@@ -25,7 +25,7 @@
     ]
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "e993064da902787e9323ff0d7abfede933ccee3a3698571a10cb36adfcf19c8b",
+    "windows-x64-msvc/managed/Bindings.cs": "0868e28083c2df0f99ae67f2d6f3408a0cb9222a18d09750c19ab19dfa27de53",
     "windows-x64-msvc/native/include/Bimg_.h": "8d49292fce8d83e17a4b12370d72a832aedcfe25aa778951622c38fcf8169609",
     "windows-x64-msvc/native/src/Bimg_.cpp": "d2a2e165be64bbab2c89504caf9d5ba56325f954fc5b927134fec7d83f54f269",
     "windows-x64-msvc/native/src/storage.assertions.cpp": "c9d629a97c02ea422ec4b83892c2ac621b9183eac3a92982291bac3f699fa376"

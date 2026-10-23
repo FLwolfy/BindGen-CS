@@ -77,12 +77,17 @@ public sealed class NeutralOwnedRecipeTests
 
     private static TypeLoweringRecipe Recipe() => new()
     {
-        id = "token", typePattern = "Demo::Token", cAbiType = "uint64_t*", resultExpression = "new uint64_t({value}.value)",
+        id = "token",
+        typePattern = "Demo::Token",
+        cAbiType = "uint64_t*",
+        resultExpression = "new uint64_t({value}.value)",
         ownedResultRelease = new("Demo::Release", "tokens") { releaseThreadDomain = "any" }
     };
 
-    private static NativeBridgePlan Plan(string fault, bool finite = false)
-    {
+    private static NativeBridgePlan Plan(
+        string fault,
+        bool finite = false
+    ) {
         SourceLocation location = new("fixture.hpp", 1, 1);
         NativeType scalar = new(new("uint64"), NativeTypeCategory.Primitive, "unsigned long long", 8, 8) { primitiveKind = "UnsignedLongLong", isSigned = false };
         NativeType wrong = new(new("int32"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
@@ -107,6 +112,9 @@ public sealed class NeutralOwnedRecipeTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

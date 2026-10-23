@@ -21,8 +21,10 @@ public sealed class NativeCallScopedCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NativeCallsRootDelegateAndStaticThunksAndObserveFallbackBeforeManagedRethrow(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NativeCallsRootDelegateAndStaticThunksAndObserveFallbackBeforeManagedRethrow(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-call-scoped-callback-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -64,15 +66,25 @@ public sealed class NativeCallScopedCallbackTests
                 CALLBACK_EXPORT bool CallBooleanResult(StateHandler callback, int value, void* state) { return callback(value, state) != 0; }
                 CALLBACK_EXPORT int Last(void) { return last_value; }
                 """);
-            CallbackParameterConfiguration Rule(string function, bool state, string? fallback) => new()
+            CallbackParameterConfiguration Rule(
+                string function,
+                bool state,
+                string? fallback
+            ) => new()
             {
-                function = function, parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
-                threading = NativeCallbackThreading.CallerThread, failureReturn = fallback,
-                userDataParameter = state ? "state" : null, callableUserDataIndex = state ? 1 : null
+                function = function,
+                parameter = "callback",
+                lifetime = NativeLifetimeKind.Call,
+                retained = false,
+                threading = NativeCallbackThreading.CallerThread,
+                failureReturn = fallback,
+                userDataParameter = state ? "state" : null,
+                callableUserDataIndex = state ? 1 : null
             };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "callbacks", nativeName = "callback_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "callbacks", nativeName = "callback_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["callbacks.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 semantics = new()
                 {
@@ -87,11 +99,16 @@ public sealed class NativeCallScopedCallbackTests
                     valueParameters = [new() { function = "CallComposed", parameter = "state", direction = NativeParameterDirection.InputOutput,
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }]
                 },
-                api = new() { @namespace = "Generated.Callbacks", name = "CallbackApi", importMode = mode,
-                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
+                api = new()
+                {
+                    @namespace = "Generated.Callbacks",
+                    name = "CallbackApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

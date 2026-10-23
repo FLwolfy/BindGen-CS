@@ -24,20 +24,29 @@ namespace BGCS.Tests;
 public sealed class SourceContributionIntegrationTests
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Add(int value);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int BridgeAdd(int value, out int result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int BridgeAdd(
+        int value,
+        out int result,
+        out nint error
+    );
 
     [Theory]
     [InlineData(SourceLanguage.C, "split")]
     [InlineData(SourceLanguage.Cpp, "singleFile")]
-    public async Task ContractsOnlyManifestContributesSourcesThatSurviveStoreCleanupAndExternalFixtureCompilation(SourceLanguage language, string layout)
-    {
+    public async Task ContractsOnlyManifestContributesSourcesThatSurviveStoreCleanupAndExternalFixtureCompilation(
+        SourceLanguage language,
+        string layout
+    ) {
         using Scratch scratch = new(language);
         string plugin = Path.Combine(scratch.root, "SourceFixturePlugin.dll");
         File.Copy(typeof(SourceFixturePlugin).Assembly.Location, plugin);
         byte[] content = await File.ReadAllBytesAsync(plugin);
         PluginManifest manifest = new()
         {
-            schemaVersion = 1, assembly = Path.GetFileName(plugin), entryType = typeof(SourceFixturePlugin).FullName!,
+            schemaVersion = 1,
+            assembly = Path.GetFileName(plugin),
+            entryType = typeof(SourceFixturePlugin).FullName!,
             plugin = new SourceFixturePlugin().descriptor,
             assets = [new(Path.GetFileName(plugin), Digest(content))]
         };
@@ -45,7 +54,9 @@ public sealed class SourceContributionIntegrationTests
             new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
         BindingConfiguration configuration = scratch.Configuration() with
         {
-            extensions = new() { plugins = ["plugin.json"] }, output = new() { root = "Generated", layout = layout }};
+            extensions = new() { plugins = ["plugin.json"] },
+            output = new() { root = "Generated", layout = layout }
+        };
         await using BindingHost host = Builder().Build();
         GenerationRequest request = new(configuration, scratch.root);
         GenerationResult builtTogether = await NativeConsumerHarness.GenerateAndCompileAsync(host, request, compileManaged: true);
@@ -117,7 +128,10 @@ public sealed class SourceContributionIntegrationTests
         GenerationResult previous = await initial.GenerateAsync(request);
         Assert.True(previous.success, previous.GetDiagnosticSummary());
         byte[] report = await File.ReadAllBytesAsync(Path.Combine(previous.outputRoot, "generation.report.json"));
-        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("invalid", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("invalid", (_, _) =>
+        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("invalid", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("invalid", (
+            _,
+            _
+        ) =>
             ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8(path, SourceContributionRole.PublicHeader,
                 "text/x-c-header", "int bad(void);", SourceLanguage.C, true)], new(EvidenceLevel.Declared, "invalid-path fixture"))))).Build();
         GenerationResult rejected = await host.GenerateAsync(request);
@@ -129,8 +143,10 @@ public sealed class SourceContributionIntegrationTests
     public async Task UnfingerprintedContributorDisablesEmissionCacheAndCancellationReleasesSession()
     {
         using Scratch scratch = new(SourceLanguage.C);
-        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("plain", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("plain", (_, token) =>
-        {
+        await using BindingHost host = Builder().RegisterFactory<ISourceContributor>(new("plain", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("plain", (
+            _,
+            token
+        ) => {
             token.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("plain.h", SourceContributionRole.PublicHeader,
                 "text/x-c-header", "int plain(void);", SourceLanguage.C, true)], new(EvidenceLevel.Declared, "unfingerprinted source fixture")));
@@ -140,31 +156,50 @@ public sealed class SourceContributionIntegrationTests
         Assert.Equal("disabled", Assert.Single(result.cacheStages, stage => stage.stage == "csharpEmission").status);
         using CancellationTokenSource cancellation = new();
         bool disposed = false;
-        await using BindingHost cancelledHost = Builder().RegisterFactory<ISourceContributor>(new("cancelled", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("cancelled", (_, token) => { cancellation.Cancel(); token.ThrowIfCancellationRequested(); throw new InvalidOperationException(); }, () => disposed = true)).Build();
+        await using BindingHost cancelledHost = Builder().RegisterFactory<ISourceContributor>(new("cancelled", ExtensionPort.SourceContributor, 0), _ => new DelegateContributor("cancelled", (
+            _,
+            token
+        ) => { cancellation.Cancel(); token.ThrowIfCancellationRequested(); throw new InvalidOperationException(); }, () => disposed = true)).Build();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelledHost.GenerateAsync(new(scratch.Configuration(), scratch.root), cancellation.Token));
         Assert.True(disposed);
     }
 
 
-    private sealed class DelegateContributor(string name, Func<SourceContributionRequest, CancellationToken, ValueTask<SourceContribution>> create, Action? release = null) : ISourceContributor, IDisposable
+    private sealed class DelegateContributor(
+        string name,
+        Func<SourceContributionRequest, CancellationToken, ValueTask<SourceContribution>> create,
+        Action? release = null
+    ) : ISourceContributor, IDisposable
     {
         public string id => name;
         public int priority => 0;
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken) => create(request, cancellationToken);
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        ) => create(request, cancellationToken);
         public void Dispose() => release?.Invoke();
     }
 
-    private sealed class MutableContributor(int version, Action called, Action released) : ISourceContributor, ICacheFingerprintProvider, IDisposable
+    private sealed class MutableContributor(
+        int version,
+        Action called,
+        Action released
+    ) : ISourceContributor, ICacheFingerprintProvider, IDisposable
     {
         public string id => "mutable-source";
         public int priority => 0;
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        ) {
             called();
             return ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("generated.h", SourceContributionRole.PublicHeader,
                 "text/x-c-header", "int generated_" + version + "(void);", SourceLanguage.C, true)], new(EvidenceLevel.Declared, "mutable fixture")));
         }
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken) => new(Digest(Encoding.UTF8.GetBytes("deliberately fixed private fingerprint")), []);
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) => new(Digest(Encoding.UTF8.GetBytes("deliberately fixed private fingerprint")), []);
         public void Dispose() => released();
     }
 
@@ -189,9 +224,11 @@ public sealed class SourceContributionIntegrationTests
         }
         internal BindingConfiguration Configuration() => new()
         {
-            schemaVersion = 2, library = new() { id = "contributions", nativeName = "contributions_bridge" },
+            schemaVersion = 2,
+            library = new() { id = "contributions", nativeName = "contributions_bridge" },
             source = new() { language = m_language, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-            api = new() { @namespace = "Generated.Contributions", name = "ContributionsApi" }, runtime = new() { mode = "source" }
+            api = new() { @namespace = "Generated.Contributions", name = "ContributionsApi" },
+            runtime = new() { mode = "source" }
         };
         public void Dispose() => Directory.Delete(root, recursive: true);
     }

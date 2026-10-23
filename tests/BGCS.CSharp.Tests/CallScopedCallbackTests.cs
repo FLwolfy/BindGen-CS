@@ -26,8 +26,10 @@ public sealed class CallScopedCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport(BindingImportMode mode, bool userData)
-    {
+    public async Task FixedReverseAbiAndStateLifetimeRemainCheckedForEveryImport(
+        BindingImportMode mode,
+        bool userData
+    ) {
         ManagedApiModel model = Model(userData);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
@@ -92,7 +94,8 @@ public sealed class CallScopedCallbackTests
             _ => contract
         };
         InteropModule interop = new(model.interop.libraryId, model.interop.targetId, 8, model.interop.types,
-            [function with { parameters = function.parameters.SetItem(0, parameter with { callback = contract }) }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [function with { parameters = function.parameters.SetItem(0, parameter with { callback = contract }) }], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         EmissionRequest request = new("native", new NeutralBackendTests.MemorySink())
         {
             managedRuntime = missing == "aot" ? new("native-aot", new ManagedRuntimeId("fixture.static-runtime"), NativeModuleMechanism.DynamicLibrary,
@@ -133,8 +136,10 @@ public sealed class CallScopedCallbackTests
         InteropType pointer = new(new("callback-pointer"), "Callback", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         CallbackContract contract = new(callable.id, new(NativeLifetimeKind.Call, null, evidence), evidence)
         {
-            retained = false, threading = NativeCallbackThreading.CallerThread,
-            userDataParameter = userData ? new StableId("userdata") : null, callableUserDataIndex = userData ? 1 : null,
+            retained = false,
+            threading = NativeCallbackThreading.CallerThread,
+            userDataParameter = userData ? new StableId("userdata") : null,
+            callableUserDataIndex = userData ? 1 : null,
             failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence)
         };
         ImmutableArray<InteropParameter> parameters = [new(new("callback"), "callback", pointer.id) { callback = contract }, new(new("value"), "value", integer.id)];

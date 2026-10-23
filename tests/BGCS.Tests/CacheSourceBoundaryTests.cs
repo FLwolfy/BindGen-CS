@@ -73,7 +73,10 @@ public sealed class CacheSourceBoundaryTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static BindingConfiguration Configuration(string include, string cache) => new()
+    private static BindingConfiguration Configuration(
+        string include,
+        string cache
+    ) => new()
     {
         schemaVersion = 2,
         library = new() { id = "cache_boundary", nativeName = "cache_boundary" },
@@ -91,8 +94,21 @@ public sealed class CacheSourceBoundaryTests
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern SafeFileHandle CreateFileW(string path, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+    private static extern SafeFileHandle CreateFileW(
+        string path,
+        uint access,
+        uint share,
+        IntPtr security,
+        uint creation,
+        uint flags,
+        IntPtr template
+    );
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int informationClass, ref uint information, uint size);
+    private static extern bool SetFileInformationByHandle(
+        SafeFileHandle handle,
+        int informationClass,
+        ref uint information,
+        uint size
+    );
 }

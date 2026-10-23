@@ -79,8 +79,11 @@ public sealed class SharedContextTests
         model = model with
         {
             interop = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types, model.interop.functions, model.interop.diagnostics)
-            { byteOrder = model.interop.byteOrder, constants = [new(new("answer"), "ANSWER", "ANSWER",
-                new(NativeScalarConstantKind.Integer, "42", 4, true, new(EvidenceLevel.Declared, "fixture:constant")), null)] },
+            {
+                byteOrder = model.interop.byteOrder,
+                constants = [new(new("answer"), "ANSWER", "ANSWER",
+                new(NativeScalarConstantKind.Integer, "42", 4, true, new(EvidenceLevel.Declared, "fixture:constant")), null)]
+            },
             constants = [new(new("answer"), "Answer")],
             recipeHelpers = [new("count", "size_t", new ManagedRecipeProjection("uint", "{value}", "checked((uint){value})"))]
         };
@@ -159,31 +162,48 @@ public sealed class SharedContextTests
         finally { load.Unload(); }
     }
 
-    private sealed class ObservedProvider(bool alternate, bool missing = false, bool blocking = false) : INativeModuleProvider
+    private sealed class ObservedProvider(
+        bool alternate,
+        bool missing = false,
+        bool blocking = false
+    ) : INativeModuleProvider
     {
         private readonly StaticModuleProvider m_inner = new(Exports(alternate, blocking));
         internal int disposals;
-        public bool TryGetExport(string name, out nint address)
-        {
+        public bool TryGetExport(
+            string name,
+            out nint address
+        ) {
             if (missing && name == "notify") { address = 0; return false; }
             return m_inner.TryGetExport(name, out address);
         }
         public void Dispose() { Interlocked.Increment(ref disposals); m_inner.Dispose(); }
     }
 
-    private static unsafe IEnumerable<KeyValuePair<string, nint>> Exports(bool alternate, bool blocking = false) => new Dictionary<string, nint>
+    private static unsafe IEnumerable<KeyValuePair<string, nint>> Exports(
+        bool alternate,
+        bool blocking = false
+    ) => new Dictionary<string, nint>
     {
         ["add"] = blocking ? (nint)(delegate* unmanaged[Cdecl]<int, int, int>)&Blocking
             : alternate ? (nint)(delegate* unmanaged[Cdecl]<int, int, int>)&Alternate : (nint)(delegate* unmanaged[Cdecl]<int, int, int>)&Add,
         ["notify"] = (nint)(delegate* unmanaged[Cdecl]<void>)&Notify
     };
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Add(int left, int right) => left + right;
+    private static int Add(
+        int left,
+        int right
+    ) => left + right;
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Alternate(int left, int right) => left + right + 5;
+    private static int Alternate(
+        int left,
+        int right
+    ) => left + right + 5;
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Blocking(int left, int right)
-    {
+    private static int Blocking(
+        int left,
+        int right
+    ) {
         s_callEntered.Set();
         return s_releaseCall.Wait(TimeSpan.FromSeconds(20)) ? left + right : int.MinValue;
     }

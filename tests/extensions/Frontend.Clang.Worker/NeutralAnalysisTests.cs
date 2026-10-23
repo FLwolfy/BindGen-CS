@@ -62,7 +62,8 @@ public sealed class NeutralAnalysisTests : WorkerTestHost
         };
         NativeDeclaration field = new(new("field"), "Field", "value", "Value::value", scalar.id, default)
         {
-            parent = declaration.id, offset = 0
+            parent = declaration.id,
+            offset = 0
         };
         NativeModule module = new("linux-x64-gnu", "x86_64-unknown-linux-gnu", 8, [scalar, record], [declaration, field], []);
         Assert.Empty(new NativeModuleVerifier().Validate(module));
@@ -77,7 +78,8 @@ public sealed class NeutralAnalysisTests : WorkerTestHost
         NativeDeclaration declaration = new(new("record-declaration"), "Class", "Broken", "Broken", record.id, default);
         NativeDeclaration field = new(new("field"), "Field", "value", "Broken::value", scalar.id, default)
         {
-            parent = declaration.id, offset = 4
+            parent = declaration.id,
+            offset = 4
         };
         NativeModule module = new("linux-x64-gnu", "x86_64-unknown-linux-gnu", 8, [scalar, record], [declaration with { children = [field.id] }, field], []);
         Assert.Single(new NativeModuleVerifier().Validate(module));

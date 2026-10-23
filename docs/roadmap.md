@@ -10,4 +10,4 @@ The architecture separates neutral algorithms, explicit standard implementations
 
 One targeted Browser Mono Wasm/AOT aggregate regression belongs to the Linux repository job. It is not a product build feature. Other unexecuted combinations remain explicit.
 
-Current status comes from records/acceptance and execution receipts. Source, compilation, tests, package consumption and publication are different evidence. Maintenance is extension-first; future core changes require a specific defect or representation gap.
+Accepted versions and their exact-revision execution receipts are linked from [release history](releases/README.md). The [development ledger](history/4.0-development-ledger.md) is historical. Source, compilation, tests, package consumption and publication are different evidence. Maintenance is extension-first; future core changes require a specific defect or representation gap.

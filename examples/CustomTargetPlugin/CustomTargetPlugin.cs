@@ -20,7 +20,7 @@ namespace BGCS.Examples.CustomTargetPlugin;
 public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "4.0.0", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
+    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "4.1.0", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
     {
         configurationSchema = JsonSerializer.Deserialize<JsonElement>("""
             {"type":"object","additionalProperties":false,"required":["profile"],"properties":{"profile":{"type":"string","minLength":1}}}
@@ -28,29 +28,37 @@ public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvid
     };
 
     /// <inheritdoc />
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    ) {
         string profile = configuration.ResolveInputPath("/profile");
         registry.RegisterFactory<INativeTargetProvider>("example.custom-target", _ => new Provider(profile));
     }
 
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
-    {
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    ) {
         cancellationToken.ThrowIfCancellationRequested();
         return new(new(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("custom-target-recipe:1")))), []);
     }
 
     private sealed class Provider(string profilePath) : INativeTargetProvider, IExternalInputProvider, ICacheFingerprintProvider
     {
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken)
-        {
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return [new(profilePath, ExternalInputKind.File)];
         }
 
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = null;
             if (request.targetId.value != "example-private-host") return false;
             Profile profile = JsonSerializer.Deserialize<Profile>(File.ReadAllBytes(profilePath), new JsonSerializerOptions
@@ -79,8 +87,10 @@ public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvid
             return true;
         }
 
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
-        {
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             ImmutableArray<DeclaredExternalInput> inputs = [new(profilePath, ExternalInputKind.File),
                 .. context.target.toolchain.systemIncludeFolders.Concat(context.target.toolchain.cxxSystemIncludeFolders)

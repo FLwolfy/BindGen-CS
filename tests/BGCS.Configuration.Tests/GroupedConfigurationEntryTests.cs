@@ -40,6 +40,9 @@ public sealed class GroupedConfigurationEntryTests : GroupedConfigurationEntryTe
     [InlineData("EnumItemNamingConvention", "config.pascal")]
     [InlineData("ParameterNamingConvention", "config")]
     [InlineData("ParameterNamingConvention", "config.alt")]
-    public Task GroupedConfigurationPreservesItsDeclaredBehavior(string fixture, string variant)
+    public Task GroupedConfigurationPreservesItsDeclaredBehavior(
+        string fixture,
+        string variant
+    )
         => VerifyAsync(fixture, variant);
 }

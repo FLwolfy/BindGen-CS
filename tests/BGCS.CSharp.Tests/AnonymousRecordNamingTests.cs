@@ -75,17 +75,29 @@ public sealed class AnonymousRecordNamingTests
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType first = new(new("anonymous-struct"), "struct Parent::(unnamed at " + physical + "/native.h:5:5)", NativeTypeCategory.Record, 4, 4)
         {
-            declarationName = "", sourceQualifiedName = "Parent::", sourceDeclaration = new("decl:first"), source = new("native.h", 5, 5), recordKind = "Struct",
+            declarationName = "",
+            sourceQualifiedName = "Parent::",
+            sourceDeclaration = new("decl:first"),
+            source = new("native.h", 5, 5),
+            recordKind = "Struct",
             fields = [new(new("first-value"), "value", integer.id, 0, 0, null)]
         };
         InteropType second = new(new("anonymous-union"), "Parent::", NativeTypeCategory.Record, 4, 4)
         {
-            declarationName = "", sourceQualifiedName = "Parent::", sourceDeclaration = new("decl:second"), source = new("native.h", 6, 5), recordKind = "Union",
+            declarationName = "",
+            sourceQualifiedName = "Parent::",
+            sourceDeclaration = new("decl:second"),
+            source = new("native.h", 6, 5),
+            recordKind = "Union",
             fields = [new(new("second-value"), "value", integer.id, 0, 0, null)]
         };
         InteropType parent = new(new("parent"), "struct Parent", NativeTypeCategory.Record, 8, 4)
         {
-            declarationName = "Parent", sourceQualifiedName = "Parent", sourceDeclaration = new("decl:parent"), source = new("native.h", 4, 1), recordKind = "Struct",
+            declarationName = "Parent",
+            sourceQualifiedName = "Parent",
+            sourceDeclaration = new("decl:parent"),
+            source = new("native.h", 4, 1),
+            recordKind = "Struct",
             fields = [new(new("parent-first"), "child", first.id, 0, 0, null), new(new("parent-second"), "", second.id, 4, 32, null)]
         };
         return new("anonymous", "windows-x64-msvc", 8, [integer, first, second, parent], [], []) { byteOrder = NativeByteOrder.LittleEndian };

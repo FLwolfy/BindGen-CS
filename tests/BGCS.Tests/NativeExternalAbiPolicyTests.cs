@@ -50,13 +50,24 @@ public sealed class NativeExternalAbiPolicyTests
             {
                 schemaVersion = 2,
                 library = new() { id = "external-policy", nativeName = "external_policy_fixture" },
-                source = new() { language = SourceLanguage.C, headers = ["point.h"], parseMacros = false,
-                    includeTransitivelyReferencedHeaders = false, selection = new() { excludeDeclarations = ["by_value"] } },
-                api = new() { @namespace = "Generated.ExternalPolicyNative", name = "PointApi", importMode = mode,
+                source = new()
+                {
+                    language = SourceLanguage.C,
+                    headers = ["point.h"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false,
+                    selection = new() { excludeDeclarations = ["by_value"] }
+                },
+                api = new()
+                {
+                    @namespace = "Generated.ExternalPolicyNative",
+                    name = "PointApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("copy_point", "Copy").Add("read_point", "Read")
                         .Add("point_size", "Size").Add("point_alignment", "Alignment").Add("by_value", "ByValue"),
                     externalTypes = [new() { nativeType = "Point", managedType = "System.Numerics.Vector2",
-                        fields = ImmutableDictionary<string, string>.Empty.Add("x", "X").Add("y", "Y") }] },
+                        fields = ImmutableDictionary<string, string>.Empty.Add("x", "X").Add("y", "Y") }]
+                },
 
                 cache = new() { enabled = false }
             };

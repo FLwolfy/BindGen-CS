@@ -1,6 +1,6 @@
-# Architecture self review
+# Architecture review
 
-Review scope: current 4.0 production source, actual composition path and repository-only consumer boundary. This is not a passing test receipt.
+Review scope: current 4.x production architecture, actual composition path and repository-only consumer boundary. This is not a passing test receipt.
 
 - Core and Runtime do not reference other BGCS projects.
 - Engine and algorithms do not reference concrete host/target/frontend/optional implementations.
@@ -24,9 +24,9 @@ The independent source review found two concrete remaining boundary defects and
 their corrections: cache overlap now compares the actual physical input paths
 through injected directory semantics, and callable assertion policy comes from
 explicit target-owned facts rather than a triple switch inside NativeBridge.
-Neither correction removes an assertion or grants an unproved ABI. The next
-acceptance step is execution and package consumption, not another architecture
-rewrite.
+Neither correction removes an assertion or grants an unproved ABI. Execution
+and package acceptance are recorded in release-specific receipts, independently
+of this source review. See [release history](releases/README.md).
 
 The final review also checks derived-work reuse boundaries: parser-cache admission
 can reuse its graph/input checks only for the exact instance admitted at the same

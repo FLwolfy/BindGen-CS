@@ -17,8 +17,10 @@ public sealed class CanonicalAliasStorageTests : FrontendTestHost
     [InlineData(SourceLanguage.Cpp, false)]
     [InlineData(SourceLanguage.C, true)]
     [InlineData(SourceLanguage.Cpp, true)]
-    public async Task PlainSignedAndUnsignedCharKeepDistinctCanonicalTypesAndAliasPointerFacts(SourceLanguage language, bool unsignedPlainChar)
-    {
+    public async Task PlainSignedAndUnsignedCharKeepDistinctCanonicalTypesAndAliasPointerFacts(
+        SourceLanguage language,
+        bool unsignedPlainChar
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-char-identity-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -141,8 +143,10 @@ public sealed class CanonicalAliasStorageTests : FrontendTestHost
     [InlineData("i686-pc-windows-msvc", 4)]
     [InlineData("x86_64-pc-windows-msvc", 8)]
     [InlineData("aarch64-unknown-linux-gnu", 8)]
-    public async Task CanonicalizedAliasPointersRetainCompilerMeasuredStorage(string triple, int width)
-    {
+    public async Task CanonicalizedAliasPointersRetainCompilerMeasuredStorage(
+        string triple,
+        int width
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-canonical-storage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try

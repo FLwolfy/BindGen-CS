@@ -45,8 +45,10 @@ public sealed class ArtifactSinkTests
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
 
-        public string WriteText(string relativePath, string content)
-        {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) {
             sources.Add(relativePath, content);
             return "memory:" + relativePath;
         }

@@ -21,16 +21,21 @@ namespace BGCS.Examples.CustomCallAbi;
 public sealed class IntegerOnlyPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.integer-only", "4.0.0",
+    public PluginDescriptor descriptor => new("bgcs.examples.integer-only", "4.1.0",
         [new("example.integer-runtime", ExtensionPort.ManagedRuntimeProvider), new("example.integer-abi", ExtensionPort.CallAbiProvider)]);
     /// <inheritdoc />
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    ) {
         registry.RegisterFactory<IManagedRuntimeProvider>("example.integer-runtime", _ => new IntegerOnlyRuntime());
         registry.RegisterFactory<ICallAbiProvider>("example.integer-abi", _ => new IntegerOnlyCallAbi());
     }
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => Identity(cancellationToken);
     internal static CacheFingerprintContribution Identity(CancellationToken cancellationToken)
     {
@@ -47,18 +52,28 @@ public sealed class IntegerOnlyRuntime : IManagedRuntimeProvider, ICacheFingerpr
     /// <summary>Gets the explicit runtime policy selected by this sample's configuration.</summary>
     public const string RUNTIME_ID = "example.coreclr-integer-only";
     /// <inheritdoc />
-    public bool TryResolve(ManagedRuntimeRequest request, [NotNullWhen(true)] out ManagedRuntimeProfile? profile)
-    {
+    public bool TryResolve(
+        ManagedRuntimeRequest request,
+        [NotNullWhen(true)] out ManagedRuntimeProfile? profile
+    ) {
         profile = null;
         if (request.runtimeId.value != RUNTIME_ID) return false;
         if (!new DotNetRuntimeProvider().TryResolve(new(new("dotnet.coreclr"), request.target), out ManagedRuntimeProfile? implemented))
             return false;
-        profile = implemented with { id = "example/integer-only/1/" + implemented.id, runtimeId = new(RUNTIME_ID),
-            moduleMechanism = NativeModuleMechanism.ExternalFunctionTable, importModes = [BindingImportMode.FunctionTable] };
+        profile = implemented with
+        {
+            id = "example/integer-only/1/" + implemented.id,
+            runtimeId = new(RUNTIME_ID),
+            moduleMechanism = NativeModuleMechanism.ExternalFunctionTable,
+            importModes = [BindingImportMode.FunctionTable]
+        };
         return true;
     }
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => IntegerOnlyPlugin.Identity(cancellationToken);
 }
 
@@ -87,6 +102,9 @@ public sealed class IntegerOnlyCallAbi : ICallAbiProvider, ICacheFingerprintProv
         }
     }
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => IntegerOnlyPlugin.Identity(cancellationToken);
 }

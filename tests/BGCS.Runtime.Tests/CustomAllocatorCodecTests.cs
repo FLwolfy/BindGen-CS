@@ -18,8 +18,11 @@ public sealed class CustomAllocatorCodecTests
     [InlineData(16, true, "0041D83DDE000000")]
     [InlineData(32, false, "4100000000F6010000000000")]
     [InlineData(32, true, "000000410001F60000000000")]
-    public void TextEncoding_PreservesExactBytesAndMatchingAlignedPair(int width, bool bigEndian, string expected)
-    {
+    public void TextEncoding_PreservesExactBytesAndMatchingAlignedPair(
+        int width,
+        bool bigEndian,
+        string expected
+    ) {
         Counters counters = new();
         NativeAllocator allocator = CreateAllocator(counters);
         NativeStringLease text = Encode(width, bigEndian, "A😀", false, allocator);
@@ -124,7 +127,13 @@ public sealed class CustomAllocatorCodecTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference Abandon(NativeAllocator allocator) => new(Encode(8, false, "abandoned", false, allocator));
 
-    private static NativeStringLease Encode(int width, bool bigEndian, string? value, bool allowsNull, NativeAllocator allocator)
+    private static NativeStringLease Encode(
+        int width,
+        bool bigEndian,
+        string? value,
+        bool allowsNull,
+        NativeAllocator allocator
+    )
         => width switch
         {
             8 => Utf8Codec.EncodeNullTerminated(value, allowsNull, 64, allocator),
@@ -133,17 +142,26 @@ public sealed class CustomAllocatorCodecTests
             _ => throw new ArgumentOutOfRangeException(nameof(width))
         };
 
-    private static unsafe NativeAllocator CreateAllocator(Counters counters, NativeModuleSession? session = null,
-        bool throwAfterFree = false, Pump? dispatcher = null)
-        => new("text-allocation-pair", (length, alignment) =>
-        {
+    private static unsafe NativeAllocator CreateAllocator(
+        Counters counters,
+        NativeModuleSession? session = null,
+        bool throwAfterFree = false,
+        Pump? dispatcher = null
+    )
+        => new("text-allocation-pair", (
+            length,
+            alignment
+        ) => {
             if (dispatcher is not null) Assert.True(dispatcher.CheckAccess());
             counters.allocations++;
             counters.physicalLength = length;
             counters.alignment = alignment;
             return (nint)NativeMemory.AlignedAlloc(length, alignment);
-        }, (address, length, alignment) =>
-        {
+        }, (
+            address,
+            length,
+            alignment
+        ) => {
             if (dispatcher is not null) Assert.True(dispatcher.CheckAccess());
             Assert.Equal(0, Volatile.Read(ref counters.unloads));
             Assert.Equal(counters.physicalLength, length);

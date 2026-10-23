@@ -30,14 +30,16 @@ public sealed class ValueParameterOmissionTests
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType record = new(new("record"), "Record", NativeTypeCategory.Record, 4, 4)
         {
-            declarationName = "Record", recordKind = recordKind,
+            declarationName = "Record",
+            recordKind = recordKind,
             fields = [new(new("field"), "value", integer.id, 0, recordKind == "Struct" ? 0 : null, recordKind == "Struct" ? 8 : null)]
         };
         InteropType pointer = new(new("pointer"), "Record*", NativeTypeCategory.Pointer, 8, 8) { elementType = record.id };
         InteropParameter parameter = new(new("parameter"), "value", pointer.id)
         {
             singleValue = new(NativeParameterDirection.InputOutput, new(NativeLifetimeKind.Call, null, evidence), evidence)
-                { retainsPointer = false, allowsNull = false }, source = new("fixture.h", 3, 12)
+            { retainsPointer = false, allowsNull = false },
+            source = new("fixture.h", 3, 12)
         };
         InteropFunction function = new(new("change"), "change", integer.id, [parameter], "C");
         InteropModule module = new("omission", "windows-x64-msvc", 8, [integer, record, pointer], [function], []) { byteOrder = NativeByteOrder.LittleEndian };
@@ -65,6 +67,9 @@ public sealed class ValueParameterOmissionTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> contents { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { contents.Add(relativePath, content); return Path.GetFullPath(relativePath); }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { contents.Add(relativePath, content); return Path.GetFullPath(relativePath); }
     }
 }

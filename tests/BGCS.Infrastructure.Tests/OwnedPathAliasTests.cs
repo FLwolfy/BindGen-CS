@@ -264,15 +264,19 @@ public sealed class OwnedPathAliasTests : IDisposable
         Assert.False(Directory.Exists(backup));
     }
 
-    private void Publish(string destination, string text)
-    {
+    private void Publish(
+        string destination,
+        string text
+    ) {
         using ArtifactPublisher publisher = new(destination, "fixture", m_paths);
         new DirectoryArtifactSink(publisher.candidateRoot, m_paths).WriteText("value.txt", text);
         publisher.Commit([Descriptor("value.txt", text)]);
     }
 
-    private async Task Link(string path, string target)
-    {
+    private async Task Link(
+        string path,
+        string target
+    ) {
         Assert.StartsWith(Path.GetFullPath(m_root) + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
         if (OperatingSystem.IsWindows())
         {
@@ -288,7 +292,10 @@ public sealed class OwnedPathAliasTests : IDisposable
         else { Directory.CreateSymbolicLink(path, target); m_links.Add(path); }
     }
 
-    private static ArtifactDescriptor Descriptor(string path, string text) => new(path, "text/plain", Digest(text));
+    private static ArtifactDescriptor Descriptor(
+        string path,
+        string text
+    ) => new(path, "text/plain", Digest(text));
     private static ContentDigest Digest(string text) => new(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text))));
     private static void DeleteLink(string path) { if (OperatingSystem.IsWindows()) Directory.Delete(path); else File.Delete(path); }
     public void Dispose()

@@ -212,7 +212,7 @@ Resolution: Inspect that project configuration and its generation/build diagnost
 
 Cause: A selected primary class or function template has no explicit concrete specialization.
 
-Resolution: Declare the requested concrete class/function instance in cpp.templateInstantiations and provide all required type/value arguments.
+Resolution: Declare the requested concrete class/function instance in bridge.cpp.templateInstantiations and provide all required type/value arguments.
 
 ## BGCSCPP001 — C++ declaration has no safe lowering
 

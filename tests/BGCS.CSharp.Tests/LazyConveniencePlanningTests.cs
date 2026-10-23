@@ -71,8 +71,11 @@ public sealed class LazyConveniencePlanningTests
         }
     }
 
-    private static async Task AssertRejectedThenHealthy(ManagedApiModel malformed, ManagedApiModel healthy, string expected)
-    {
+    private static async Task AssertRejectedThenHealthy(
+        ManagedApiModel malformed,
+        ManagedApiModel healthy,
+        string expected
+    ) {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = PlanningFixture.Prepare(malformed, new("fixture", sink));
         ArgumentException planning = Assert.Throws<ArgumentException>(() => new CSharpEmissionPlanner().Plan(malformed, request, CancellationToken.None));

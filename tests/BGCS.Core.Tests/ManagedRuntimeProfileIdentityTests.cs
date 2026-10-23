@@ -33,8 +33,11 @@ public sealed class ManagedRuntimeProfileIdentityTests
         ManagedRuntimeProfile original = new("fixture-\"\u03bb\"", new("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable,
             [BindingImportMode.FunctionTable], false, true)
         {
-            nativeTargetId = "fixture-target", nativeTriple = "fixture-triple", pointerSize = 8,
-            byteOrder = NativeByteOrder.LittleEndian, callAbi = new("fixture.abi")
+            nativeTargetId = "fixture-target",
+            nativeTriple = "fixture-triple",
+            pointerSize = 8,
+            byteOrder = NativeByteOrder.LittleEndian,
+            callAbi = new("fixture.abi")
         };
         ManagedRuntimeProfile profile = field switch
         {

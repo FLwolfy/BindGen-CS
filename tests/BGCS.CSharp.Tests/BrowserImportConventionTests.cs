@@ -62,9 +62,12 @@ public sealed class BrowserImportConventionTests
         if (fault == "runtime") profile = profile with { runtimeId = new ManagedRuntimeId("fixture.static-runtime") };
         if (fault == "module") profile = profile with { moduleMechanism = NativeModuleMechanism.DynamicLibrary };
         if (fault is "width" or "convention")
-            model = model with { interop = new(interop.libraryId, interop.targetId, fault == "width" ? 8 : 4, interop.types,
+            model = model with
+            {
+                interop = new(interop.libraryId, interop.targetId, fault == "width" ? 8 : 4, interop.types,
                 fault == "convention" ? interop.functions.SetItem(0, interop.functions[0] with { callingConvention = "StdCall" }) : interop.functions, [])
-                { byteOrder = NativeByteOrder.LittleEndian } };
+                { byteOrder = NativeByteOrder.LittleEndian }
+            };
         if (fault == "width") Assert.Throws<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
         else Assert.Throws<InvalidOperationException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
         Assert.Empty(sink.sources);

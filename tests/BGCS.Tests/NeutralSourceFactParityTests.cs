@@ -94,12 +94,18 @@ public sealed class NeutralSourceFactParityTests
 
     private static BindingConfiguration Configuration(bool singleFile) => new()
     {
-        schemaVersion = 2, library = new() { id = "source-facts", nativeName = "source_facts" },
-        source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false,
-            selection = new() { excludeDeclarations = ["hidden_helper"] } },
+        schemaVersion = 2,
+        library = new() { id = "source-facts", nativeName = "source_facts" },
+        source = new()
+        {
+            language = SourceLanguage.C,
+            headers = ["native.h"],
+            includeTransitivelyReferencedHeaders = false,
+            selection = new() { excludeDeclarations = ["hidden_helper"] }
+        },
         api = new() { @namespace = "Generated.SourceFacts", name = "FactsApi" },
         output = new() { layout = singleFile ? "singleFile" : "split", singleFileName = "SourceFacts.cs" },
-         cache = new() { enabled = false }
+        cache = new() { enabled = false }
     };
 
     private static string CreateInput()

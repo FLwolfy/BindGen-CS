@@ -5,8 +5,10 @@ namespace BGCS.CSharp.Tests;
 
 internal static class FactoryInvocation
 {
-    internal static object? InvokeFactory(this MethodInfo method, object?[] arguments)
-    {
+    internal static object? InvokeFactory(
+        this MethodInfo method,
+        object?[] arguments
+    ) {
         ParameterInfo[] parameters = method.GetParameters();
         if (arguments.Length > parameters.Length) throw new ArgumentException("Too many explicit factory arguments.", nameof(arguments));
         object?[] supplied = new object?[parameters.Length];

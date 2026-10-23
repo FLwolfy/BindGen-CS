@@ -27,11 +27,14 @@ public sealed class EventLoopConfigurationTests
     public void CancellationAssertionRequiresAnExactNativeRequest(bool nonblocking)
     {
         BindingConfiguration configuration = Configuration();
-        configuration = configuration with { semantics = configuration.semantics with
+        configuration = configuration with
         {
-            asyncOperations = [new() { function = "Start", completionCallback = "completion", resultArgumentIndex = 0,
+            semantics = configuration.semantics with
+            {
+                asyncOperations = [new() { function = "Start", completionCallback = "completion", resultArgumentIndex = 0,
                 statusArgumentIndex = 1, cancellationIsNonBlocking = nonblocking }]
-        } };
+            }
+        };
         Assert.Contains("cancelFunction", Assert.Throws<ArgumentException>(() => BindingConfigurationLoader.ValidateAndFreeze(configuration)).Message,
             StringComparison.Ordinal);
     }
@@ -41,11 +44,14 @@ public sealed class EventLoopConfigurationTests
     {
         BindingConfiguration configuration = Configuration();
         CallbackParameterConfiguration callback = configuration.semantics.callbackParameters[0];
-        configuration = configuration with { semantics = configuration.semantics with
+        configuration = configuration with
         {
-            callbackParameters = [callback with { registration = callback.registration! with { unregisterIsNonBlocking = false } }],
-            asyncOperations = [configuration.semantics.asyncOperations[0] with { cancellationIsNonBlocking = false }]
-        } };
+            semantics = configuration.semantics with
+            {
+                callbackParameters = [callback with { registration = callback.registration! with { unregisterIsNonBlocking = false } }],
+                asyncOperations = [configuration.semantics.asyncOperations[0] with { cancellationIsNonBlocking = false }]
+            }
+        };
         BindingConfiguration frozen = BindingConfigurationLoader.ValidateAndFreeze(configuration);
         Assert.False(Assert.Single(frozen.semantics.callbackParameters).registration!.unregisterIsNonBlocking);
         Assert.False(Assert.Single(frozen.semantics.asyncOperations).cancellationIsNonBlocking);
@@ -53,7 +59,9 @@ public sealed class EventLoopConfigurationTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "event-loop", nativeName = "event-loop" }, source = new() { headers = ["native.h"] },
+        schemaVersion = 2,
+        library = new() { id = "event-loop", nativeName = "event-loop" },
+        source = new() { headers = ["native.h"] },
         semantics = new()
         {
             callbackParameters = [new()

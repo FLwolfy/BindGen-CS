@@ -27,15 +27,26 @@ internal static class TestHostPaths
 
 internal static class TestInputs
 {
-    internal static GenerationRequest LoadRequest(string path, string? profile = null, CancellationToken cancellationToken = default)
+    internal static GenerationRequest LoadRequest(
+        string path,
+        string? profile = null,
+        CancellationToken cancellationToken = default
+    )
         => LoadRequestAsync(path, profile, cancellationToken).GetAwaiter().GetResult();
-    internal static Task<GenerationRequest> LoadRequestAsync(string path, string? profile = null, CancellationToken cancellationToken = default)
+    internal static Task<GenerationRequest> LoadRequestAsync(
+        string path,
+        string? profile = null,
+        CancellationToken cancellationToken = default
+    )
         => GenerationRequest.FromFile(path, profile).MaterializeAsync(TestHostPaths.Create(), cancellationToken).AsTask();
 }
 
 internal static class TestComposition
 {
-    internal static BindingHostBuilder UseWorkerDirectory(this BindingHostBuilder builder, string root)
+    internal static BindingHostBuilder UseWorkerDirectory(
+        this BindingHostBuilder builder,
+        string root
+    )
         => builder.ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), context =>
         {
             HostServices host = context.RequireHostServices();
@@ -43,6 +54,9 @@ internal static class TestComposition
         });
     private const string newId = "bgcs.frontend.clang.worker";
 
-    internal static BindingHostBuilder UseDetachedFrontend(this BindingHostBuilder builder, Func<IFrontend> factory)
+    internal static BindingHostBuilder UseDetachedFrontend(
+        this BindingHostBuilder builder,
+        Func<IFrontend> factory
+    )
         => builder.ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), _ => factory());
 }

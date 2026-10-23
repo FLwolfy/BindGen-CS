@@ -22,8 +22,10 @@ namespace BGCS.CSharp.Tests;
 // It grants no aggregate ABI, operating-system support or runtime certification.
 internal static class PlanningFixture
 {
-    internal static EmissionRequest Prepare(ManagedApiModel model, EmissionRequest request)
-    {
+    internal static EmissionRequest Prepare(
+        ManagedApiModel model,
+        EmissionRequest request
+    ) {
         InteropModule module = model.interop;
         ManagedRuntimeProfile profile = request.managedRuntime ?? new("fixture.scalar/v1", new("fixture.syntax"),
             NativeModuleMechanism.DynamicLibrary, [BindingImportMode.FunctionTable, BindingImportMode.DllImport, BindingImportMode.LibraryImport], false, true);
@@ -67,8 +69,10 @@ internal static class PlanningFixture
             }
             catch (NotSupportedException failure) { return new(request.runtime.callAbi, NativeCallDisposition.RequiresBridge, failure.Message); }
 
-            NativeCallValuePlan? Value(StableId id, bool allowVoid)
-            {
+            NativeCallValuePlan? Value(
+                StableId id,
+                bool allowVoid
+            ) {
                 HashSet<StableId> seen = [];
                 InteropType type = request.module.GetType(id);
                 while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified or NativeTypeCategory.Enumeration)
@@ -88,12 +92,20 @@ internal static class PlanningFixture
 
 internal sealed class CSharpTestPlanner
 {
-    internal CSharpEmissionPlan Plan(ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken = default)
+    internal CSharpEmissionPlan Plan(
+        ManagedApiModel model,
+        EmissionRequest request,
+        CancellationToken cancellationToken = default
+    )
         => new CSharpEmissionPlanner().Plan(model, PlanningFixture.Prepare(model, request), cancellationToken);
 }
 
 internal sealed class CSharpTestBackend
 {
-    internal ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken)
+    internal ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(
+        ManagedApiModel model,
+        EmissionRequest request,
+        CancellationToken cancellationToken
+    )
         => new CSharpBackend().EmitAsync(model, PlanningFixture.Prepare(model, request), cancellationToken);
 }

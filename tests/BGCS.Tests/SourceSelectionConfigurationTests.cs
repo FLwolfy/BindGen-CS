@@ -62,8 +62,12 @@ public sealed class SourceSelectionConfigurationTests
             "duplicate-entry" => new() { excludeDeclarations = ["Demo::Hidden", "Demo::Hidden"] },
             _ => new() { includeDeclarations = ["Demo::Selected"], excludeDeclarations = ["Demo::Selected"] }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
-            source = new() { headers = ["entry.hpp"], selection = selected! } };
+        BindingConfiguration configuration = new()
+        {
+            schemaVersion = 2,
+            library = new() { id = "selection", nativeName = "selection" },
+            source = new() { headers = ["entry.hpp"], selection = selected! }
+        };
         Assert.ThrowsAny<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
 
@@ -99,8 +103,12 @@ public sealed class SourceSelectionConfigurationTests
             "duplicate" => new() { includeCategories = [NativeDeclarationCategory.Callables, NativeDeclarationCategory.Callables] },
             _ => new() { includeCategories = [NativeDeclarationCategory.Records], excludeCategories = [NativeDeclarationCategory.Records] }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
-            source = new() { headers = ["entry.hpp"], selection = selection } };
+        BindingConfiguration configuration = new()
+        {
+            schemaVersion = 2,
+            library = new() { id = "selection", nativeName = "selection" },
+            source = new() { headers = ["entry.hpp"], selection = selection }
+        };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
 

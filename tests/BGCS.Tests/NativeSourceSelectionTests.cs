@@ -20,8 +20,11 @@ public sealed class NativeSourceSelectionTests
         using Scratch scratch = new();
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "dependency.h"), "struct Item { int value; }; int dependency_only(void);");
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "entry.h"), "#include \"dependency.h\"\nint read_item(const struct Item* input); int unselected_entry(void);");
-        BindingConfiguration configuration = Configuration(language) with { source = Configuration(language).source with
-            { selection = new() { includeDeclarations = ["read_item"] } } };
+        BindingConfiguration configuration = Configuration(language) with
+        {
+            source = Configuration(language).source with
+            { selection = new() { includeDeclarations = ["read_item"] } }
+        };
         await using BindingHost host = Host();
         InspectionResult result = await host.InspectAsync(new(configuration, scratch.root));
         Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics));
@@ -45,8 +48,11 @@ public sealed class NativeSourceSelectionTests
         using Scratch scratch = new();
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "dependency.h"), "struct Item { int value; };");
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "entry.h"), "#include \"dependency.h\"\nint read_item(const struct Item* input);");
-        BindingConfiguration configuration = Configuration(language) with { source = Configuration(language).source with
-            { selection = new() { includeDeclarations = ["read_item"], excludeHeaders = ["dependency.h"] } } };
+        BindingConfiguration configuration = Configuration(language) with
+        {
+            source = Configuration(language).source with
+            { selection = new() { includeDeclarations = ["read_item"], excludeHeaders = ["dependency.h"] } }
+        };
         await using BindingHost host = Host();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.False(result.success);
@@ -63,8 +69,11 @@ public sealed class NativeSourceSelectionTests
         await File.WriteAllTextAsync(Path.Combine(scratch.root, "entry.h"), """
             namespace Demo { class Service { public: explicit Service(int value = 1) : m_value(value) {} int Read() const { return m_value; } private: int m_value; }; }
             """);
-        BindingConfiguration configuration = Configuration(SourceLanguage.Cpp) with { source = Configuration(SourceLanguage.Cpp).source with
-            { selection = new() { includeDeclarations = ["Demo::Service"], excludeDeclarations = ["Demo::Service::Service(int)"] } } };
+        BindingConfiguration configuration = Configuration(SourceLanguage.Cpp) with
+        {
+            source = Configuration(SourceLanguage.Cpp).source with
+            { selection = new() { includeDeclarations = ["Demo::Service"], excludeDeclarations = ["Demo::Service::Service(int)"] } }
+        };
         await using BindingHost host = Host();
         InspectionResult result = await host.InspectAsync(new(configuration, scratch.root));
         Assert.True(result.success, string.Join(Environment.NewLine, result.diagnostics));
@@ -110,8 +119,11 @@ public sealed class NativeSourceSelectionTests
         Assert.Equal(new[] { "create_item", "release_item" }, target.interop.functions.Select(function => function.sourceQualifiedName ?? function.exportName)
             .Where(name => name is "create_item" or "release_item").Order(StringComparer.Ordinal));
         Assert.DoesNotContain(target.interop.functions, function => (function.sourceQualifiedName ?? function.exportName) == "unrelated");
-        GenerationResult excluded = await host.GenerateAsync(new(configuration with { source = configuration.source with
-            { selection = configuration.source.selection with { excludeDeclarations = ["release_item"] } } }, scratch.root));
+        GenerationResult excluded = await host.GenerateAsync(new(configuration with
+        {
+            source = configuration.source with
+            { selection = configuration.source.selection with { excludeDeclarations = ["release_item"] } }
+        }, scratch.root));
         Assert.False(excluded.success);
         Assert.Contains("required native storage or cleanup", excluded.GetDiagnosticSummary());
         Assert.Contains("release_item", excluded.GetDiagnosticSummary());
@@ -224,9 +236,11 @@ public sealed class NativeSourceSelectionTests
 
     private static BindingConfiguration Configuration(SourceLanguage language) => new()
     {
-        schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" },
+        schemaVersion = 2,
+        library = new() { id = "selection", nativeName = "selection" },
         source = new() { language = language, headers = ["entry.h"], parseMacros = false },
-        api = new() { @namespace = "Generated.Selection", name = "SelectionApi" }, cache = new() { enabled = false }
+        api = new() { @namespace = "Generated.Selection", name = "SelectionApi" },
+        cache = new() { enabled = false }
     };
 
     private static BindingHost Host()

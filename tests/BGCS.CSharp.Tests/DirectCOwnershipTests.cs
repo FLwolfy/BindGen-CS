@@ -123,12 +123,17 @@ public sealed class DirectCOwnershipTests
     [InlineData("Volatile", null, false)]
     [InlineData(null, "Volatile", true)]
     [InlineData("Unknown", "Unknown", false)]
-    public void OwnedPointerQualifiersCannotBeDroppedByTypedReceiverPresentation(string? ownedQualifier, string? receiverQualifier, bool allowed)
-    {
+    public void OwnedPointerQualifiersCannotBeDroppedByTypedReceiverPresentation(
+        string? ownedQualifier,
+        string? receiverQualifier,
+        bool allowed
+    ) {
         InteropModule baseline = Module();
         var types = baseline.types.ToBuilder();
-        StableId Pointer(string prefix, string? qualifier)
-        {
+        StableId Pointer(
+            string prefix,
+            string? qualifier
+        ) {
             if (qualifier is null) return new("pointer");
             InteropType qualified = new(new(prefix + "-qualified"), qualifier + " Widget", NativeTypeCategory.Qualified, 4, 4)
             { elementType = new("widget"), qualifier = qualifier };
@@ -172,8 +177,10 @@ public sealed class DirectCOwnershipTests
     internal static ManagedProjectionRequest Request() => new("Generated.COwnedUnit", "Api")
     { memberFunctions = [new("get", "Widget", "self") { objectName = "WidgetObject", releaseDomain = "a" }] };
 
-    internal static InteropModule Module(string? condition = null, string? receiverCondition = null)
-    {
+    internal static InteropModule Module(
+        string? condition = null,
+        string? receiverCondition = null
+    ) {
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:explicit-c-ownership");
         InteropType empty = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
@@ -189,7 +196,8 @@ public sealed class DirectCOwnershipTests
         if (condition == "unknown-evidence") owned = owned with { evidence = new(EvidenceLevel.Inferred, "fixture:guess") };
         if (condition == "unknown-thread") owned = owned with { releaseThreadDomain = "unknown" };
         InteropFunction make = new(new("make"), "make", condition == "scalar-return" ? integer.id : pointer.id,
-            condition == "unproven-input" ? [new(new("input"), "input", pointer.id)] : [], "C") { returnOwnership = owned };
+            condition == "unproven-input" ? [new(new("input"), "input", pointer.id)] : [], "C")
+        { returnOwnership = owned };
         InteropParameter releaseParameter = new(new("release-self"), "self", condition == "wrong-release-pointer" ? otherPointer.id : pointer.id)
         { ownership = condition == "release-protocol" ? new(NativeOwnershipKind.Transferred, new(NativeLifetimeKind.Call, null, evidence), evidence) : null };
         InteropFunction release = new(new("release"), "release", condition == "wrong-release-return" ? integer.id : empty.id, [releaseParameter], "C");
@@ -205,6 +213,9 @@ public sealed class DirectCOwnershipTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> contents { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { contents.Add(relativePath, content); return Path.GetFullPath(relativePath); }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { contents.Add(relativePath, content); return Path.GetFullPath(relativePath); }
     }
 }

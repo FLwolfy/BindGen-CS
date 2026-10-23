@@ -30,8 +30,10 @@ public abstract class GroupedConfigurationEntryTestBase
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    protected static async Task VerifyAsync(string fixture, string variant)
-    {
+    protected static async Task VerifyAsync(
+        string fixture,
+        string variant
+    ) {
         string input = Path.Combine(AppContext.BaseDirectory, "groupedEntryTests", fixture);
         Assert.True(Directory.Exists(input), "Grouped fixture was not deployed: " + input);
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-grouped-entry-" + Guid.NewGuid().ToString("N"));
@@ -97,8 +99,11 @@ public abstract class GroupedConfigurationEntryTestBase
         }
     }
 
-    private static async Task CompileSdkConsumerAsync(BindingConfiguration configuration, IEnumerable<string> generatedSources, string temporary)
-    {
+    private static async Task CompileSdkConsumerAsync(
+        BindingConfiguration configuration,
+        IEnumerable<string> generatedSources,
+        string temporary
+    ) {
         string consumer = Path.Combine(temporary, "SdkConsumer");
         Directory.CreateDirectory(consumer);
         string[] sources = generatedSources.Concat(configuration.api.projectionInputs.sources.Select(path => Path.GetFullPath(path, temporary)))
@@ -106,7 +111,10 @@ public abstract class GroupedConfigurationEntryTestBase
         string[] references = configuration.api.projectionInputs.references.Select(path => Path.GetFullPath(path, temporary))
             .Concat(configuration.runtime.mode == "source" ? [] : new[] { typeof(NativeModuleSession).Assembly.Location }).Distinct(StringComparer.Ordinal).ToArray();
         string compile = string.Join(Environment.NewLine, sources.Select(path => "<Compile Include=\"" + SecurityElement.Escape(path) + "\" />"));
-        string metadata = string.Join(Environment.NewLine, references.Select((path, index) => "<Reference Include=\"FixtureReference" + index + "\"><HintPath>" + SecurityElement.Escape(path) + "</HintPath></Reference>"));
+        string metadata = string.Join(Environment.NewLine, references.Select((
+            path,
+            index
+        ) => "<Reference Include=\"FixtureReference" + index + "\"><HintPath>" + SecurityElement.Escape(path) + "</HintPath></Reference>"));
         await File.WriteAllTextAsync(Path.Combine(consumer, "Consumer.csproj"), $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
@@ -124,9 +132,13 @@ public abstract class GroupedConfigurationEntryTestBase
         string dotnet = string.IsNullOrWhiteSpace(sdk) ? "dotnet" : Path.Combine(sdk, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
         ProcessStartInfo start = new(dotnet)
         {
-            WorkingDirectory = consumer, UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
+            WorkingDirectory = consumer,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
         };
         foreach (string argument in new[] { "build", "Consumer.csproj", "-c", "Release", "-v:minimal", "-m:1", "-nr:false", "-p:UseSharedCompilation=false" }) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the grouped fixture SDK consumer.");
@@ -145,8 +157,11 @@ public abstract class GroupedConfigurationEntryTestBase
         Assert.True(File.Exists(assembly), "The real SDK did not produce the grouped consumer assembly: " + assembly + Environment.NewLine + buildOutput);
     }
 
-    private static void VerifyConfiguration(BindingConfiguration configuration, JsonObject expected, string temporary)
-    {
+    private static void VerifyConfiguration(
+        BindingConfiguration configuration,
+        JsonObject expected,
+        string temporary
+    ) {
         JsonNode actual = JsonSerializer.SerializeToNode(configuration, s_json)!;
         foreach ((string pointer, JsonNode? value) in expected)
         {
@@ -160,8 +175,10 @@ public abstract class GroupedConfigurationEntryTestBase
         }
     }
 
-    private static void NormalizePaths(JsonNode? node, string temporary)
-    {
+    private static void NormalizePaths(
+        JsonNode? node,
+        string temporary
+    ) {
         if (node is JsonArray array)
             for (int index = 0; index < array.Count; index++)
             {
@@ -171,14 +188,21 @@ public abstract class GroupedConfigurationEntryTestBase
             }
     }
 
-    private static CSharpCompilation Compile(BindingConfiguration configuration, string[] paths, string[] texts, bool sdkBuild)
-    {
+    private static CSharpCompilation Compile(
+        BindingConfiguration configuration,
+        string[] paths,
+        string[] texts,
+        bool sdkBuild
+    ) {
         string framework = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         string[] trusted = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? throw new InvalidOperationException("Framework metadata is unavailable."))
             .Split(Path.PathSeparator).Where(path => Path.GetDirectoryName(path) == framework).ToArray();
         IEnumerable<string> references = configuration.runtime.mode == "source" ? trusted : trusted.Append(typeof(NativeModuleSession).Assembly.Location);
         CSharpCompilation compilation = CSharpCompilation.Create("Grouped.Entry." + Guid.NewGuid().ToString("N"),
-            paths.Select((path, index) => CSharpSyntaxTree.ParseText(texts[index], new CSharpParseOptions(LanguageVersion.CSharp14), path)),
+            paths.Select((
+                path,
+                index
+            ) => CSharpSyntaxTree.ParseText(texts[index], new CSharpParseOptions(LanguageVersion.CSharp14), path)),
             references.Distinct(StringComparer.Ordinal).Select(path => MetadataReference.CreateFromFile(path)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true, nullableContextOptions: NullableContextOptions.Enable,
                 generalDiagnosticOption: ReportDiagnostic.Error));
@@ -194,8 +218,10 @@ public abstract class GroupedConfigurationEntryTestBase
         return compilation;
     }
 
-    private static void VerifySymbols(CSharpCompilation compilation, JsonObject expected)
-    {
+    private static void VerifySymbols(
+        CSharpCompilation compilation,
+        JsonObject expected
+    ) {
         foreach (JsonNode? item in expected["absentTypes"]?.AsArray() ?? [])
             Assert.Null(compilation.GetTypeByMetadataName(item!.GetValue<string>()));
         foreach (JsonNode? item in expected["types"]?.AsArray() ?? [])

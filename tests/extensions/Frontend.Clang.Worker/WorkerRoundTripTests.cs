@@ -38,7 +38,8 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
             NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
             FrontendResult parsed = await CreateClient().ParseAsync(new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = root, parseMacros = false,
+                pathBase = root,
+                parseMacros = false,
                 headerSearchPaths = ToolchainResolver.ResolveHeaderSearchPaths(target, SourceLanguage.Cpp).ToImmutableArray()
             }, CancellationToken.None);
             Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
@@ -402,7 +403,9 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
             NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
             FrontendResult result = await CreateClient().ParseAsync(new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = temporary, languageStandard = "c++23", parseMacros = false
+                pathBase = temporary,
+                languageStandard = "c++23",
+                parseMacros = false
             }, CancellationToken.None);
             Assert.Empty(result.module.diagnostics.Where(diagnostic => diagnostic.severity.ToString() == "Error"));
             Assert.Empty(new NativeModuleVerifier().Validate(result.module));
@@ -425,7 +428,9 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
             NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
             FrontendResult result = await CreateClient().ParseAsync(new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = temporary, languageStandard = "c++23", parseMacros = false
+                pathBase = temporary,
+                languageStandard = "c++23",
+                parseMacros = false
             }, CancellationToken.None);
             var outer = Assert.Single(result.module.declarations.Where(declaration => declaration.name == "Outer"));
             var inner = Assert.Single(result.module.declarations.Where(declaration => declaration.name == "Inner"));
@@ -438,8 +443,10 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
     [Theory]
     [InlineData("-fsigned-char", true)]
     [InlineData("-funsigned-char", false)]
-    public async Task PlainCharSignedness_ComesFromCompilerFactsRatherThanHostAssumptions(string flag, bool signed)
-    {
+    public async Task PlainCharSignedness_ComesFromCompilerFactsRatherThanHostAssumptions(
+        string flag,
+        bool signed
+    ) {
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-worker-char-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -449,7 +456,9 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
             NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
             FrontendResult result = await CreateClient().ParseAsync(new(target, SourceLanguage.C, [header])
             {
-                pathBase = temporary, parseMacros = false, arguments = [flag]
+                pathBase = temporary,
+                parseMacros = false,
+                arguments = [flag]
             }, CancellationToken.None);
             var type = Assert.Single(result.module.types.Where(type => type.primitiveKind == "Char"));
             Assert.Equal(signed, type.isSigned);
@@ -470,7 +479,8 @@ public sealed class WorkerRoundTripTests : WorkerTestHost
             NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
             FrontendResult result = await CreateClient().ParseAsync(new(target, SourceLanguage.C, [header])
             {
-                pathBase = temporary, parseMacros = false
+                pathBase = temporary,
+                parseMacros = false
             }, CancellationToken.None);
             var parameter = Assert.Single(result.module.declarations.Where(declaration => declaration.name == "values"));
             var outer = result.module.GetType(parameter.type!.Value);

@@ -37,10 +37,16 @@ public sealed class SiblingHeaderRelocationTests
                     "#include \"Left/common.h\"\n#include \"Right/common.h\"\n#define REPLACED 0\n#undef REPLACED\n#define REPLACED 64\n#define REMOVED 1\n#undef REMOVED\nvoid Observe(Left* left, Right* right);\n");
                 BindingConfiguration configuration = new()
                 {
-                    schemaVersion = 2, library = new() { id = "sibling", nativeName = "sibling" },
+                    schemaVersion = 2,
+                    library = new() { id = "sibling", nativeName = "sibling" },
                     source = new() { headers = ["../headers/native.h"], includeDirectories = ["../headers"] },
-                    api = new() { @namespace = "Generated.Siblings", name = "SiblingApi", importMode = mode,
-                        names = ImmutableDictionary<string, string>.Empty.Add("REPLACED", "ObservedValue").Add("REMOVED", "RemovedValue") },
+                    api = new()
+                    {
+                        @namespace = "Generated.Siblings",
+                        name = "SiblingApi",
+                        importMode = mode,
+                        names = ImmutableDictionary<string, string>.Empty.Add("REPLACED", "ObservedValue").Add("REMOVED", "RemovedValue")
+                    },
                     cache = new() { enabled = false }
                 };
                 await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();

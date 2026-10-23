@@ -15,7 +15,7 @@ public sealed class DotNetInteropPlugin : IBindingPlugin, ICacheFingerprintProvi
         => ExtensionFingerprint.Capture(GetType(), cancellationToken);
 
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.extensions.dotnet", "4.0.0", [
+    public PluginDescriptor descriptor => new("bgcs.extensions.dotnet", "4.1.0", [
         new("dotnet.execution", ExtensionPort.ManagedRuntimeProvider),
         new("dotnet.call-abi", ExtensionPort.CallAbiProvider)]);
 

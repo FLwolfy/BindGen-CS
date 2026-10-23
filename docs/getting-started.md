@@ -1,6 +1,6 @@
 # Getting Started
 
-[Wiki](README.md) | [中文](getting-started.cn.md)
+[Documentation](README.md) | [中文](getting-started.cn.md)
 
 ## Requirements and platform evidence
 
@@ -27,7 +27,7 @@ proved all of its ABI, runtime or import combinations.
 Install the released command-line tool:
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.0.0
+dotnet tool install --global BindGen-CS --version 4.1.0
 bindgen-cs --help
 ```
 
@@ -96,7 +96,7 @@ fields and old flat configurations are rejected. Create a new configuration with
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="4.0.0" />
+  <PackageReference Include="BGCS.Runtime" Version="4.1.0" />
 </ItemGroup>
 ```
 

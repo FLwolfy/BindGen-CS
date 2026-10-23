@@ -13,8 +13,10 @@ public sealed class TargetPointerTests : FrontendTestHost
     [Theory]
     [InlineData("windows-x86-msvc", 4)]
     [InlineData("linux-arm64-gnu", 8)]
-    public async Task CanonicalPointerRetainsTheParsedTargetWidth(string targetId, int pointerSize)
-    {
+    public async Task CanonicalPointerRetainsTheParsedTargetWidth(
+        string targetId,
+        int pointerSize
+    ) {
         Assert.True(new DesktopTargetProvider().TryResolve(new(new(targetId)), out NativeTargetDescriptor? target));
         NativeModule module = (await ParseSourceAsync("typedef int Value; Value* value;", target)).module;
         Assert.DoesNotContain(module.diagnostics, value => value.isFailure);

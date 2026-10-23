@@ -131,14 +131,17 @@ public sealed class ManagedConstantCompilationInputTests
     [InlineData(true, false)]
     [InlineData(true, true)]
     [InlineData(false, false)]
-    public void OptionalFrameworkForwardersRemainMissingSymbolsWhileExternalClosuresStayStrict(bool framework, bool selected)
-    {
+    public void OptionalFrameworkForwardersRemainMissingSymbolsWhileExternalClosuresStayStrict(
+        bool framework,
+        bool selected
+    ) {
         string dependencyName = "OptionalForwardedValues" + Guid.NewGuid().ToString("N");
         ManagedAssemblyInput dependency = AssemblyInput(dependencyName,
             "namespace Forwarded { public static class Values { public const long Answer = 99L; } }");
         ManagedAssemblyInput facade = AssemblyInput("OptionalForwardingFacade" + Guid.NewGuid().ToString("N"),
             "[assembly: global::System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::Forwarded.Values))]",
-            [MetadataReference.CreateFromImage(dependency.image)]) with { isFramework = framework };
+            [MetadataReference.CreateFromImage(dependency.image)]) with
+        { isFramework = framework };
         string corePath = typeof(object).Assembly.Location;
         ManagedSourceInput source = Source("namespace Vendor { public static class Values { public const long Answer = "
             + (selected ? "global::Forwarded.Values.Answer" : "43L") + "; } }");
@@ -171,15 +174,20 @@ public sealed class ManagedConstantCompilationInputTests
         return new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()) { managedProjection = inputs });
     }
 
-    private static ManagedSourceInput Source(string text, string? path = null)
-    {
+    private static ManagedSourceInput Source(
+        string text,
+        string? path = null
+    ) {
         byte[] image = Encoding.UTF8.GetBytes(text);
         return new(path ?? Path.Combine(Path.GetTempPath(), "bgcs-constant-source-" + Guid.NewGuid().ToString("N") + ".cs"),
             new(Convert.ToHexStringLower(SHA256.HashData(image))), image.ToImmutableArray(), text);
     }
 
-    private static ManagedAssemblyInput AssemblyInput(string name, string source, ImmutableArray<MetadataReference> additional = default)
-    {
+    private static ManagedAssemblyInput AssemblyInput(
+        string name,
+        string source,
+        ImmutableArray<MetadataReference> additional = default
+    ) {
         string frameworkDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
             .Where(path => Path.GetDirectoryName(path) == frameworkDirectory).Select(path => MetadataReference.CreateFromFile(path)).Cast<MetadataReference>();

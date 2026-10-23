@@ -1,6 +1,6 @@
 # Configuration Guide
 
-[Wiki](README.md) | [中文](configuration-guide.cn.md) | [Generated field reference](generated/config-reference.md)
+[Documentation](README.md) | [中文](configuration-guide.cn.md) | [Generated field reference](generated/config-reference.md)
 
 BGCS 4.0 uses one strict grouped `bindgen.json` for C and C++. The generator, Runtime
 and default consumers use .NET 10 / C# 14. Configuration values become an immutable
@@ -874,7 +874,7 @@ The generated convenience method hides only the independently selected integral 
 
 Native C++ text values can also be copied into a managed `string` before their creating call ends. This requires a fresh owned holder, exact count and bounded bulk-copy exports, explicit string encoding, and a same-creating-call cleanup capability. Exact standard `basic_string` types with default `char_traits` and `allocator`, and `filesystem::path`, can carry compiler-checked finite cleanup evidence. This permits synchronous destruction on the creating caller thread; it does not authorize escaping handles, arbitrary cleanup threads or finalizer destruction. Custom traits, allocators and custom families do not inherit that capability from a familiar type name or a `noexcept` declaration.
 
-Use exact named aliases such as `std::string`, `std::u16string` and `std::u32string` in `cpp.familyBindings[].nativeType` to attach the corresponding explicit `stringEncoding`. These alias selectors still resolve actual compiler template arguments and reject conflicting bindings. A `char` string does not automatically become UTF-8. Path conversion uses the selected `pathFormat`, including `nativeUtf8` when native separators must be preserved. `api.maximumValueStringCodeUnits` defaults to 1,048,576 and bounds the complete copied extent. Unknown encoding or cleanup facts leave the exact Raw holder operations available with an omission diagnostic.
+Use exact named aliases such as `std::string`, `std::u16string` and `std::u32string` in `bridge.cpp.familyBindings[].nativeType` to attach the corresponding explicit `stringEncoding`. These alias selectors still resolve actual compiler template arguments and reject conflicting bindings. A `char` string does not automatically become UTF-8. Path conversion uses the selected `pathFormat`, including `nativeUtf8` when native separators must be preserved. `api.maximumValueStringCodeUnits` defaults to 1,048,576 and bounds the complete copied extent. Unknown encoding or cleanup facts leave the exact Raw holder operations available with an omission diagnostic.
 
 The text-returning facade retains one resource lease and one call throughout factory invocation, count validation, one bulk copy, strict decoding and matching destruction. Empty text remains `string.Empty`; embedded zero code units are preserved. A count/copy mismatch, invalid Unicode or an excessive extent still runs matching cleanup. An unexpected destruction failure retains the module and faults unload without retrying an ambiguous release; combined copy and cleanup failures remain observable together.
 

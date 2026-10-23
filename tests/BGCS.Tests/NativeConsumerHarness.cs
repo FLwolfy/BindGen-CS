@@ -26,8 +26,11 @@ internal static class NativeConsumerHarness
 {
     // Test fixtures compile their own sources after exercising the public generator.
     // This is intentionally not a product provider, manifest or packaging pipeline.
-    internal static async Task<GenerationResult> GenerateAndCompileAsync(BindingHost host, GenerationRequest request, bool compileManaged = false)
-    {
+    internal static async Task<GenerationResult> GenerateAndCompileAsync(
+        BindingHost host,
+        GenerationRequest request,
+        bool compileManaged = false
+    ) {
         GenerationResult generated = await host.GenerateAsync(request);
         if (generated.success)
         {
@@ -41,8 +44,10 @@ internal static class NativeConsumerHarness
         return generated;
     }
 
-    internal static async Task CompileManagedAsync(GenerationResult generated, GenerationRequest request)
-    {
+    internal static async Task CompileManagedAsync(
+        GenerationResult generated,
+        GenerationRequest request
+    ) {
         Assert.True(generated.success, generated.GetDiagnosticSummary());
         new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
         foreach (TargetInspection target in generated.targetModels)
@@ -60,7 +65,10 @@ internal static class NativeConsumerHarness
                 Path.GetFileName(generated.outputRoot), target.targetId, "managed-only");
             Directory.CreateDirectory(consumer);
             string compile = string.Join(Environment.NewLine, sources.Select(path => "<Compile Include=\"" + SecurityElement.Escape(path) + "\" />"));
-            string metadata = string.Join(Environment.NewLine, references.Select((path, index) => "<Reference Include=\"FixtureReference" + index + "\"><HintPath>" + SecurityElement.Escape(path) + "</HintPath></Reference>"));
+            string metadata = string.Join(Environment.NewLine, references.Select((
+                path,
+                index
+            ) => "<Reference Include=\"FixtureReference" + index + "\"><HintPath>" + SecurityElement.Escape(path) + "</HintPath></Reference>"));
             await File.WriteAllTextAsync(Path.Combine(consumer, "Consumer.csproj"), $$"""
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
@@ -83,9 +91,14 @@ internal static class NativeConsumerHarness
         new ArtifactDigestVerifier(TestHostPaths.Create()).Verify(generated.outputRoot, generated.artifacts, [".bgcs-artifacts.json"]);
     }
 
-    internal static async Task CompileNativeFixturesAsync(GenerationResult generated, string sourceRoot, string libraryName,
-        IEnumerable<string>? explicitSources = null, IEnumerable<string>? arguments = null, string? languageStandard = null)
-    {
+    internal static async Task CompileNativeFixturesAsync(
+        GenerationResult generated,
+        string sourceRoot,
+        string libraryName,
+        IEnumerable<string>? explicitSources = null,
+        IEnumerable<string>? arguments = null,
+        string? languageStandard = null
+    ) {
         string[] fixtureSources = (explicitSources ?? Directory.GetFiles(sourceRoot).Where(IsSource)).Select(Path.GetFullPath).ToArray();
         foreach (TargetInspection target in generated.targetModels)
         {
@@ -110,10 +123,15 @@ internal static class NativeConsumerHarness
         static bool IsSource(string path) => Path.GetExtension(path) is ".c" or ".cpp" or ".cc" or ".cxx";
     }
 
-    internal static async Task CompileSharedAsync(IEnumerable<string> sources, string binary, string sourceRoot,
-        IEnumerable<string>? arguments = null, IEnumerable<string>? includeDirectories = null, string? languageStandard = null,
-        NativeTargetDescriptor? parserTarget = null)
-    {
+    internal static async Task CompileSharedAsync(
+        IEnumerable<string> sources,
+        string binary,
+        string sourceRoot,
+        IEnumerable<string>? arguments = null,
+        IEnumerable<string>? includeDirectories = null,
+        string? languageStandard = null,
+        NativeTargetDescriptor? parserTarget = null
+    ) {
         string[] sourceFiles = sources.ToArray();
         NativeTargetDescriptor? appleTarget = OperatingSystem.IsMacOS() ? parserTarget ?? ParserTarget(SourceLanguage.Cpp) : null;
         Directory.CreateDirectory(Path.GetDirectoryName(binary)!);
@@ -176,9 +194,11 @@ internal static class NativeConsumerHarness
         return target;
     }
 
-    internal static IEnumerable<string> ManifestSystemIncludeArguments(NativeSourceManifest manifest,
-        IReadOnlyDictionary<string, string> roots, NativeTargetDescriptor? parserTarget)
-    {
+    internal static IEnumerable<string> ManifestSystemIncludeArguments(
+        NativeSourceManifest manifest,
+        IReadOnlyDictionary<string, string> roots,
+        NativeTargetDescriptor? parserTarget
+    ) {
         HashSet<string> compilerSdk = new(StringComparer.Ordinal);
         if (OperatingSystem.IsMacOS())
         {
@@ -198,8 +218,10 @@ internal static class NativeConsumerHarness
         }
     }
 
-    internal static IEnumerable<string> CompilerSdkArguments(SourceLanguage language = SourceLanguage.Cpp, NativeTargetDescriptor? parserTarget = null)
-    {
+    internal static IEnumerable<string> CompilerSdkArguments(
+        SourceLanguage language = SourceLanguage.Cpp,
+        NativeTargetDescriptor? parserTarget = null
+    ) {
         if (OperatingSystem.IsWindows())
         {
             NativeTargetDescriptor target = ParserTarget(SourceLanguage.Cpp);
@@ -240,8 +262,11 @@ internal static class NativeConsumerHarness
         yield return Path.Combine(sdk.sdkRoot, "Lib", sdk.sdkVersion, "um", "x64");
     }
 
-    internal static async Task<string> RunAsync(string executable, IEnumerable<string> arguments, string directory)
-    {
+    internal static async Task<string> RunAsync(
+        string executable,
+        IEnumerable<string> arguments,
+        string directory
+    ) {
         ProcessStartInfo start = new(executable) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start fixture compiler.");
@@ -254,8 +279,10 @@ internal static class NativeConsumerHarness
         return diagnostics;
     }
 
-    internal static object? InvokeFactory(this MethodInfo method, object?[] arguments)
-    {
+    internal static object? InvokeFactory(
+        this MethodInfo method,
+        object?[] arguments
+    ) {
         ParameterInfo[] parameters = method.GetParameters();
         if (arguments.Length > parameters.Length) throw new ArgumentException("Too many explicit factory arguments.", nameof(arguments));
         object?[] supplied = new object?[parameters.Length];
@@ -268,9 +295,16 @@ internal static class NativeConsumerHarness
         return method.Invoke(null, supplied);
     }
 
-    internal static async Task<object?> CompileAndInvokeAsync(string managedRoot, string nativeBinary, string nativeLibraryName,
-        string probeSource, string probeType, string root, bool sourceRuntime, IEnumerable<string>? additionalSources = null)
-    {
+    internal static async Task<object?> CompileAndInvokeAsync(
+        string managedRoot,
+        string nativeBinary,
+        string nativeLibraryName,
+        string probeSource,
+        string probeType,
+        string root,
+        bool sourceRuntime,
+        IEnumerable<string>? additionalSources = null
+    ) {
         string targetRoot = Directory.GetParent(managedRoot)!.FullName;
         string outputRoot = Directory.GetParent(targetRoot)!.FullName;
         using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(outputRoot, ".bgcs-artifacts.json")));
@@ -310,7 +344,11 @@ internal static class NativeConsumerHarness
         try
         {
             Assembly assembly = load.LoadFromStream(image);
-            NativeLibrary.SetDllImportResolver(assembly, (name, _, _) => name == nativeLibraryName ? native : 0);
+            NativeLibrary.SetDllImportResolver(assembly, (
+                name,
+                _,
+                _
+            ) => name == nativeLibraryName ? native : 0);
             return assembly.GetType(probeType, true)!.GetMethod("Run")!.Invoke(null, [nativeBinary]);
         }
         finally { load.Unload(); NativeLibrary.Free(native); }

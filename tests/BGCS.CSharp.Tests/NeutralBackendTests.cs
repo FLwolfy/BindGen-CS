@@ -48,7 +48,8 @@ public sealed class NeutralBackendTests
         InteropFunction setter = new(new("set-message-callback"), "set_message_callback", nothing.id,
             [new(new("callback-argument"), "callback", callback.id)], "C");
         InteropModule module = new("messages", "windows-x64-msvc", 8,
-            [nothing, incomplete, alias, pointer, signature, callback], [setter], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [nothing, incomplete, alias, pointer, signature, callback], [setter], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Messages", "CallbackApi"), CancellationToken.None);
         MemorySink sink = new();
         EmissionRequest request = new("callback", sink) { importMode = mode };
@@ -136,8 +137,10 @@ public sealed class NeutralBackendTests
     [InlineData(4, true)]
     [InlineData(8, false)]
     [InlineData(8, true)]
-    public async Task PointerArrays_UseExactNativeSlotsAndCheckedPointerAccess(int pointerSize, bool explicitName)
-    {
+    public async Task PointerArrays_UseExactNativeSlotsAndCheckedPointerAccess(
+        int pointerSize,
+        bool explicitName
+    ) {
         ManagedApiModel original = Model();
         InteropType integer = original.interop.types[0];
         InteropType pointer = new(new("integer-pointer"), "int*", NativeTypeCategory.Pointer, pointerSize, pointerSize) { elementType = integer.id };
@@ -176,7 +179,8 @@ public sealed class NeutralBackendTests
         InteropType integer = Model().interop.types[0];
         Evidence evidence = new(EvidenceLevel.UserAsserted, "test:explicit-native-text-contract");
         StringContract contract = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input,
-            new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, retainsPointer = false, allowsNull = false };
+            new(NativeLifetimeKind.Call, null, evidence), evidence)
+        { zeroTerminated = true, retainsPointer = false, allowsNull = false };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = contract };
         InteropFunction function = new(new("utf8-size"), "utf8_size", integer.id, [parameter], "C");
         InteropModule interop = new("example", "windows-x64-msvc", 8, [octet, pointer, integer], [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
@@ -198,7 +202,8 @@ public sealed class NeutralBackendTests
             Assert.IsType<ArgumentException>(Assert.Throws<TargetInvocationException>(() => method.Invoke(context, ["A\0B"])).InnerException);
         }
         InteropModule inferred = new("example", interop.targetId, 8, interop.types,
-            [function with { parameters = [parameter with { text = contract with { evidence = new(EvidenceLevel.Inferred, "name-guess") } }] }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [function with { parameters = [parameter with { text = contract with { evidence = new(EvidenceLevel.Inferred, "name-guess") } }] }], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Empty(Assert.Single(new DefaultManagedProjection().Project(inferred, new("Generated.Example", "NativeApi"), CancellationToken.None).methods).stringInputs);
     }
 
@@ -209,15 +214,18 @@ public sealed class NeutralBackendTests
     [InlineData(2, true)]
     [InlineData(4, false)]
     [InlineData(4, true)]
-    public async Task ExplicitWideText_UsesTheNativeWidthAndAlignmentWithPackageOrSourceRuntime(int width, bool sourceRuntime)
-    {
+    public async Task ExplicitWideText_UsesTheNativeWidthAndAlignmentWithPackageOrSourceRuntime(
+        int width,
+        bool sourceRuntime
+    ) {
         InteropType unit = new(new("wide-unit"), "wchar_t", NativeTypeCategory.Primitive, width, width) { primitiveKind = "WChar" };
         InteropType aligned = new(new("aligned-unit"), "AlignedWide", NativeTypeCategory.Alias, width, 64) { elementType = unit.id };
         InteropType pointer = new(new("wide-pointer"), "const AlignedWide*", NativeTypeCategory.Pointer, 8, 8) { elementType = aligned.id };
         InteropType integer = new(new("integer"), "unsigned int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "UnsignedInt", isSigned = false };
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:wide-text");
         StringContract text = new(width == 2 ? NativeTextEncoding.Utf16 : NativeTextEncoding.Utf32, width, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input,
-            new(NativeLifetimeKind.Call, null, evidence), evidence) { byteOrder = NativeTextByteOrder.Native, zeroTerminated = true, retainsPointer = false, allowsNull = false };
+            new(NativeLifetimeKind.Call, null, evidence), evidence)
+        { byteOrder = NativeTextByteOrder.Native, zeroTerminated = true, retainsPointer = false, allowsNull = false };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = text };
         InteropFunction first = new(new("first-unit"), "first_unit", integer.id, [parameter], "C");
         InteropFunction last = new(new("next-unit"), "next_unit", integer.id, [parameter], "C");
@@ -266,7 +274,8 @@ public sealed class NeutralBackendTests
         InteropType flexible = new(new("flexible"), "int[]", NativeTypeCategory.Array, null, 4) { elementType = integer.id };
         InteropType packet = new(new("packet"), "Packet", NativeTypeCategory.Record, 4, 4)
         {
-            declarationName = "Packet", recordKind = "Struct",
+            declarationName = "Packet",
+            recordKind = "Struct",
             fields = [new(new("count"), "count", integer.id, 0, 0, null), new(new("data"), "data", flexible.id, 4, 32, null)]
         };
         InteropModule interop = new("example", original.interop.targetId, 8, original.interop.types.AddRange(ImmutableArray.Create(flexible, packet)), original.interop.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
@@ -288,7 +297,8 @@ public sealed class NeutralBackendTests
     {
         ManagedApiModel model = Model();
         InteropModule interop = new("example", model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            [model.interop.functions[0] with { hasPrototype = false }], []) { byteOrder = model.interop.byteOrder };
+            [model.interop.functions[0] with { hasPrototype = false }], [])
+        { byteOrder = model.interop.byteOrder };
         model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         MemorySink sink = new();
         await Assert.ThrowsAsync<CSharpPlanningException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
@@ -420,9 +430,15 @@ public sealed class NeutralBackendTests
     };
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Add(int left, int right) => left + right;
+    private static int Add(
+        int left,
+        int right
+    ) => left + right;
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int AddAlternate(int left, int right) => left + right + 5;
+    private static int AddAlternate(
+        int left,
+        int right
+    ) => left + right + 5;
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Notify() { }
 
@@ -444,10 +460,16 @@ public sealed class NeutralBackendTests
     internal sealed class MemorySink : IArtifactSink
     {
         internal readonly Dictionary<string, string> sources = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 
-    private sealed record CompiledSources(AssemblyLoadContext context, Assembly assembly) : IDisposable
+    private sealed record CompiledSources(
+        AssemblyLoadContext context,
+        Assembly assembly
+    ) : IDisposable
     {
         public void Dispose() => context.Unload();
     }

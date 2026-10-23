@@ -21,8 +21,10 @@ public sealed class NativeValueReceiverTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ValueMembersPreserveOriginalInRefAndSpanStorageAcrossGcAndContexts(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ValueMembersPreserveOriginalInRefAndSpanStorageAcrossGcAndContexts(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-value-receiver-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -76,17 +78,31 @@ public sealed class NativeValueReceiverTests
                 API const void* value_held_address(void){return held_address;}
                 """);
             string[] functions = ["value_add", "value_read", "value_reset", "value_alias", "value_validate", "value_hold"];
-            ValueParameterConfiguration Value(string function, string parameter, NativeParameterDirection direction) => new()
+            ValueParameterConfiguration Value(
+                string function,
+                string parameter,
+                NativeParameterDirection direction
+            ) => new()
             { function = function, parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "values", nativeName = "values_fixture" },
-                source = new() { language = SourceLanguage.C, headers = ["value.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-                    selection = new() { includeDeclarations = functions.Concat(new[] { "value_entered", "value_release", "value_held_address" }).ToImmutableArray() } },
+                schemaVersion = 2,
+                library = new() { id = "values", nativeName = "values_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.C,
+                    headers = ["value.h"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false,
+                    selection = new() { includeDeclarations = functions.Concat(new[] { "value_entered", "value_release", "value_held_address" }).ToImmutableArray() }
+                },
                 api = new()
                 {
-                    @namespace = "Generated.Values", name = "ValueApi", importMode = mode,
-                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime,
+                    @namespace = "Generated.Values",
+                    name = "ValueApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
+                    nestGeneratedTypesInApi = sourceRuntime,
                     names = ImmutableDictionary<string, string>.Empty.Add("value_add", "Add").Add("value_read", "Read").Add("value_reset", "Reset")
                         .Add("value_alias", "Alias").Add("value_validate", "Validate").Add("value_hold", "Hold")
                         .Add("value_entered", "Entered").Add("value_release", "Release").Add("value_held_address", "HeldAddress"),
@@ -101,8 +117,9 @@ public sealed class NativeValueReceiverTests
                     bufferParameters = [new() { function = "value_alias", parameter = "buffer", capacityParameter = "count", direction = NativeParameterDirection.InputOutput,
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false, lengthUnit = NativeLengthUnit.Elements }]
                 },
-                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

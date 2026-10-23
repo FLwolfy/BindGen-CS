@@ -50,11 +50,12 @@ public sealed class NativeOpaqueCallbackTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "callback_fixture", nativeName = "callback_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "callback_fixture", nativeName = "callback_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["callbacks.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.OpaqueCallbacks", name = "CallbackApi", importMode = mode },
                 runtime = new() { mode = mode == BindingImportMode.LibraryImport ? "source" : "package" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

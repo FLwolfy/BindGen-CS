@@ -131,7 +131,7 @@ public sealed class NativeStorageAssertionTests
                 Assert.Contains("BGCS native template constant differs", valueDrift.standardOutput + valueDrift.standardError);
                 NativeModule unproved = new(module.targetId, module.triple, module.pointerSize, module.types,
                     module.declarations.Select(declaration => declaration.id == witness.id ? declaration with { constantValue = null } : declaration).ToImmutableArray(), module.diagnostics)
-                    { language = module.language, byteOrder = module.byteOrder };
+                { language = module.language, byteOrder = module.byteOrder };
                 Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(unproved, [header], NativeAssertionConventions.For(unproved)));
             }
         }
@@ -183,7 +183,7 @@ public sealed class NativeStorageAssertionTests
             // standard-layout. Its representation still never crosses by value.
             NativeModule observed = new(parsed.targetId, parsed.triple, parsed.pointerSize, parsed.types,
                 parsed.declarations.Select(declaration => declaration.id == owner.id ? declaration with { isStandardLayout = false } : declaration).ToImmutableArray(), parsed.diagnostics)
-                { language = parsed.language, byteOrder = parsed.byteOrder };
+            { language = parsed.language, byteOrder = parsed.byteOrder };
             Assert.False(observed.GetDeclaration(owner.id).isStandardLayout);
             string proof = new NativeStorageAssertionEmitter().Emit(observed, [header], NativeAssertionConventions.For(observed));
             Assert.DoesNotContain(proof.Split('\n'), line => line.Contains("is_standard_layout<", StringComparison.Ordinal) && line.Contains("OpaqueOwner", StringComparison.Ordinal));
@@ -232,7 +232,7 @@ public sealed class NativeStorageAssertionTests
             NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8,
                 [new(integer, NativeTypeCategory.Primitive, correct ? "int" : "unsigned int", 4, 4) { primitiveKind = correct ? "Int" : "UInt", isSigned = correct },
                  new(enumType, NativeTypeCategory.Enumeration, "PublicEnum", 4, 4) { declaration = declarationId, elementType = integer }], [declaration], [])
-                { language = SourceLanguage.C };
+            { language = SourceLanguage.C };
             string assertions = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(PublicEnum)", assertions);
             Assert.DoesNotContain("sizeof(enum PublicEnum)", assertions);
@@ -276,24 +276,31 @@ public sealed class NativeStorageAssertionTests
         Assert.Contains("decltype(((Demo::Outer<int>::Nested*)nullptr)->value)", source);
     }
 
-    private static NativeModule Module(bool specialized, bool system)
-    {
+    private static NativeModule Module(
+        bool specialized,
+        bool system
+    ) {
         StableId integer = new("int"), parameter = new("T"), owner = new("outer"), nested = new("nested"), field = new("field"), nestedType = new("nested-type");
         string ownerName = specialized ? "Demo::Outer<int>" : "Demo::Outer";
         NativeDeclaration container = new(owner, "Class", "Outer", ownerName, null, new("source.hpp", 1, 1))
         {
-            role = "Struct", isCompleteDefinition = specialized, isSystemDeclaration = system, children = [nested],
-            templateKind = specialized ? "ClassTemplateSpecialization" : "TemplateClass", templateParameters = specialized ? [] : [parameter]
+            role = "Struct",
+            isCompleteDefinition = specialized,
+            isSystemDeclaration = system,
+            children = [nested],
+            templateKind = specialized ? "ClassTemplateSpecialization" : "TemplateClass",
+            templateParameters = specialized ? [] : [parameter]
         };
         NativeDeclaration record = new(nested, "Class", "Nested", ownerName + "::Nested", nestedType, new("source.hpp", 2, 1))
-            { role = "Struct", parent = owner, children = [field], isCompleteDefinition = true, isSystemDeclaration = system };
+        { role = "Struct", parent = owner, children = [field], isCompleteDefinition = true, isSystemDeclaration = system };
         NativeDeclaration member = new(field, "Field", "value", ownerName + "::Nested::value", integer, new("source.hpp", 3, 1))
-            { parent = nested, offset = 0, bitOffset = 0, visibility = "Public", isSystemDeclaration = system };
+        { parent = nested, offset = 0, bitOffset = 0, visibility = "Public", isSystemDeclaration = system };
         return new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8,
             [new(integer, NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true },
              new(parameter, NativeTypeCategory.Template, "T", null, null),
              new(nestedType, NativeTypeCategory.Record, record.qualifiedName, 4, 4) { declaration = nested }],
-            [container, record, member], []) { language = SourceLanguage.Cpp };
+            [container, record, member], [])
+        { language = SourceLanguage.Cpp };
     }
 
     private static string WorkerRoot()

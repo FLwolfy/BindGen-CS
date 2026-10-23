@@ -120,8 +120,11 @@ public sealed class RuntimeAllocatorSourceTests
         CompileAndRun(combined, probe, 78);
     }
 
-    private static void CompileAndRun(System.Collections.Immutable.ImmutableArray<(string Path, string Text)> sources, string probe, int expected)
-    {
+    private static void CompileAndRun(
+        System.Collections.Immutable.ImmutableArray<(string Path, string Text)> sources,
+        string probe,
+        int expected
+    ) {
         string platforms = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string
             ?? throw new InvalidOperationException("Framework metadata references are unavailable.");
         var references = platforms.Split(Path.PathSeparator).Select(path => MetadataReference.CreateFromFile(path));

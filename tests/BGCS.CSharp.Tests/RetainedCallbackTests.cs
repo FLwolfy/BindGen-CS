@@ -77,7 +77,8 @@ public sealed class RetainedCallbackTests
         EmissionRequest request = new("native", new NeutralBackendTests.MemorySink())
         {
             managedRuntime = fault == "browser" ? new("nonblocking-test", new ManagedRuntimeId("fixture.nonblocking-runtime"), NativeModuleMechanism.StaticAdapter,
-                [BindingImportMode.FunctionTable], true, false) { functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger } : null,
+                [BindingImportMode.FunctionTable], true, false)
+            { functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger } : null,
             staticExportTable = fault == "browser" ? new("retained", "retained_get", "retained_revision", "retained_count", "retained_identity", "retained_pointer_size",
                 new string('a', 64), module.functions.Select(function => function.exportName).ToImmutableArray()) : null
         };
@@ -98,8 +99,12 @@ public sealed class RetainedCallbackTests
         InteropType callbackPointer = new(new("callback-pointer"), "Callback", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         CallbackContract callback = new(callable.id, new(NativeLifetimeKind.Registration, null, evidence), evidence)
         {
-            retained = true, threading = NativeCallbackThreading.AnyThread, userDataParameter = new("userdata"), callableUserDataIndex = 1,
-            failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence), unregisterFunction = new("stop"),
+            retained = true,
+            threading = NativeCallbackThreading.AnyThread,
+            userDataParameter = new("userdata"),
+            callableUserDataIndex = 1,
+            failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence),
+            unregisterFunction = new("stop"),
             unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
             registration = new(new("handle"), NativeQuiescenceKind.NoActiveNativeInvocations, "any", evidence)
         };

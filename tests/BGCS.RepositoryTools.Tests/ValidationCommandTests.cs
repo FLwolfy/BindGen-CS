@@ -4,11 +4,14 @@ using Xunit;
 
 namespace BGCS.RepositoryTools.Tests;
 
-public sealed class ValidationCommandTests {
+public sealed class ValidationCommandTests
+{
     [Fact]
-    public void ApiSnapshot_ReflectsTheActualAssemblyAndWritesStableOutput() {
+    public void ApiSnapshot_ReflectsTheActualAssemblyAndWritesStableOutput()
+    {
         string directory = CreateDirectory();
-        try {
+        try
+        {
             string assembly = Path.Combine(AppContext.BaseDirectory, "BGCS.Core.dll");
             string snapshot = Path.Combine(directory, "snapshot.txt");
             using StringWriter error = new();
@@ -22,7 +25,8 @@ public sealed class ValidationCommandTests {
                 directory, TextWriter.Null, error));
             Assert.Equal(first, File.ReadAllText(snapshot));
         }
-        finally {
+        finally
+        {
             Directory.Delete(directory, true);
         }
     }
@@ -111,9 +115,11 @@ public sealed class ValidationCommandTests {
     }
 
     [Fact]
-    public void ApiSnapshot_MissingAssembly_FailsWithoutCreatingSnapshot() {
+    public void ApiSnapshot_MissingAssembly_FailsWithoutCreatingSnapshot()
+    {
         string directory = CreateDirectory();
-        try {
+        try
+        {
             string snapshot = Path.Combine(directory, "snapshot.txt");
             using StringWriter error = new();
             int exitCode = CliInvocation.Run(["validate", "api-snapshot", "missing.dll", snapshot],
@@ -123,7 +129,8 @@ public sealed class ValidationCommandTests {
             Assert.False(File.Exists(snapshot));
             Assert.NotEmpty(error.ToString());
         }
-        finally {
+        finally
+        {
             Directory.Delete(directory, true);
         }
     }
@@ -136,7 +143,8 @@ public sealed class ValidationCommandTests {
         int expectedExitCode
     ) {
         string directory = CreateDirectory();
-        try {
+        try
+        {
             string path = Path.Combine(directory, "report.json");
             File.WriteAllText(path, report);
             using StringWriter error = new();
@@ -147,12 +155,14 @@ public sealed class ValidationCommandTests {
             if (expectedExitCode != 0)
                 Assert.Contains("Unsafe.Package 1.0.0: High", error.ToString());
         }
-        finally {
+        finally
+        {
             Directory.Delete(directory, true);
         }
     }
 
-    private static string CreateDirectory() {
+    private static string CreateDirectory()
+    {
         string directory = Path.Combine(Path.GetTempPath(), "bgcs-cli-validation-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         return directory;

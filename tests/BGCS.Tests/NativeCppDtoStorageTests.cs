@@ -82,15 +82,25 @@ public sealed class NativeCppDtoStorageTests
 
     private static BindingConfiguration Configuration(string runtime) => new()
     {
-        schemaVersion = 2, library = new() { id = "dto", nativeName = "dto_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "dto", nativeName = "dto_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["dto.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-        api = new() { @namespace = "Generated.NativeDto", name = "DtoApi", names = ImmutableDictionary<string, string>.Empty
-            .Add("Demo::Inner", "Inner").Add("Demo::Packet", "Packet").Add("Demo::Standalone", "Standalone").Add("Demo::Aligned", "Aligned").Add("Demo::View", "View") },
-        runtime = new() { mode = runtime },  cache = new() { enabled = false }
+        api = new()
+        {
+            @namespace = "Generated.NativeDto",
+            name = "DtoApi",
+            names = ImmutableDictionary<string, string>.Empty
+            .Add("Demo::Inner", "Inner").Add("Demo::Packet", "Packet").Add("Demo::Standalone", "Standalone").Add("Demo::Aligned", "Aligned").Add("Demo::View", "View")
+        },
+        runtime = new() { mode = runtime },
+        cache = new() { enabled = false }
     };
 
-    private static void Invoke(string sources, string binary, string runtimeMode)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        string runtimeMode
+    ) {
         string consumer = """
             using Generated.NativeDto;
             public static unsafe class DtoConsumer {

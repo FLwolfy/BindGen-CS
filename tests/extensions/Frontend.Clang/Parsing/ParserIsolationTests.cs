@@ -23,7 +23,8 @@ public sealed class ParserIsolationTests : FrontendTestHost
     [Fact]
     public async Task ConcurrentCompilationsKeepDeclarationsAndReferencesWithinTheirOwner()
     {
-        await Task.WhenAll(Enumerable.Range(0, 12).Select(async index => {
+        await Task.WhenAll(Enumerable.Range(0, 12).Select(async index =>
+        {
             string owner = "Owner" + index;
             for (int attempt = 0; attempt < 8; attempt++)
             {

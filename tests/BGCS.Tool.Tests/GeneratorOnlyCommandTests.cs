@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Xunit;
 namespace BGCS.Tool.Tests;
+
 public sealed class GeneratorOnlyCommandTests
 {
     [Theory]

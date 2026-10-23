@@ -21,8 +21,10 @@ public sealed class NativeCallbackStatusTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CallbackFailuresReleaseSuccessfulOwnedResultsAndPreserveNativeStatusCleanup(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CallbackFailuresReleaseSuccessfulOwnedResultsAndPreserveNativeStatusCleanup(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-callback-status-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -54,11 +56,14 @@ public sealed class NativeCallbackStatusTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "callback_status", nativeName = "callback_status_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "callback_status", nativeName = "callback_status_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callback.hpp"], parseMacros = false },
                 api = new()
                 {
-                    @namespace = "Generated.Status", name = "StatusApi", importMode = mode,
+                    @namespace = "Generated.Status",
+                    name = "StatusApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("Demo::Invoke", "InvokeCallback").Add("Demo::Notify", "NotifyCallback")
                         .Add("Demo::Last", "Last").Add("Demo::Live", "Live").Add("Demo::Widget::Widget", "CreateWidget").Add("Demo::Widget::Get", "Get"),
@@ -69,14 +74,20 @@ public sealed class NativeCallbackStatusTests
                 {
                     callbackParameters = new[] { "Demo::Invoke", "Demo::Notify", "Demo::Widget::Widget" }.Select(function => new CallbackParameterConfiguration
                     {
-                        function = function, parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
-                        threading = NativeCallbackThreading.CallerThread, userDataParameter = "state", callableUserDataIndex = 1, failureReturn = "-7"
+                        function = function,
+                        parameter = "callback",
+                        lifetime = NativeLifetimeKind.Call,
+                        retained = false,
+                        threading = NativeCallbackThreading.CallerThread,
+                        userDataParameter = "state",
+                        callableUserDataIndex = 1,
+                        failureReturn = "-7"
                     }).ToImmutableArray(),
                     ownedResults = [new() { function = "Demo::Widget::Widget", releaseThreadDomain = "any" }]
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

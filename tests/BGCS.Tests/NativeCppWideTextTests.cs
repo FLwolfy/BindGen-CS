@@ -101,12 +101,13 @@ public sealed class NativeCppWideTextTests
             names.Add("Wide::Probe::Read", "Read");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "cpp_wide", nativeName = "cpp_wide_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "cpp_wide", nativeName = "cpp_wide_fixture" },
                 source = new() { headers = ["wide.hpp"], language = SourceLanguage.Cpp, parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.CppWide", name = "WideApi", names = names.ToImmutable() },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 semantics = new() { stringParameters = rules.ToImmutable(), ownedResults = [new() { function = "Wide::Probe::Probe", releaseThreadDomain = "any" }] },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -117,15 +118,30 @@ public sealed class NativeCppWideTextTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static StringParameterConfiguration Text(string callable, int bytes) => new()
+    private static StringParameterConfiguration Text(
+        string callable,
+        int bytes
+    ) => new()
     {
-        function = callable, parameter = "text", encoding = bytes == 2 ? NativeTextEncoding.Utf16 : NativeTextEncoding.Utf32,
-        codeUnitWidth = bytes, byteOrder = NativeTextByteOrder.Native, lengthUnit = NativeLengthUnit.CodeUnits,
-        direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call, retainsPointer = false, zeroTerminated = true, allowsNull = false
+        function = callable,
+        parameter = "text",
+        encoding = bytes == 2 ? NativeTextEncoding.Utf16 : NativeTextEncoding.Utf32,
+        codeUnitWidth = bytes,
+        byteOrder = NativeTextByteOrder.Native,
+        lengthUnit = NativeLengthUnit.CodeUnits,
+        direction = NativeParameterDirection.Input,
+        lifetime = NativeLifetimeKind.Call,
+        retainsPointer = false,
+        zeroTerminated = true,
+        allowsNull = false
     };
 
-    private static void Invoke(string sources, string binary, int width, bool wcharSigned)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        int width,
+        bool wcharSigned
+    ) {
         string[] paths = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("NativeCppWide_" + Guid.NewGuid().ToString("N"),
             Directory.EnumerateFiles(sources, "*.cs", SearchOption.AllDirectories).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new(LanguageVersion.CSharp14), path)),
@@ -141,7 +157,10 @@ public sealed class NativeCppWideTextTests
             Assembly assembly = load.LoadFromStream(image);
             Type type = assembly.GetType("Generated.CppWide.WideApi", true)!;
             using IDisposable api = (IDisposable)type.GetMethod("Load")!.InvokeFactory([binary])!;
-            object? Call(string method, params object?[] values) => type.GetMethod(method)!.Invoke(api, values);
+            object? Call(
+                string method,
+                params object?[] values
+            ) => type.GetMethod(method)!.Invoke(api, values);
             Assert.Equal((uint)width, Call("WcharWidth"));
             Assert.Equal((uint)65, Call("First16", "AB"));
             Assert.Equal((uint)65, Call("First32", "AB"));

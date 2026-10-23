@@ -15,8 +15,11 @@ public sealed class NeutralConstantTransformationTests
     {
         InteropModule baseline = Module();
         InteropStringConstant original = baseline.stringConstants[0];
-        InteropStringConstant copied = original with { value = original.value with
-            { codeUnits = ImmutableArray.CreateRange(original.value.codeUnits.AsSpan().ToArray()), literalTokens = ImmutableArray.CreateRange(original.value.literalTokens.AsSpan().ToArray()) } };
+        InteropStringConstant copied = original with
+        {
+            value = original.value with
+            { codeUnits = ImmutableArray.CreateRange(original.value.codeUnits.AsSpan().ToArray()), literalTokens = ImmutableArray.CreateRange(original.value.literalTokens.AsSpan().ToArray()) }
+        };
         new InteropModuleVerifier().VerifyPreservedAbi(baseline, Copy(baseline.constants, [copied]));
         new InteropModuleVerifier().VerifyPreservedAbi(baseline, Copy([], []));
     }
@@ -68,6 +71,9 @@ public sealed class NeutralConstantTransformationTests
         [new(new("text"), "TEXT", "TEXT", new(NativeStringLiteralKind.Utf8, [65, 0], 1, Evidence) { literalTokens = ["u8\"A\""] }, null)]);
 
     private static Evidence Evidence => new(EvidenceLevel.Declared, "compiler:source-constant");
-    private static InteropModule Copy(ImmutableArray<InteropConstant> scalars, ImmutableArray<InteropStringConstant> strings) =>
+    private static InteropModule Copy(
+        ImmutableArray<InteropConstant> scalars,
+        ImmutableArray<InteropStringConstant> strings
+    ) =>
         new("constants", "windows-x64-msvc", 8, [], [], []) { constants = scalars, stringConstants = strings };
 }

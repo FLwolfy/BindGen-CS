@@ -68,8 +68,10 @@ public sealed class ManagedRecipeProjectionTests
     [Theory]
     [InlineData(4, "uint")]
     [InlineData(8, "ulong")]
-    public void NativeSizeHelpers_UseActualTargetFacts(int pointerSize, string expected)
-    {
+    public void NativeSizeHelpers_UseActualTargetFacts(
+        int pointerSize,
+        string expected
+    ) {
         var plan = new ManagedRecipeProjectionValidator().Plan(new("uint", "{value}", "checked((uint){value})"), "size_t", pointerSize);
         Assert.Equal(expected, plan.carrierType);
     }
@@ -149,7 +151,11 @@ public sealed class ManagedRecipeProjectionTests
         ["add"] = (nint)(delegate* unmanaged[Cdecl]<int, int, int>)&Add,
         ["notify"] = (nint)(delegate* unmanaged[Cdecl]<void>)&Notify
     };
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])] private static int Add(int left, int right) => left + right;
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int Add(
+        int left,
+        int right
+    ) => left + right;
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])] private static void Notify() { }
 
     private static CompiledSources Compile(NeutralBackendTests.MemorySink sink)
@@ -166,5 +172,9 @@ public sealed class ManagedRecipeProjectionTests
         AssemblyLoadContext context = new("BGCS.ManagedRecipes.Test", isCollectible: true);
         return new(context, context.LoadFromStream(stream));
     }
-    private sealed record CompiledSources(AssemblyLoadContext context, Assembly assembly) : IDisposable { public void Dispose() => context.Unload(); }
+    private sealed record CompiledSources(
+        AssemblyLoadContext context,
+        Assembly assembly
+    ) : IDisposable
+    { public void Dispose() => context.Unload(); }
 }

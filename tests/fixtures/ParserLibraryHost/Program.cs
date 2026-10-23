@@ -24,7 +24,7 @@ internal static class Program
             string header = Path.Combine(root, "native.h");
             File.WriteAllText(header, "int bgcs_library_add(int left, int right);");
             FrontendResult parsed = new ClangFrontend(host).ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.C, [header])
-                { pathBase = root, parseMacros = false }, CancellationToken.None).GetAwaiter().GetResult();
+            { pathBase = root, parseMacros = false }, CancellationToken.None).GetAwaiter().GetResult();
             if (parsed.module.diagnostics.Any(diagnostic => diagnostic.isFailure))
             {
                 Console.Error.WriteLine(string.Join(Environment.NewLine, parsed.module.diagnostics.Select(diagnostic => diagnostic.message)));

@@ -31,6 +31,9 @@ public sealed class GroupedConfigurationSelectionEntryTests : GroupedConfigurati
     [InlineData("GenerateFunctions", "config.true")]
     [InlineData("GenerateTypes", "config")]
     [InlineData("GenerateTypes", "config.alt")]
-    public Task IndependentSelectionPreservesTheExactPublicApi(string fixture, string variant)
+    public Task IndependentSelectionPreservesTheExactPublicApi(
+        string fixture,
+        string variant
+    )
         => VerifyAsync(fixture, variant);
 }

@@ -9,12 +9,17 @@ using Microsoft.CodeAnalysis;
 
 namespace BGCS.RepositoryTools.Validation;
 
-internal sealed class ArchitectureVisibilityPolicy(string root, ICollection<string> failures)
+internal sealed class ArchitectureVisibilityPolicy(
+    string root,
+    ICollection<string> failures
+)
 {
     private readonly HashSet<string> m_buildFiles = new(StringComparer.Ordinal);
 
-    internal void Validate(string project, XDocument document)
-    {
+    internal void Validate(
+        string project,
+        XDocument document
+    ) {
         CheckItems(project, document);
         string directory = Path.GetDirectoryName(project)!;
         for (string? parent = directory; parent is not null; parent = Path.GetDirectoryName(parent))
@@ -35,8 +40,10 @@ internal sealed class ArchitectureVisibilityPolicy(string root, ICollection<stri
         }
     }
 
-    private static bool HasFriend(SyntaxNode syntax, IEnumerable<string>? inheritedAliases = null)
-    {
+    private static bool HasFriend(
+        SyntaxNode syntax,
+        IEnumerable<string>? inheritedAliases = null
+    ) {
         HashSet<string> aliases = syntax.DescendantNodes().OfType<UsingDirectiveSyntax>()
             .Where(item => item.Alias is not null && item.Name is not null && IsFriend(item.Name.ToString()))
             .Select(item => item.Alias!.Name.Identifier.ValueText).ToHashSet(StringComparer.Ordinal);
@@ -47,8 +54,10 @@ internal sealed class ArchitectureVisibilityPolicy(string root, ICollection<stri
             .Any(trivia => HasFriend(CSharpSyntaxTree.ParseText(trivia.ToFullString()).GetRoot(), aliases));
     }
 
-    private void CheckItems(string path, XDocument document)
-    {
+    private void CheckItems(
+        string path,
+        XDocument document
+    ) {
         if (document.Descendants().Any(item => item.Name.LocalName == "InternalsVisibleTo"
             || item.Name.LocalName == "AssemblyAttribute" && IsFriend((string?)item.Attribute("Include") ?? string.Empty)))
             failures.Add("Build files cannot grant friend assemblies: " + Path.GetRelativePath(root, path));

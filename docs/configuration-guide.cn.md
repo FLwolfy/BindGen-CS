@@ -1,6 +1,6 @@
 # 配置指南
 
-[Wiki](README.cn.md) | [English](configuration-guide.md) | [自动生成的字段参考](generated/config-reference.cn.md)
+[文档首页](README.cn.md) | [English](configuration-guide.md) | [自动生成的字段参考](generated/config-reference.cn.md)
 
 BGCS 4.0 的 C 与 C++ 使用同一份严格分组的 `bindgen.json`。生成器、Runtime 和默认消费者
 采用 .NET 10 / C# 14。配置冻结成会话输入，不在其中保存服务实例或解析器句柄。
@@ -752,7 +752,7 @@ UTF-16、UTF-32 分别使用 `utf16`、`utf32`；`byteOrder` 支持默认 `nativ
 
 C++ 文本值可以在创建它的同一次调用结束前复制为托管 `string`。该包装需要全新拥有的 holder、精确计数与有界批量复制导出、明确字符串编码，以及仅允许在创建调用内清理的能力。使用默认 `char_traits` 和 `allocator` 的精确标准 `basic_string`，以及 `filesystem::path`，可以取得由编译器检查的有限清理事实。它仅允许在创建时的调用线程同步销毁，不授予逃逸 handle、任意线程或 finalizer 清理权限。自定义 traits、allocator 与 family 不能凭熟悉的名字或 `noexcept` 自动取得这一能力。
 
-在 `cpp.familyBindings[].nativeType` 中使用 `std::string`、`std::u16string`、`std::u32string` 等精确命名别名，并分别声明 `stringEncoding`。选择器仍然解析真实编译器模板参数，并拒绝冲突绑定；`char` 存储不会自动变成 UTF-8。路径遵循所选 `pathFormat`，需要保留本地分隔符时可选择 `nativeUtf8`。`api.maximumValueStringCodeUnits` 默认 1,048,576，限制完整复制的码元数量。编码或清理事实未知时，保留精确 Raw holder 操作并报告包装省略原因。
+在 `bridge.cpp.familyBindings[].nativeType` 中使用 `std::string`、`std::u16string`、`std::u32string` 等精确命名别名，并分别声明 `stringEncoding`。选择器仍然解析真实编译器模板参数，并拒绝冲突绑定；`char` 存储不会自动变成 UTF-8。路径遵循所选 `pathFormat`，需要保留本地分隔符时可选择 `nativeUtf8`。`api.maximumValueStringCodeUnits` 默认 1,048,576，限制完整复制的码元数量。编码或清理事实未知时，保留精确 Raw holder 操作并报告包装省略原因。
 
 文本返回方法在工厂调用、长度验证、一次批量复制、严格解码和匹配销毁的整个过程保留一个资源 lease 与一个调用 lease。空文本仍为 `string.Empty`，内嵌零码元完整保留。长度/复制结果不一致、Unicode 非法或超出上限时仍执行匹配清理；意外销毁失败会保留模块并让卸载失败，不重试结果不明确的释放。复制和清理同时失败时，两项错误共同保留。
 

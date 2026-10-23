@@ -191,15 +191,19 @@ public sealed class PhysicalPathResolutionScopeTests : IDisposable
         return (alias, replacement, first, second);
     }
 
-    private void SwitchAlias(string alias, string replacement)
-    {
+    private void SwitchAlias(
+        string alias,
+        string replacement
+    ) {
         DeleteLink(alias);
         Directory.Move(replacement, alias);
         m_links.Remove(replacement);
     }
 
-    private async Task Link(string path, string target)
-    {
+    private async Task Link(
+        string path,
+        string target
+    ) {
         if (OperatingSystem.IsWindows())
         {
             string executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
@@ -213,8 +217,10 @@ public sealed class PhysicalPathResolutionScopeTests : IDisposable
         else { Directory.CreateSymbolicLink(path, target); m_links.Add(path); }
     }
 
-    private BGCS.Core.Inputs.DirectoryInputDependency CaptureWhile(string directory, Action change)
-    {
+    private BGCS.Core.Inputs.DirectoryInputDependency CaptureWhile(
+        string directory,
+        Action change
+    ) {
         IEnumerable<string> Exclusions()
         {
             change();

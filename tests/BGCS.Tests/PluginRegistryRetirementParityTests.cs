@@ -25,8 +25,10 @@ public sealed class PluginRegistryRetirementParityTests
     [InlineData(ContractVersion.C_MAJOR, ContractVersion.C_API_MINOR + 1)]
     [InlineData(ContractVersion.C_MAJOR + 1, 0)]
     [InlineData(ContractVersion.C_MAJOR, -1)]
-    public void IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(int major, int minimumMinor)
-    {
+    public void IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(
+        int major,
+        int minimumMinor
+    ) {
         int calls = 0;
         PluginDescriptor descriptor = new("probe.plugin", "1.0.0", [new("probe.service", ExtensionPort.NativeModuleTransform)])
         { contractsMajor = major, minimumApiMinor = minimumMinor };
@@ -128,8 +130,10 @@ public sealed class PluginRegistryRetirementParityTests
     }
 
     private static BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new EmptyFrontend());
-    private static async Task<string> Emit(BindingHost host, GenerationRequest request)
-    {
+    private static async Task<string> Emit(
+        BindingHost host,
+        GenerationRequest request
+    ) {
         GenerationResult result = await host.GenerateAsync(request);
         Assert.True(result.success, result.GetDiagnosticSummary());
         return Assert.Single(result.cacheStages, stage => stage.stage == "csharpEmission").status;
@@ -139,44 +143,86 @@ public sealed class PluginRegistryRetirementParityTests
 
     private sealed class EmptyFrontend : IFrontend, ICacheFingerprintProvider
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple,
                 request.target.architectureId is "x86" or "wasm32" or "arm" ? 4 : 8, [], [], [])
             { language = request.language, byteOrder = request.target.byteOrder }, new([], [])));
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken) => Fingerprint("empty-native-facts-v1");
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) => Fingerprint("empty-native-facts-v1");
     }
-    private sealed class Traced(string identity, int order, List<string> trace) : INativeModuleTransform
+    private sealed class Traced(
+        string identity,
+        int order,
+        List<string> trace
+    ) : INativeModuleTransform
     {
         public string id => identity;
         public int priority => order;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) { trace.Add(identity); return module; }
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) { trace.Add(identity); return module; }
     }
-    private sealed class Fingerprinted(string identity, Func<string> state) : INativeModuleTransform, IInteropTransform, ICacheFingerprintProvider
+    private sealed class Fingerprinted(
+        string identity,
+        Func<string> state
+    ) : INativeModuleTransform, IInteropTransform, ICacheFingerprintProvider
     {
         public string id => identity;
         public int priority => 0;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
-        public InteropModule Transform(InteropModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken) => Fingerprint(state());
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
+        public InteropModule Transform(
+            InteropModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) => Fingerprint(state());
     }
-    private sealed class DeclaredPlugin(PluginDescriptor metadata, Action<IExtensionRegistryBuilder> configure) : IBindingPlugin
+    private sealed class DeclaredPlugin(
+        PluginDescriptor metadata,
+        Action<IExtensionRegistryBuilder> configure
+    ) : IBindingPlugin
     {
         public PluginDescriptor descriptor => metadata;
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => configure(registry);
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) => configure(registry);
     }
     private sealed class BrokenFingerprint(PluginDescriptor metadata) : IBindingPlugin, ICacheFingerprintProvider
     {
         internal bool disposed { get; private set; }
         public PluginDescriptor descriptor => metadata;
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        )
             => registry.RegisterFactory<INativeModuleTransform>("broken.service", _ => new Fingerprinted("broken.service", () => "fixed"));
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => throw new InvalidOperationException("The configured plugin state cannot produce a fingerprint.");
         public void Dispose() => disposed = true;
     }
@@ -188,8 +234,10 @@ public sealed class PluginRegistryRetirementParityTests
         internal Scratch() { Directory.CreateDirectory(root); File.WriteAllText(header, "/* Detached empty neutral facts are intentional. */"); }
         internal GenerationRequest Request() => new(new BindingConfiguration
         {
-            schemaVersion = 2, library = new() { id = "plugin_retirement", nativeName = "plugin_retirement" },
-            source = new() { headers = [header], parseMacros = false }, api = new() { @namespace = "Generated.PluginRetirement", name = "PluginApi" }
+            schemaVersion = 2,
+            library = new() { id = "plugin_retirement", nativeName = "plugin_retirement" },
+            source = new() { headers = [header], parseMacros = false },
+            api = new() { @namespace = "Generated.PluginRetirement", name = "PluginApi" }
         }, root);
         public void Dispose() => Directory.Delete(root, recursive: true);
     }

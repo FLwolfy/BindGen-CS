@@ -28,8 +28,11 @@ public sealed class NativeProofTokenTests
     [InlineData("clang", true, "exact")]
     [InlineData("clang", true, "offset")]
     [InlineData("clang", true, "shadow")]
-    public async Task CompilerOwnedOffsetsAndProofTokensCannotBeForgedByPublicHeaderMacros(string provider, bool cpp, string scenario)
-    {
+    public async Task CompilerOwnedOffsetsAndProofTokensCannotBeForgedByPublicHeaderMacros(
+        string provider,
+        bool cpp,
+        string scenario
+    ) {
         if (!OperatingSystem.IsWindows()) return;
         string root = Path.Combine(Path.GetTempPath(), "bgcs native proof token " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -60,8 +63,10 @@ public sealed class NativeProofTokenTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static NativeModule Module(string path, bool cpp)
-    {
+    private static NativeModule Module(
+        string path,
+        bool cpp
+    ) {
         StableId integer = new("integer"), record = new("pair"), type = new("pair-type"), first = new("a"), second = new("b");
         NativeDeclaration declaration = new(record, "Class", "Pair", "Pair", type, new(path, 1, 1))
         { role = "Struct", isCompleteDefinition = true, isStandardLayout = true, children = [first, second] };
@@ -71,6 +76,6 @@ public sealed class NativeProofTokenTests
             [declaration,
              new(first, "Field", "a", "Pair::a", integer, new(path, 1, 1)) { parent = record, visibility = "Public", offset = 0, bitOffset = 0 },
              new(second, "Field", "b", "Pair::b", integer, new(path, 1, 1)) { parent = record, visibility = "Public", offset = 4, bitOffset = 32 }], [])
-            { language = cpp ? SourceLanguage.Cpp : SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
+        { language = cpp ? SourceLanguage.Cpp : SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
     }
 }

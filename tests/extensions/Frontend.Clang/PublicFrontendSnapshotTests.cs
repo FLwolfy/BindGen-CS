@@ -49,5 +49,12 @@ public sealed class PublicFrontendSnapshotTests : FrontendTestHost
         Assert.True(SourceSnapshotVerifier.Matches(parsed.snapshot, host.paths));
         Assert.NotEmpty(parsed.snapshot.pathSemantics);
     }
-    private sealed record Case(string caseId, string id, string source, string target, string sourceSha256, string expected);
+    private sealed record Case(
+        string caseId,
+        string id,
+        string source,
+        string target,
+        string sourceSha256,
+        string expected
+    );
 }

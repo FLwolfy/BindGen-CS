@@ -1,4 +1,4 @@
-> Historical architecture audit. Superseded by [current architecture](architecture.md) and records/acceptance.
+> Historical architecture audit. Superseded by [current architecture](architecture.md) and [architecture review](architecture-review.md).
 
 # 架构 Plan 逐项核对
 

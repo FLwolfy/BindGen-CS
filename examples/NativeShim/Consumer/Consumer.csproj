@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BGCSGeneratedRoot Condition="'$(BGCSGeneratedRoot)' == ''">../Generated</BGCSGeneratedRoot>
   </PropertyGroup>
 
   <ItemGroup Label="Project dependencies">
@@ -10,7 +11,6 @@
   </ItemGroup>
 
   <ItemGroup Label="Generated source inputs">
-    <Compile Include="../Generated/*/managed/**/*.cs" LinkBase="Generated" />
-    <None Include="../Generated/*/native/bin/*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="$(BGCSGeneratedRoot)/*/managed/**/*.cs" LinkBase="Generated" />
   </ItemGroup>
 </Project>

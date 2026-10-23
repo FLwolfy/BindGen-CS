@@ -394,7 +394,7 @@ bindgen-cs generate examples/NativeShim/bindgen.json
 
 ## 模板和原始虚回调
 
-类型实例放在 `cpp.templateInstantiations.types`，字段为 `id` 和 `nativeType`。函数实例字段为 `id`、`nativeCallable`、`returnType`、`parameterTypes`。worker 产生具体事实，函数 wrapper 根据参数声明使用 `std::forward`。
+类型实例放在 `bridge.cpp.templateInstantiations.types`，字段为 `id` 和 `nativeType`。函数实例字段为 `id`、`nativeCallable`、`returnType`、`parameterTypes`。worker 产生具体事实，函数 wrapper 根据参数声明使用 `std::forward`。
 
 `bridge.cpp.virtualCallbacks` 条目包含 `id` 和 `nativeInterface`。第二次普通 C++ 解析验证 proxy，独立 C 解析复核命名 callback typedef。最终 `InteropModule.virtualProxies` 保留准确的方法名、callback 值通道、factory/user-data 身份、真正调整指针的基类转换和匹配的具体析构入口。原生保留边界与 quiescence 仍然未知。
 

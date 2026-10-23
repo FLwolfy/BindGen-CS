@@ -17,8 +17,10 @@ public static unsafe class CustomSlotTable
     /// <param name="path">The exact native producer library path.</param>
     /// <param name="released">An optional nonthrowing cleanup observer, called once after this module reference is freed.</param>
     /// <returns>An independent provider accepted by the generated FromProvider factory.</returns>
-    public static ExternalFunctionTableProvider Open(string path, Action? released = null)
-    {
+    public static ExternalFunctionTableProvider Open(
+        string path,
+        Action? released = null
+    ) {
         ModuleReference? lifetime = new(NativeLibrary.Load(path), released);
         try
         {
@@ -48,7 +50,10 @@ public static unsafe class CustomSlotTable
         finally { lifetime?.Dispose(); }
     }
 
-    private sealed class ModuleReference(nint native, Action? released) : IDisposable
+    private sealed class ModuleReference(
+        nint native,
+        Action? released
+    ) : IDisposable
     {
         private nint m_handle = native;
         internal nint handle => m_handle;

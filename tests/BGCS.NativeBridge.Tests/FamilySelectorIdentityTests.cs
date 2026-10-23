@@ -22,8 +22,12 @@ public sealed class FamilySelectorIdentityTests
     [InlineData(NativeDeclarationCategory.Records, "SharedRecord", "record", true)]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedEnum", "enum", false)]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedEnum", "enum", true)]
-    public void TypedNamesResolveTagsBeforeTheirSameNamedTypedefs(NativeDeclarationCategory family, string name, string id, bool excluded)
-    {
+    public void TypedNamesResolveTagsBeforeTheirSameNamedTypedefs(
+        NativeDeclarationCategory family,
+        string name,
+        string id,
+        bool excluded
+    ) {
         DeclarationCategorySelection rule = excluded ? new(family) { excludeDeclarations = [name] } : new(family) { includeDeclarations = [name] };
         DeclarationSelection selected = Select(Source(), new() { includeCategories = [family], categories = [rule] });
         if (excluded)
@@ -36,8 +40,10 @@ public sealed class FamilySelectorIdentityTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Records, "alias-record")]
     [InlineData(NativeDeclarationCategory.Enumerations, "alias-enum")]
-    public void ExactIdsDoNotRebindToANameInTheRequestedFamily(NativeDeclarationCategory family, string wrongId)
-    {
+    public void ExactIdsDoNotRebindToANameInTheRequestedFamily(
+        NativeDeclarationCategory family,
+        string wrongId
+    ) {
         ArgumentException failure = Assert.Throws<ArgumentException>(() => Select(Source(), new()
         { categories = [new(family) { includeDeclarations = [wrongId] }] }));
         Assert.Contains("selected a different declaration family", failure.Message);
@@ -55,8 +61,11 @@ public sealed class FamilySelectorIdentityTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Records, "SharedRecord", "record")]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedEnum", "enum")]
-    public void TwoMatchesInsideOneFamilyRemainAmbiguous(NativeDeclarationCategory family, string name, string id)
-    {
+    public void TwoMatchesInsideOneFamilyRemainAmbiguous(
+        NativeDeclarationCategory family,
+        string name,
+        string id
+    ) {
         NativeModule module = Source();
         NativeDeclaration original = module.GetDeclaration(new(id));
         NativeDeclaration duplicate = original with { id = new(id + "-duplicate"), type = null, children = [] };
@@ -70,8 +79,10 @@ public sealed class FamilySelectorIdentityTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Records, "SharedEnum")]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedRecord")]
-    public void NamesFromOtherFamiliesStillFailExplicitly(NativeDeclarationCategory family, string name)
-    {
+    public void NamesFromOtherFamiliesStillFailExplicitly(
+        NativeDeclarationCategory family,
+        string name
+    ) {
         ArgumentException failure = Assert.Throws<ArgumentException>(() => Select(Source(), new()
         { categories = [new(family) { includeDeclarations = [name] }] }));
         Assert.Contains("selected a different declaration family", failure.Message);
@@ -80,8 +91,10 @@ public sealed class FamilySelectorIdentityTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Records, "SharedRecord")]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedEnum")]
-    public void ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist(NativeDeclarationCategory family, string name)
-    {
+    public void ImplicitCoNamedTypedefCannotRestoreATagOutsideItsFamilyAllowlist(
+        NativeDeclarationCategory family,
+        string name
+    ) {
         NativeModule module = WithOtherTag(family);
         DeclarationSelection selected = Select(module, new() { categories = [new(family) { includeDeclarations = [name] }] });
         Assert.DoesNotContain(selected.module.declarations, declaration => declaration.id.value is "other" or "other-alias");
@@ -93,8 +106,11 @@ public sealed class FamilySelectorIdentityTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Records, "record", "enum")]
     [InlineData(NativeDeclarationCategory.Enumerations, "enum", "record")]
-    public void ExcludingAnUnusedTagFamilyAlsoSuppressesItsImplicitCoNamedTypedef(NativeDeclarationCategory family, string excluded, string retained)
-    {
+    public void ExcludingAnUnusedTagFamilyAlsoSuppressesItsImplicitCoNamedTypedef(
+        NativeDeclarationCategory family,
+        string excluded,
+        string retained
+    ) {
         DeclarationSelection selected = Select(Source(), new() { excludeCategories = [family] });
         Assert.DoesNotContain(selected.module.declarations, declaration => declaration.id.value == excluded || declaration.id.value == "alias-" + excluded);
         Assert.Contains(selected.publicDeclarations, id => id.value == retained);
@@ -106,8 +122,10 @@ public sealed class FamilySelectorIdentityTests
     [InlineData(NativeDeclarationCategory.Records, "SharedRecord")]
     [InlineData(NativeDeclarationCategory.Enumerations, "alias-enum")]
     [InlineData(NativeDeclarationCategory.Enumerations, "SharedEnum")]
-    public void ExplicitAliasStillRequiresItsExcludedTagStorage(NativeDeclarationCategory family, string alias)
-    {
+    public void ExplicitAliasStillRequiresItsExcludedTagStorage(
+        NativeDeclarationCategory family,
+        string alias
+    ) {
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Select(Source(), new()
         { excludeCategories = [family], categories = [new(NativeDeclarationCategory.TypeAliases) { includeDeclarations = [alias] }] }));
         Assert.Contains("dependency chain", failure.Message);
@@ -129,7 +147,8 @@ public sealed class FamilySelectorIdentityTests
         NativeModule source = Source();
         NativeDeclaration alias = source.GetDeclaration(new("alias-record")) with { name = "OtherName", qualifiedName = "OtherName" };
         NativeModule module = new(source.targetId, source.triple, source.pointerSize, source.types,
-            source.declarations.Replace(source.GetDeclaration(alias.id), alias), []) { language = source.language, byteOrder = source.byteOrder };
+            source.declarations.Replace(source.GetDeclaration(alias.id), alias), [])
+        { language = source.language, byteOrder = source.byteOrder };
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Select(module, new()
         { excludeCategories = [NativeDeclarationCategory.Records] }));
         Assert.Contains("OtherName", failure.Message);
@@ -165,7 +184,10 @@ public sealed class FamilySelectorIdentityTests
         Assert.Empty(new NativeModuleVerifier().Validate(selected.module));
     }
 
-    private static DeclarationSelection Select(NativeModule module, DeclarationSelectionRequest request)
+    private static DeclarationSelection Select(
+        NativeModule module,
+        DeclarationSelectionRequest request
+    )
         => new DeclarationSelector(global::System.StringComparer.Ordinal).Select(module, request, [s_header], s_root, includeTransitivelyReferencedHeaders: false);
 
     private static NativeModule WithOtherTag(NativeDeclarationCategory family)

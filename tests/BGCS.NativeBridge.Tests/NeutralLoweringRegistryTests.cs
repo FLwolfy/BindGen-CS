@@ -74,12 +74,22 @@ public sealed class NeutralLoweringRegistryTests
         NativeTargetDescriptor target = new(new("windows-x64-msvc"), "windows", "x64", "msvc", module.triple, new());
         return new(module, target, "example", []);
     }
-    private sealed class TypeLowering(string identity, List<string> trace, bool match) : INativeTypeLowering
+    private sealed class TypeLowering(
+        string identity,
+        List<string> trace,
+        bool match
+    ) : INativeTypeLowering
     {
         internal int matches { get; private set; }
-        public bool CanLower(NativeTypeView type, LoweringContext context) { matches++; trace.Add("match:" + identity); return match; }
-        public NativeTypeLoweringPlan Lower(NativeTypeView type, LoweringContext context, CancellationToken cancellationToken)
-        {
+        public bool CanLower(
+            NativeTypeView type,
+            LoweringContext context
+        ) { matches++; trace.Add("match:" + identity); return match; }
+        public NativeTypeLoweringPlan Lower(
+            NativeTypeView type,
+            LoweringContext context,
+            CancellationToken cancellationToken
+        ) {
             trace.Add("lower:" + identity);
             BridgeType carrier = new(new("custom-int"), BridgeTypeKind.Scalar, "int32_t") { nativeType = type.id };
             return new(carrier.id, [carrier], BridgeConversionKind.ScalarCast, BridgeConversionKind.ScalarCast);

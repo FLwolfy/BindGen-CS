@@ -97,8 +97,11 @@ public sealed class NeutralEngineCompositionTests
         Assert.Empty(result.artifacts);
     }
 
-    private static async Task AssertGenerated(BindingHost host, Fixture fixture, Spec spec)
-    {
+    private static async Task AssertGenerated(
+        BindingHost host,
+        Fixture fixture,
+        Spec spec
+    ) {
         GenerationResult result = await host.GenerateAsync(Request(fixture, spec));
         Assert.True(result.success, result.GetDiagnosticSummary());
         var target = Assert.Single(result.targetModels);
@@ -111,31 +114,46 @@ public sealed class NeutralEngineCompositionTests
             .Select(artifact => File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))));
         Assert.Contains("Echo", text, StringComparison.Ordinal);
     }
-    private static GenerationRequest Request(Fixture fixture, Spec spec) => new(new()
+    private static GenerationRequest Request(
+        Fixture fixture,
+        Spec spec
+    ) => new(new()
     {
-        schemaVersion = 2, library = new() { id = "neutral", nativeName = "neutral_native" },
+        schemaVersion = 2,
+        library = new() { id = "neutral", nativeName = "neutral_native" },
         source = new() { headers = ["native.h"], language = SourceLanguage.C, parseMacros = false },
-        targets = [new() { id = spec.id }], api = new() { @namespace = "Generated.Neutral", name = "NeutralApi", runtime = new(spec.runtime) },
-        output = new() { root = "generated-" + spec.id }, cache = new() { enabled = false }
+        targets = [new() { id = spec.id }],
+        api = new() { @namespace = "Generated.Neutral", name = "NeutralApi", runtime = new(spec.runtime) },
+        output = new() { root = "generated-" + spec.id },
+        cache = new() { enabled = false }
     }, fixture.root);
     private static BindingHostBuilder Compose(Fixture fixture) => BindingHost.CreateBuilder()
         .RegisterFactory<IHostServicesProvider>(new("fixture.host", ExtensionPort.HostServicesProvider), _ => new Host(fixture))
         .RegisterFactory<IFrontend>(new("fixture.frontend", ExtensionPort.Frontend), context => new Frontend(context.RequireHostServices().paths));
-    private static void Register(BindingHostBuilder builder, Spec spec)
-    {
+    private static void Register(
+        BindingHostBuilder builder,
+        Spec spec
+    ) {
         builder.RegisterFactory<INativeTargetProvider>(new("fixture.target." + spec.id, ExtensionPort.NativeTargetProvider), _ => new Target(spec));
         builder.RegisterFactory<IManagedRuntimeProvider>(new("fixture.runtime." + spec.id, ExtensionPort.ManagedRuntimeProvider), _ => new Runtime(spec));
         builder.RegisterFactory<ICallAbiProvider>(new("fixture.abi." + spec.id, ExtensionPort.CallAbiProvider), _ => new Abi(spec));
     }
-    private sealed record Spec(string id, string platform, string runtime, int pointerSize)
+    private sealed record Spec(
+        string id,
+        string platform,
+        string runtime,
+        int pointerSize
+    )
     {
         internal string triple => "fixture-" + id;
         internal CallAbiId abi => new("fixture.scalar." + id);
     }
     private sealed class Target(Spec spec) : INativeTargetProvider
     {
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = request.targetId.value == spec.id ? new(new(spec.id), spec.platform, "private-cpu", "private-abi", spec.triple,
                 new(defines: ["FIXTURE_POINTER_BYTES=" + spec.pointerSize.ToString(CultureInfo.InvariantCulture)]), new(false, true), NativeByteOrder.LittleEndian) : null;
             return target is not null;
@@ -143,8 +161,10 @@ public sealed class NeutralEngineCompositionTests
     }
     private sealed class Runtime(Spec spec) : IManagedRuntimeProvider
     {
-        public bool TryResolve(ManagedRuntimeRequest request, [NotNullWhen(true)] out ManagedRuntimeProfile? profile)
-        {
+        public bool TryResolve(
+            ManagedRuntimeRequest request,
+            [NotNullWhen(true)] out ManagedRuntimeProfile? profile
+        ) {
             profile = null;
             if (request.runtimeId.value != spec.runtime || request.target.targetId.value != spec.id) return false;
             profile = new("fixture-profile/" + spec.id, new(spec.runtime), NativeModuleMechanism.DynamicLibrary,
@@ -177,10 +197,15 @@ public sealed class NeutralEngineCompositionTests
     }
     private sealed class Frontend(IHostPathService paths) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(new FrontendPreparation(request, new([], []), ["Synthetic frontend source fixture has no reusable parser execution closure."]));
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             string header = request.headers.Single();
             Assert.Equal("int Echo(int value);", File.ReadAllText(header));
             BGCS.Core.Common.SourceLocation source = new(header, 1, 1);
@@ -190,7 +215,8 @@ public sealed class NeutralEngineCompositionTests
             NativeDeclaration parameter = new(new("fixture-value"), "Parameter", "value", "Echo::value", integer.id, source) { parent = function.id };
             int pointerSize = int.Parse(request.target.toolchain.defines.Single().Split('=')[1], CultureInfo.InvariantCulture);
             NativeModule module = new(request.target.targetId.value, request.target.triple, pointerSize,
-                [integer], [function, parameter], []) { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
+                [integer], [function, parameter], [])
+            { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
             SourceSnapshot snapshot = new ExternalInputSnapshotBuilder().Capture([new(header, ExternalInputKind.File)], request.pathBase, paths, cancellationToken);
             return ValueTask.FromResult(new FrontendResult(module, snapshot));
         }
@@ -202,7 +228,10 @@ public sealed class NeutralEngineCompositionTests
     }
     // Intentionally limited fixture host: every mutable input/output directory is created under
     // one observed temp root, inherits its name semantics, and is never made case-sensitive later.
-    private sealed class Paths(string root, bool caseSensitive) : IHostPathService
+    private sealed class Paths(
+        string root,
+        bool caseSensitive
+    ) : IHostPathService
     {
         public IEqualityComparer<string> comparer { get; } = caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
         public HostPathIdentity GetIdentity(string path)
@@ -212,13 +241,22 @@ public sealed class NeutralEngineCompositionTests
         }
         public HostPathSemantics GetSemantics(string directory) => new(caseSensitive);
         public string GetIdentityKey(string path) => caseSensitive ? Path.GetFullPath(path) : Path.GetFullPath(path).ToUpperInvariant();
-        public bool Equals(string left, string right) => comparer.Equals(Path.GetFullPath(left), Path.GetFullPath(right));
-        public bool IsWithin(string candidate, string parent, bool includeRoot = true)
-        {
+        public bool Equals(
+            string left,
+            string right
+        ) => comparer.Equals(Path.GetFullPath(left), Path.GetFullPath(right));
+        public bool IsWithin(
+            string candidate,
+            string parent,
+            bool includeRoot = true
+        ) {
             string full = Path.GetFullPath(candidate), container = Path.TrimEndingDirectorySeparator(Path.GetFullPath(parent));
             return includeRoot && Equals(full, container) || full.StartsWith(container + Path.DirectorySeparatorChar, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
         }
-        public string GetRelativePath(string baseDirectory, string path) => Path.GetRelativePath(baseDirectory, path);
+        public string GetRelativePath(
+            string baseDirectory,
+            string path
+        ) => Path.GetRelativePath(baseDirectory, path);
         public HostIoFailureKind ClassifyIoFailure(Exception failure) => HostIoFailureKind.Permanent;
         public void Verify()
         {

@@ -95,17 +95,17 @@ class PackageEvidenceTests(unittest.TestCase):
 
     def test_private_version_binds_the_exact_commit_and_dirty_source_without_becoming_formal(self):
         props = self.repository / 'Directory.Build.props'
-        props.write_text('<Project><PropertyGroup><Version>4.0.0</Version></PropertyGroup></Project>', encoding='utf-8')
+        props.write_text('<Project><PropertyGroup><Version>4.1.0</Version></PropertyGroup></Project>', encoding='utf-8')
         first_source = source_identity(self.repository)
         first = package_version(self.repository)
-        self.assertEqual('4.0.0-ci.g' + first_source['revision'][:12] + '.s' + first_source['checkedOutSourceSha256'][:16], first)
+        self.assertEqual('4.1.0-ci.g' + first_source['revision'][:12] + '.s' + first_source['checkedOutSourceSha256'][:16], first)
         self.assertEqual(first, package_version(self.repository))
         self.assertTrue(first_source['workingTreeDirty'])
         (self.repository / 'source.txt').write_text('different reviewed source\n', encoding='utf-8')
         self.assertNotEqual(first, package_version(self.repository))
-        self.assertEqual('4.0.0', package_version(self.repository, declared=True))
-        props.write_text('<Project><PropertyGroup><Version>4.0.0-ci.local</Version></PropertyGroup></Project>', encoding='utf-8')
-        self.assertRegex(package_version(self.repository, declared=True), r'^4\.0\.0-ci\.g[0-9a-f]{12}\.s[0-9a-f]{16}$')
+        self.assertEqual('4.1.0', package_version(self.repository, declared=True))
+        props.write_text('<Project><PropertyGroup><Version>4.1.0-ci.local</Version></PropertyGroup></Project>', encoding='utf-8')
+        self.assertRegex(package_version(self.repository, declared=True), r'^4\.1\.0-ci\.g[0-9a-f]{12}\.s[0-9a-f]{16}$')
         props.write_text('<Project><PropertyGroup><Version>4.0.1</Version></PropertyGroup></Project>', encoding='utf-8')
         with self.assertRaises(RuntimeError): package_version(self.repository)
 

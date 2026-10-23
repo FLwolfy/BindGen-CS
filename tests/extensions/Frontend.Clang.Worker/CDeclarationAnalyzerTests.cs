@@ -58,7 +58,9 @@ public sealed class CDeclarationAnalyzerTests : WorkerTestHost
         NativeDeclaration field = new(new("field"), "Field", "value", "Item::value", integer.id, default) { parent = item.id, offset = 4, bitOffset = 32 };
         NativeDeclaration function = new(new("function"), "Function", "consume", "consume", null, default)
         {
-            returnType = integer.id, callingConvention = "C", children = [new StableId("parameter")]
+            returnType = integer.id,
+            callingConvention = "C",
+            children = [new StableId("parameter")]
         };
         NativeDeclaration parameter = new(new("parameter"), "Parameter", "value", "consume::value", pointer.id, default) { parent = function.id };
         return new("linux-x64-gnu", "x86_64-unknown-linux-gnu", 8, [integer, record, pointer], [item, field, function, parameter], []) { language = SourceLanguage.C };

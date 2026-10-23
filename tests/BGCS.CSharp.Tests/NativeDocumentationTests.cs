@@ -24,19 +24,24 @@ public sealed class NativeDocumentationTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task NativeProse_RemainsInertValidXmlAcrossRawFriendlyStorageAndSharedApis(bool shared, bool singleFile)
-    {
+    public async Task NativeProse_RemainsInertValidXmlAcrossRawFriendlyStorageAndSharedApis(
+        bool shared,
+        bool singleFile
+    ) {
         const string hostile = "A < B && B > C, \"quoted\" and 'literal' 🐈.\r\n</summary>\n<include file='missing.xml' path='*'/>\n@param renamed native description\n#pragma warning disable\u0085public class Injected {}\u2028class Another {}\u2029\0\uD800";
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType record = new(new("record"), "Value", NativeTypeCategory.Record, 8, 4)
         {
-            declarationName = "Value", documentation = "Record " + hostile,
+            declarationName = "Value",
+            documentation = "Record " + hostile,
             fields = [new(new("field"), "value", integer.id, 0, 0, null) { documentation = "Field " + hostile },
                 new(new("bits"), "flags", integer.id, 4, 32, 3) { documentation = "Bitfield " + hostile }]
         };
         InteropType enumeration = new(new("enum"), "Kind", NativeTypeCategory.Enumeration, 4, 4)
         {
-            declarationName = "Kind", elementType = integer.id, documentation = "Enum " + hostile,
+            declarationName = "Kind",
+            elementType = integer.id,
+            documentation = "Enum " + hostile,
             enumValues = [new(new("enumerator"), "First", "1", "1") { documentation = "Enumerator " + hostile }]
         };
         InteropFunction function = new(new("call"), "call", integer.id, [new(new("parameter"), "native_name", integer.id)], "C")
@@ -121,8 +126,10 @@ public sealed class NativeDocumentationTests
     private sealed class MemorySink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content)
-        {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) {
             sources.Add(relativePath, content);
             return relativePath;
         }

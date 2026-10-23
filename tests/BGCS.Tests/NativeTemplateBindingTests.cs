@@ -15,7 +15,12 @@ namespace BGCS.Tests;
 
 public sealed class NativeTemplateBindingTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Invoke(int input, out int result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Invoke(
+        int input,
+        out int result,
+        out nint error
+    );
 
     [Theory]
     [InlineData("return")]
@@ -53,11 +58,12 @@ public sealed class NativeTemplateBindingTests
             string scalar = changed == "alias" ? "Demo::Scalar" : "int";
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "template_binding", nativeName = "template_binding" },
+                schemaVersion = 2,
+                library = new() { id = "template_binding", nativeName = "template_binding" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["template.hpp"], parseMacros = false },
                 bridge = new() { cpp = new() { templateInstantiations = new() { functions = [new("selected", callable, scalar, [scalar])] } } },
                 api = new() { @namespace = "Generated.TemplateBinding", name = "TemplateBindingApi" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult first = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);

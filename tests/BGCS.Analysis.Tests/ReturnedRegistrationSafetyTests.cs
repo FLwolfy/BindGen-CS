@@ -21,8 +21,11 @@ public sealed class ReturnedRegistrationSafetyTests
     [InlineData(true, EvidenceLevel.Verified, NativeCallbackThreading.CallerThread)]
     [InlineData(false, EvidenceLevel.UserAsserted, NativeCallbackThreading.EventLoop)]
     [InlineData(true, EvidenceLevel.UserAsserted, NativeCallbackThreading.EventLoop)]
-    public void ExactTerminalRegistrationFactsDoNotRequireASecondPointerCleanup(bool asynchronous, EvidenceLevel level, NativeCallbackThreading threading)
-    {
+    public void ExactTerminalRegistrationFactsDoNotRequireASecondPointerCleanup(
+        bool asynchronous,
+        EvidenceLevel level,
+        NativeCallbackThreading threading
+    ) {
         InteropModule module = Module(asynchronous, level, threading);
         InteropFunction original = module.functions[0];
         CallbackContract callback = original.parameters[0].callback!;
@@ -193,8 +196,11 @@ public sealed class ReturnedRegistrationSafetyTests
         Assert.Equal(NativeQuiescenceKind.NoNewInvocations, module.functions[0].asynchronous!.completionQuiescence);
         Assert.Empty(new SafetyAnalyzer().Analyze(module));
         CallbackContract callback = module.functions[0].parameters[0].callback!;
-        InteropFunction start = module.functions[0] with { parameters = module.functions[0].parameters.SetItem(0,
-            module.functions[0].parameters[0] with { callback = callback with { unregisterQuiescence = NativeQuiescenceKind.NoNewInvocations } }) };
+        InteropFunction start = module.functions[0] with
+        {
+            parameters = module.functions[0].parameters.SetItem(0,
+            module.functions[0].parameters[0] with { callback = callback with { unregisterQuiescence = NativeQuiescenceKind.NoNewInvocations } })
+        };
         Assert.Single(new SafetyAnalyzer().Analyze(Copy(module, module.functions.SetItem(0, start))));
     }
 
@@ -207,9 +213,11 @@ public sealed class ReturnedRegistrationSafetyTests
         Assert.Throws<InvalidOperationException>(() => new SafetyAnalyzer().Analyze(Copy(module, [module.functions[0], stop], module.types.Add(broken))));
     }
 
-    private static InteropModule Module(bool asynchronous = false, EvidenceLevel level = EvidenceLevel.UserAsserted,
-        NativeCallbackThreading threading = NativeCallbackThreading.AnyThread)
-    {
+    private static InteropModule Module(
+        bool asynchronous = false,
+        EvidenceLevel level = EvidenceLevel.UserAsserted,
+        NativeCallbackThreading threading = NativeCallbackThreading.AnyThread
+    ) {
         Evidence evidence = new(level, "fixture:exact-stop-and-join-protocol");
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType empty = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
@@ -222,8 +230,12 @@ public sealed class ReturnedRegistrationSafetyTests
         InteropType callbackPointer = new(new("callback-pointer"), "Completion*", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         CallbackContract callback = new(callable.id, new(asynchronous ? NativeLifetimeKind.Operation : NativeLifetimeKind.Registration, null, evidence), evidence)
         {
-            retained = true, threading = threading, userDataParameter = new("state"), callableUserDataIndex = 2,
-            unregisterFunction = new("stop"), unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
+            retained = true,
+            threading = threading,
+            userDataParameter = new("state"),
+            callableUserDataIndex = 2,
+            unregisterFunction = new("stop"),
+            unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
             registration = new(new("handle"), NativeQuiescenceKind.NoActiveNativeInvocations, threading == NativeCallbackThreading.EventLoop ? "eventLoop" : "any", evidence)
             { unregisterIsNonBlocking = threading == NativeCallbackThreading.EventLoop ? true : null }
         };
@@ -235,12 +247,18 @@ public sealed class ReturnedRegistrationSafetyTests
         if (asynchronous) start = start with
         {
             parameters = start.parameters.Add(new(new("memory"), "memory", integers.id)
-            { buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput, new(NativeLifetimeKind.Operation, null, evidence), evidence)
-                { retainsPointer = true, lengthParameter = new("count"), allowsNull = false } }).Add(new(new("count"), "count", integer.id)),
+            {
+                buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput, new(NativeLifetimeKind.Operation, null, evidence), evidence)
+                { retainsPointer = true, lengthParameter = new("count"), allowsNull = false }
+            }).Add(new(new("count"), "count", integer.id)),
             asynchronous = new(new("callback"), NativeQuiescenceKind.NoNewInvocations, evidence)
             {
-                resultArgumentIndex = 0, statusArgumentIndex = 1, successStatus = new(NativeScalarConstantKind.Integer, "0", 4, true, evidence),
-                retainedParameters = [new("memory")], cancelFunction = cancel.id, cancellationHandleParameter = new("cancel-handle"),
+                resultArgumentIndex = 0,
+                statusArgumentIndex = 1,
+                successStatus = new(NativeScalarConstantKind.Integer, "0", 4, true, evidence),
+                retainedParameters = [new("memory")],
+                cancelFunction = cancel.id,
+                cancellationHandleParameter = new("cancel-handle"),
                 cancellationIsNonBlocking = threading == NativeCallbackThreading.EventLoop ? true : null
             }
         };
@@ -248,6 +266,10 @@ public sealed class ReturnedRegistrationSafetyTests
             asynchronous ? [start, stop, cancel] : [start, stop], []);
     }
 
-    private static InteropModule Copy(InteropModule original, ImmutableArray<InteropFunction> functions, ImmutableArray<InteropType>? types = null)
+    private static InteropModule Copy(
+        InteropModule original,
+        ImmutableArray<InteropFunction> functions,
+        ImmutableArray<InteropType>? types = null
+    )
         => new(original.libraryId, original.targetId, original.pointerSize, types ?? original.types, functions, []);
 }

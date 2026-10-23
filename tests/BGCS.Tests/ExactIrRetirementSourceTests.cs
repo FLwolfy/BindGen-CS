@@ -140,11 +140,17 @@ public sealed class ExactIrRetirementSourceTests
             foreach (string code in codes)
                 Assert.Equal(BindingDiagnosticSeverity.Error, Assert.Single(rejected.diagnostics, diagnostic => diagnostic.code == code).severity);
             Assert.Equal(previous.OrderBy(item => item.Key), Snapshot(initial.outputRoot).OrderBy(item => item.Key));
-            BindingConfiguration declared = strict with { semantics = new() { callbackParameters = [new()
+            BindingConfiguration declared = strict with
+            {
+                semantics = new()
+                {
+                    callbackParameters = [new()
             {
                 function = "bgcs_register", parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
                 threading = NativeCallbackThreading.CallerThread
-            }] } };
+            }]
+                }
+            };
             GenerationResult recovered = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(declared, root), compileManaged: true);
             Assert.True(recovered.success, recovered.GetDiagnosticSummary());
             Assert.DoesNotContain(recovered.diagnostics, diagnostic => codes.Contains(diagnostic.code));
@@ -205,10 +211,11 @@ public sealed class ExactIrRetirementSourceTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "exact-ir", nativeName = "exact_ir_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "exact-ir", nativeName = "exact_ir_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.ExactIr", name = "ExactApi", importMode = BindingImportMode.DllImport },
-         cache = new() { enabled = false }
+        cache = new() { enabled = false }
     };
 
     private static string[] ManagedFiles(GenerationResult result) => Directory.GetFiles(result.outputRoot, "*.cs", SearchOption.AllDirectories);

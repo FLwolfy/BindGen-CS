@@ -38,10 +38,12 @@ public sealed class PostReplayInputFenceTests
             await File.WriteAllTextAsync(state.header, C_ORIGINAL);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "fence-order-" + Guid.NewGuid().ToString("N"), nativeName = "fence_order" },
+                schemaVersion = 2,
+                library = new() { id = "fence-order-" + Guid.NewGuid().ToString("N"), nativeName = "fence_order" },
                 source = new() { language = SourceLanguage.C, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.FenceOrder", name = "FenceApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
             };
             // The public worker-backed wrapper exposes the contributed store
             // path while keeping the original header a parsed-only input.
@@ -99,7 +101,10 @@ public sealed class PostReplayInputFenceTests
         }
     }
 
-    private sealed class State(string header, bool addUnlistedMember)
+    private sealed class State(
+        string header,
+        bool addUnlistedMember
+    )
     {
         internal readonly string header = header;
         internal readonly bool addUnlistedMember = addUnlistedMember;
@@ -126,22 +131,32 @@ public sealed class PostReplayInputFenceTests
     {
         public string id => "fence.order";
         public int priority => 0;
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("generated.h", SourceContributionRole.PublicHeader,
                 "text/x-c-header", "#pragma once\nint contributed(void);\n", SourceLanguage.C, exposeToBindings: true)], new(EvidenceLevel.Declared, "final input order fixture")));
     }
 
-    private sealed class ObservingFrontend(string workerRoot, State state) : IFrontend
+    private sealed class ObservingFrontend(
+        string workerRoot,
+        State state
+    ) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
         private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
-        public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             string file = request.sourcePathMappings.Single(pair => pair.Value == "contributions/fence.order/generated.h").Key;
             if (state.contributedFile is string previous) Assert.Equal(previous, file);
             state.contributedFile = file;
@@ -154,8 +169,10 @@ public sealed class PostReplayInputFenceTests
     {
         public string id => "fence-order-mutation";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             if (state.armed)
             {

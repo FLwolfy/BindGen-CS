@@ -11,8 +11,11 @@ public sealed class ExternCDetectionTests : FrontendTestHost
     [InlineData("extern \"C\" int Bgcs_Extern(int a);", "Bgcs_Extern", "C")]
     [InlineData("int Bgcs_Normal(int a);", "Bgcs_Normal", "C++")]
     [InlineData("namespace Demo { extern \"C\" { int Bgcs_ExternNs(int a); } }", "Bgcs_ExternNs", "C")]
-    public async Task LanguageLinkageRemainsIndependentOfItsDeclarationContainer(string source, string name, string linkage)
-    {
+    public async Task LanguageLinkageRemainsIndependentOfItsDeclarationContainer(
+        string source,
+        string name,
+        string linkage
+    ) {
         NativeModule module = (await ParseSourceAsync(source)).module;
         Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
         Assert.Equal(linkage, Assert.Single(module.declarations, value => value.kind == "Function" && value.name == name).linkage);

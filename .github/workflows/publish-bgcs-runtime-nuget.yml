@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Accepted public release version (4.0.0; private -ci candidates are never published)"
+        description: "Accepted public release version (4.1.0; private -ci candidates are never published)"
         required: true
         type: string
 

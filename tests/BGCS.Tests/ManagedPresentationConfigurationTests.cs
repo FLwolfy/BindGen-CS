@@ -20,8 +20,10 @@ public sealed class ManagedPresentationConfigurationTests
     [InlineData("enum-member-array", "initialized")]
     [InlineData("duplicate-member", "multiple")]
     [InlineData("member-value-expression", "either")]
-    public void InvalidPresentationInputsFailDuringConfigurationValidation(string invalid, string reason)
-    {
+    public void InvalidPresentationInputsFailDuringConfigurationValidation(
+        string invalid,
+        string reason
+    ) {
         ApiConfiguration api = invalid switch
         {
             "constant-array" => new() { constants = default },

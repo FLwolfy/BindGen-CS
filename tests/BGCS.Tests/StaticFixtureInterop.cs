@@ -18,8 +18,10 @@ internal static class StaticFixtureInterop
 
     private sealed class Runtime : IManagedRuntimeProvider
     {
-        public bool TryResolve(ManagedRuntimeRequest request, [NotNullWhen(true)] out ManagedRuntimeProfile? profile)
-        {
+        public bool TryResolve(
+            ManagedRuntimeRequest request,
+            [NotNullWhen(true)] out ManagedRuntimeProfile? profile
+        ) {
             profile = null;
             if (request.runtimeId.value != "fixture.static") return false;
             NativeTargetDescriptor target = request.target;
@@ -28,8 +30,10 @@ internal static class StaticFixtureInterop
             if (!new DotNetRuntimeProvider().TryResolve(new(new("dotnet.coreclr"), desktop), out ManagedRuntimeProfile? dynamicProfile)) return false;
             profile = dynamicProfile with
             {
-                id = target.targetId.value + "/fixture.static/v1", runtimeId = new("fixture.static"),
-                moduleMechanism = NativeModuleMechanism.StaticAdapter, requiresStaticCallbackThunks = true
+                id = target.targetId.value + "/fixture.static/v1",
+                runtimeId = new("fixture.static"),
+                moduleMechanism = NativeModuleMechanism.StaticAdapter,
+                requiresStaticCallbackThunks = true
             };
             return true;
         }

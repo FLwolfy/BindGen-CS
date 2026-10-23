@@ -146,7 +146,7 @@ public static partial class BindingDiagnosticCatalog
         new("BGCSCPP-INSTANTIATION",
             "C++ template needs a concrete instance",
             "A selected primary class or function template has no explicit concrete specialization.",
-            "Declare the requested concrete class/function instance in cpp.templateInstantiations and provide all required type/value arguments."),
+            "Declare the requested concrete class/function instance in bridge.cpp.templateInstantiations and provide all required type/value arguments."),
         new("BGCSCPP001",
             "C++ declaration has no safe lowering",
             "No registered C++ lowering preserves the selected declaration and its ABI/lifetime contract.",

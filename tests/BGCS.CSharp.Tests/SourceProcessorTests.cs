@@ -107,7 +107,10 @@ public sealed class SourceProcessorTests
     [InlineData(30001, RegexOptions.None)]
     [InlineData(1000, RegexOptions.RightToLeft)]
     [InlineData(1000, RegexOptions.ECMAScript)]
-    public void UnboundedOrUnsupportedRegexPoliciesFailBeforeProcessing(int timeout, RegexOptions options)
+    public void UnboundedOrUnsupportedRegexPoliciesFailBeforeProcessing(
+        int timeout,
+        RegexOptions options
+    )
         => Assert.Throws<ArgumentException>(() => new RegexArtifactProcessor(["**/*.cs"], "x", "y", timeout, options));
 
     [Fact]
@@ -172,8 +175,11 @@ public sealed class SourceProcessorTests
 
     private sealed class RenameSyntax() : SyntaxArtifactProcessor(["**/*.cs"])
     {
-        protected override CompilationUnitSyntax Rewrite(string path, CompilationUnitSyntax root, CancellationToken cancellationToken)
-        {
+        protected override CompilationUnitSyntax Rewrite(
+            string path,
+            CompilationUnitSyntax root,
+            CancellationToken cancellationToken
+        ) {
             ClassDeclarationSyntax declaration = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
             return root.ReplaceNode(declaration, declaration.WithIdentifier(SyntaxFactory.Identifier("After").WithTriviaFrom(declaration.Identifier)));
         }
@@ -187,10 +193,28 @@ public sealed class SourceProcessorTests
         internal string Text(string path) => m_sources[C_PREFIX + path];
         internal ArtifactProcessingRequest Request() => new(NeutralBackendTests.Model(), m_sources.Select(pair => Describe(pair.Key)).ToImmutableArray(), this);
         private ArtifactDescriptor Describe(string path) => new(path, "text/x-csharp", new(new string('a', 64)));
-        public ValueTask<string> ReadTextAsync(string relativePath, CancellationToken cancellationToken) => ValueTask.FromResult(m_sources[relativePath]);
-        public ValueTask<ReadOnlyMemory<byte>> ReadBytesAsync(string relativePath, CancellationToken cancellationToken) => ValueTask.FromResult<ReadOnlyMemory<byte>>(Encoding.UTF8.GetBytes(m_sources[relativePath]));
-        public ValueTask<ArtifactDescriptor> ReplaceTextAsync(string relativePath, string content, CancellationToken cancellationToken) { m_sources[relativePath] = content; return ValueTask.FromResult(Describe(relativePath)); }
-        public ValueTask<ArtifactDescriptor> AddTextAsync(string relativePath, string mediaType, string content, CancellationToken cancellationToken) { m_sources.Add(relativePath, content); return ValueTask.FromResult(Describe(relativePath)); }
-        public ValueTask DeleteTextAsync(string relativePath, CancellationToken cancellationToken) { m_sources.Remove(relativePath); return ValueTask.CompletedTask; }
+        public ValueTask<string> ReadTextAsync(
+            string relativePath,
+            CancellationToken cancellationToken
+        ) => ValueTask.FromResult(m_sources[relativePath]);
+        public ValueTask<ReadOnlyMemory<byte>> ReadBytesAsync(
+            string relativePath,
+            CancellationToken cancellationToken
+        ) => ValueTask.FromResult<ReadOnlyMemory<byte>>(Encoding.UTF8.GetBytes(m_sources[relativePath]));
+        public ValueTask<ArtifactDescriptor> ReplaceTextAsync(
+            string relativePath,
+            string content,
+            CancellationToken cancellationToken
+        ) { m_sources[relativePath] = content; return ValueTask.FromResult(Describe(relativePath)); }
+        public ValueTask<ArtifactDescriptor> AddTextAsync(
+            string relativePath,
+            string mediaType,
+            string content,
+            CancellationToken cancellationToken
+        ) { m_sources.Add(relativePath, content); return ValueTask.FromResult(Describe(relativePath)); }
+        public ValueTask DeleteTextAsync(
+            string relativePath,
+            CancellationToken cancellationToken
+        ) { m_sources.Remove(relativePath); return ValueTask.CompletedTask; }
     }
 }

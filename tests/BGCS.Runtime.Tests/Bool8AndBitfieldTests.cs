@@ -85,8 +85,10 @@ public class Bool8AndBitfieldTests
     [InlineData(-1, 1)]
     [InlineData(0, 0)]
     [InlineData(31, 2)]
-    public void Bitfield_InvalidRange_ShouldThrow(int offset, int width)
-    {
+    public void Bitfield_InvalidRange_ShouldThrow(
+        int offset,
+        int width
+    ) {
         Assert.Throws<ArgumentOutOfRangeException>(() => Bitfield.Get(0u, offset, width));
     }
 }

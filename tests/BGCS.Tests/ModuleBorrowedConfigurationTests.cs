@@ -36,13 +36,18 @@ public sealed class ModuleBorrowedConfigurationTests
     {
         Assert.Throws<ArgumentException>(() => new GenerationRequest(Configuration() with
         {
-            api = new() { memberFunctions = [new("read", "Widget", "self")
-                { kind = ManagedReceiverKind.ModuleBorrowed, releaseDomain = "invented" }] }
+            api = new()
+            {
+                memberFunctions = [new("read", "Widget", "self")
+                { kind = ManagedReceiverKind.ModuleBorrowed, releaseDomain = "invented" }]
+            }
         }, Path.GetTempPath()));
     }
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "borrowed", nativeName = "borrowed" }, source = new() { headers = ["native.h"] }
+        schemaVersion = 2,
+        library = new() { id = "borrowed", nativeName = "borrowed" },
+        source = new() { headers = ["native.h"] }
     };
 }

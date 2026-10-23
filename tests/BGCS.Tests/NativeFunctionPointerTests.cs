@@ -39,10 +39,12 @@ public sealed class NativeFunctionPointerTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "callbacks", nativeName = "callback_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "callbacks", nativeName = "callback_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callbacks.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Callbacks", name = "CallbackApi", importMode = importMode },
-                runtime = new() { mode = "source" },  cache = new() { enabled = false }
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -104,7 +106,8 @@ public sealed class NativeFunctionPointerTests
             await File.WriteAllTextAsync(Path.Combine(root, "callbacks.hpp"), "struct Payload { int value; };\nusing Callback = " + callback + ";\ninline void Set(Callback value) { (void)value; }\n");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "callbacks", nativeName = "callback_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "callbacks", nativeName = "callback_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["callbacks.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 cache = new() { enabled = false }
             };

@@ -15,8 +15,11 @@ public sealed class NeutralTemplateFactTests : FrontendTestHost
     [Theory]
     [InlineData("i686-pc-windows-msvc", 4, 4)]
     [InlineData("aarch64-unknown-linux-gnu", 8, 8)]
-    public async Task ParameterPackPreservesExactNeutralTypeArgumentsAndTargetWidths(string triple, int longSize, int pointerSize)
-    {
+    public async Task ParameterPackPreservesExactNeutralTypeArgumentsAndTargetWidths(
+        string triple,
+        int longSize,
+        int pointerSize
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-neutral-template-pack-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -25,7 +28,7 @@ public sealed class NeutralTemplateFactTests : FrontendTestHost
             await File.WriteAllTextAsync(header, "template<class... Types> class Values {}; Values<long, double, int*> create();");
             NativeTargetDescriptor target = new(new("template-pack-test"), "test", "test", "test", triple, new());
             NativeModule module = (await new ClangFrontend(host).ParseAsync(new(target, SourceLanguage.Cpp, [header])
-                { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
+            { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             NativeDeclaration function = Assert.Single(module.declarations, declaration => declaration.kind == "Function" && declaration.name == "create");
             NativeType result = module.GetType(function.returnType!.Value);

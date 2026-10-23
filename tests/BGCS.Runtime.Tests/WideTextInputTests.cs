@@ -40,7 +40,11 @@ public sealed class WideTextInputTests
     [InlineData(32)]
     public void InvalidUnicodeNullAllowanceAndAlignment_AreExplicit(int width)
     {
-        NativeStringLease Encode(string? value, bool allowsNull = false, nuint alignment = 4)
+        NativeStringLease Encode(
+            string? value,
+            bool allowsNull = false,
+            nuint alignment = 4
+        )
             => width == 16 ? Utf16Codec.EncodeNullTerminated(value, allowsNull, requiredAlignment: alignment) : Utf32Codec.EncodeNullTerminated(value, allowsNull, requiredAlignment: alignment);
         Assert.Throws<ArgumentNullException>(() => Encode(null));
         using NativeStringLease absent = Encode(null, true);

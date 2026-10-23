@@ -22,8 +22,10 @@ public sealed class CallbackSafetyAnalyzerTests
     [InlineData("callback-storage", false)]
     [InlineData("misleading-spelling", false)]
     [InlineData("integer", false)]
-    public void OnlyAnExactFunctionPointerParameterRequiresCallbackLifetimeAndThreadFacts(string type, bool callback)
-    {
+    public void OnlyAnExactFunctionPointerParameterRequiresCallbackLifetimeAndThreadFacts(
+        string type,
+        bool callback
+    ) {
         InteropModule module = Module(type);
         var diagnostics = new SafetyAnalyzer().Analyze(module);
         Assert.Equal(callback ? 2 : 0, diagnostics.Length);
@@ -47,8 +49,11 @@ public sealed class CallbackSafetyAnalyzerTests
     [InlineData("thread", false, true)]
     [InlineData("undefined-thread", false, true)]
     [InlineData("evidence", true, true)]
-    public void IndependentUnknownFieldsReportOnlyTheirMissingFacts(string fault, bool lifetime, bool threading)
-    {
+    public void IndependentUnknownFieldsReportOnlyTheirMissingFacts(
+        string fault,
+        bool lifetime,
+        bool threading
+    ) {
         CallbackContract known = Contract(EvidenceLevel.UserAsserted);
         CallbackContract changed = fault switch
         {
@@ -115,8 +120,10 @@ public sealed class CallbackSafetyAnalyzerTests
         return new(new("signature"), new(NativeLifetimeKind.Call, null, evidence), evidence)
         { retained = false, threading = NativeCallbackThreading.CallerThread };
     }
-    private static InteropModule Module(string type, CallbackContract? contract = null)
-    {
+    private static InteropModule Module(
+        string type,
+        CallbackContract? contract = null
+    ) {
         ImmutableArray<InteropType> types =
         [
             new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true },

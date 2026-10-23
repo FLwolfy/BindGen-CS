@@ -213,8 +213,10 @@ public sealed class SourceSnapshotDirectoryBatchTests : IDisposable
         }
     }
 
-    private async Task Link(string path, string target)
-    {
+    private async Task Link(
+        string path,
+        string target
+    ) {
         if (OperatingSystem.IsWindows())
         {
             string executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");

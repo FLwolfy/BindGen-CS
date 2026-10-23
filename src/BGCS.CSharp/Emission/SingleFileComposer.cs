@@ -65,9 +65,9 @@ public sealed class SingleFileComposer
         cancellationToken.ThrowIfCancellationRequested();
         CompilationUnitSyntax output = SyntaxFactory.CompilationUnit().WithAttributeLists(SyntaxFactory.List(attributes)).WithUsings(SyntaxFactory.List(usings.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value)));
         output = output.WithMembers(SyntaxFactory.List(members));
-        string normalized = GeneratedSourceFormatter.Normalize(output, Environment.NewLine);
-        string nullableDirective = nullableEnabled ? $"#nullable enable{Environment.NewLine}" : string.Empty;
-        string text = CreateHeader(abiReferenceTarget) + nullableDirective + normalized + Environment.NewLine;
+        string normalized = GeneratedSourceFormatter.Normalize(output, "\n");
+        string nullableDirective = nullableEnabled ? "#nullable enable\n" : string.Empty;
+        string text = CreateHeader(abiReferenceTarget) + nullableDirective + normalized + "\n";
         cancellationToken.ThrowIfCancellationRequested();
         return text;
     }
@@ -84,7 +84,7 @@ public sealed class SingleFileComposer
         header.AppendLine("// </auto-generated>");
         header.AppendLine("// ------------------------------------------------------------------------------");
         header.AppendLine("#pragma warning disable CS1591 // Native declarations may omit documentation.");
-        return header.ToString();
+        return header.ToString().ReplaceLineEndings("\n");
     }
 
     private static string FormatParsingErrors(

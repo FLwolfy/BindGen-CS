@@ -239,30 +239,42 @@ public sealed class InspectionAndDiffTests
     private static BindingHost Host() => BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend()).Build();
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "example", nativeName = "example" },
-        source = new() { headers = ["native.h"] }, targets = [new() { id = "host" }],
-        api = new() { @namespace = "Example", name = "NativeApi" }, cache = new() { enabled = false }
+        schemaVersion = 2,
+        library = new() { id = "example", nativeName = "example" },
+        source = new() { headers = ["native.h"] },
+        targets = [new() { id = "host" }],
+        api = new() { @namespace = "Example", name = "NativeApi" },
+        cache = new() { enabled = false }
     };
-    private sealed class MetadataValidator(int order, string message) : IGenerationValidator
+    private sealed class MetadataValidator(
+        int order,
+        string message
+    ) : IGenerationValidator
     {
         public string id => "metadata-probe";
         public int priority => order;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(Enumerable.Range(0, 20).Select(index => new BindingDiagnostic(BindingDiagnosticSeverity.Information, message + index)).ToImmutableArray());
         }
     }
     private sealed class ScalarFrontend : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeDeclaration function = new(new("function"), "Function", "echo", "echo", null, new(request.headers[0], 1, 1)) { returnType = integer.id, callingConvention = "C" };
             return ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [integer], [function], []) { language = SourceLanguage.C, byteOrder = request.target.byteOrder }, new([], [])));

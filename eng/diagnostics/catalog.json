@@ -379,11 +379,11 @@
       "code": "BGCSCPP-INSTANTIATION",
       "title": "C++ template needs a concrete instance",
       "cause": "A selected primary class or function template has no explicit concrete specialization.",
-      "resolution": "Declare the requested concrete class/function instance in cpp.templateInstantiations and provide all required type/value arguments.",
+      "resolution": "Declare the requested concrete class/function instance in bridge.cpp.templateInstantiations and provide all required type/value arguments.",
       "zh": {
         "title": "C++ 模板需要具体实例",
         "cause": "选中的主类模板或函数模板没有显式具体特化。",
-        "resolution": "在 cpp.templateInstantiations 中声明所需类或函数实例，并提供完整类型、值参数。"
+        "resolution": "在 bridge.cpp.templateInstantiations 中声明所需类或函数实例，并提供完整类型、值参数。"
       }
     },
     {

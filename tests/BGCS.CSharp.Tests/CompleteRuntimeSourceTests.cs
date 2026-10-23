@@ -15,6 +15,35 @@ namespace BGCS.CSharp.Tests;
 
 public sealed class CompleteRuntimeSourceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RuntimeSourceDeliveryRetainsOriginalNoticesAfterNamespaceAndFileComposition(bool singleFile)
+    {
+        var sources = new RuntimeSourceCatalog().GetSources(["runtime.complete"], "Local.Attributed.Runtime");
+        string[] attributed = ["Bool8.cs", "Bool32.cs", "Pointer.cs", "ConstPointer.cs", "Bitfield.cs", "Utils.cs", "NativeNameAttribute.cs"];
+        foreach (string file in attributed)
+        {
+            string text = sources.Single(source => source.Path == "Runtime/" + file).Text;
+            Assert.Contains("Copyright (c) 2023 Juna Meinhold", text, StringComparison.Ordinal);
+            Assert.Contains("The above copyright notice and this permission notice", text, StringComparison.Ordinal);
+        }
+        if (singleFile)
+        {
+            string composed = new SingleFileComposer().ComposeSources(
+                sources.Select(source => (source.Path, "#nullable enable\n" + source.Text)), "Local.Attributed");
+            Assert.Contains("Copyright (c) 2023 Juna Meinhold", composed, StringComparison.Ordinal);
+            Assert.Contains("The above copyright notice and this permission notice", composed, StringComparison.Ordinal);
+            using SourceAssembly compiled = Compile([("Bindings.cs", composed)]);
+            Assert.NotEmpty(compiled.assembly.GetExportedTypes());
+        }
+        else
+        {
+            using SourceAssembly compiled = Compile(sources);
+            Assert.NotEmpty(compiled.assembly.GetExportedTypes());
+        }
+    }
+
     [Fact]
     public void CompleteSourceDeliveryPreservesTheRuntimePackagesPublicTypesAndMembers()
     {
@@ -83,8 +112,10 @@ public sealed class CompleteRuntimeSourceTests
         Assert.Throws<InvalidOperationException>(() => catalog.GetSources(["primitives.atomic"], "Missing.Runtime"));
     }
 
-    private static string[] Surface(Assembly assembly, string sourceNamespace)
-    {
+    private static string[] Surface(
+        Assembly assembly,
+        string sourceNamespace
+    ) {
         List<string> surface = [];
         foreach (Type type in assembly.GetExportedTypes())
         {
@@ -120,7 +151,10 @@ public sealed class CompleteRuntimeSourceTests
         catch { context.Unload(); throw; }
     }
 
-    private sealed class SourceAssembly(AssemblyLoadContext context, Assembly assembly) : IDisposable
+    private sealed class SourceAssembly(
+        AssemblyLoadContext context,
+        Assembly assembly
+    ) : IDisposable
     {
         public Assembly assembly { get; } = assembly;
         public void Dispose() => context.Unload();

@@ -16,8 +16,10 @@ public sealed class QuantityArtifactProcessor : IArtifactProcessor, IDisposable
     /// <summary>Gets whether the processor has released its session resources.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-    {
+    public async ValueTask ProcessAsync(
+        ArtifactProcessingRequest request,
+        CancellationToken cancellationToken
+    ) {
         foreach (var artifact in request.artifacts)
         {
             string text = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken).ConfigureAwait(false);

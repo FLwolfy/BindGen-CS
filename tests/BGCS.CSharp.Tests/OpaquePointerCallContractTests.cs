@@ -26,8 +26,11 @@ public sealed class OpaquePointerCallContractTests
     [InlineData("macos-arm64-darwin", 8, BindingImportMode.FunctionTable)]
     [InlineData("macos-arm64-darwin", 8, BindingImportMode.DllImport)]
     [InlineData("macos-arm64-darwin", 8, BindingImportMode.LibraryImport)]
-    public async Task OpaqueAliasesKeepNativePointerChannelsOutsideTheirAddressWrapper(string target, int pointerSize, BindingImportMode mode)
-    {
+    public async Task OpaqueAliasesKeepNativePointerChannelsOutsideTheirAddressWrapper(
+        string target,
+        int pointerSize,
+        BindingImportMode mode
+    ) {
         InteropType record = new(new("opaque"), "Window", NativeTypeCategory.Record, null, null) { recordKind = "Struct" };
         InteropType pointer = new(new("pointer"), "Window*", NativeTypeCategory.Pointer, pointerSize, pointerSize) { elementType = record.id };
         InteropType alias = new(new("alias"), "NativeWindow", NativeTypeCategory.Alias, pointerSize, pointerSize) { elementType = pointer.id };

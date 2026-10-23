@@ -17,7 +17,11 @@ namespace BGCS.Tests;
 
 public sealed class NativeBridgeErrorAllocationTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Scalar(out int value, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Scalar(
+        out int value,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void Release(nint error);
 
     [Theory]
@@ -49,10 +53,13 @@ public sealed class NativeBridgeErrorAllocationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "allocation", nativeName = "allocation_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "allocation", nativeName = "allocation_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["allocation.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.ErrorAllocation", name = "AllocationApi" },
-                runtime = new() { mode = runtimeMode }, cache = new() { enabled = false }};
+                runtime = new() { mode = runtimeMode },
+                cache = new() { enabled = false }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -98,8 +105,11 @@ public sealed class NativeBridgeErrorAllocationTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void InvokeFriendly(string sources, string binary, string runtimeMode)
-    {
+    private static void InvokeFriendly(
+        string sources,
+        string binary,
+        string runtimeMode
+    ) {
         string runtime = runtimeMode == "package" ? "BGCS.Runtime" : "Generated.ErrorAllocation.Runtime";
         string consumer = """
             public static class AllocationConsumer {

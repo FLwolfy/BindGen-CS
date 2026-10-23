@@ -74,7 +74,10 @@ public sealed class SchemaCommandTests
         });
     }
 
-    private static int Run(string directory, params string[] args) => CliInvocation.Run(["schema", .. args], directory, TextWriter.Null, TextWriter.Null);
+    private static int Run(
+        string directory,
+        params string[] args
+    ) => CliInvocation.Run(["schema", .. args], directory, TextWriter.Null, TextWriter.Null);
     private static void WithDirectory(Action<string> action)
     {
         string directory = Path.Combine(Path.GetTempPath(), "bgcs-schema-tests-" + Guid.NewGuid().ToString("N"));

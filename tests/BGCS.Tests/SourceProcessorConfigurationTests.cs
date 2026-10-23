@@ -36,8 +36,16 @@ public sealed class SourceProcessorConfigurationTests
     [Fact]
     public void GroupedSchemaAndFrozenRequestExposeAllFiniteChoicesWithoutExecutableTypes()
     {
-        SourceProcessorConfiguration rule = new() { id = "patch", kind = SourceProcessorKind.RegexReplace, paths = ["Types/**/*.cs"],
-            match = "(?<name>old)", replacement = "${name}_new", timeoutMilliseconds = 321, explicitCapture = true };
+        SourceProcessorConfiguration rule = new()
+        {
+            id = "patch",
+            kind = SourceProcessorKind.RegexReplace,
+            paths = ["Types/**/*.cs"],
+            match = "(?<name>old)",
+            replacement = "${name}_new",
+            timeoutMilliseconds = 321,
+            explicitCapture = true
+        };
         GenerationRequest request = new(Configuration() with { output = new() { processors = [rule] } }, Path.GetTempPath());
         Assert.Equal(rule, Assert.Single(request.configuration.output.processors));
         var processors = new SchemaCatalog().CreateBindingSchema()["properties"]!["output"]!["properties"]!["processors"]!;

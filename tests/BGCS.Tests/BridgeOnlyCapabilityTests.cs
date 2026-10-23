@@ -25,8 +25,13 @@ public sealed class BridgeOnlyCapabilityTests
                 .ReplaceFactory<ICallAbiProvider>("dotnet.call-abi", new("test.abi", ExtensionPort.CallAbiProvider),
                     _ => throw new InvalidOperationException("Managed ABI activation was requested."))
                 .Build();
-            GenerationRequest request = new(new() { schemaVersion = 2, library = new() { id = "native_only", nativeName = "native_only" },
-                source = new() { headers = ["native.h"], parseMacros = false }, api = new() { runtime = new ManagedRuntimeId("private.runtime") } }, root);
+            GenerationRequest request = new(new()
+            {
+                schemaVersion = 2,
+                library = new() { id = "native_only", nativeName = "native_only" },
+                source = new() { headers = ["native.h"], parseMacros = false },
+                api = new() { runtime = new ManagedRuntimeId("private.runtime") }
+            }, root);
             GenerationResult bridge = await host.BridgeAsync(request);
             Assert.True(bridge.success, bridge.GetDiagnosticSummary());
             Assert.NotEmpty(Assert.Single(bridge.nativeSources).sources);

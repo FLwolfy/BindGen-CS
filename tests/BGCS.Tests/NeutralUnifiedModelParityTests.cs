@@ -80,8 +80,11 @@ public sealed class NeutralUnifiedModelParityTests
 
             // A new explicit semantic input is analyzed afresh even when generation caching is enabled.
             BindingConfiguration declared = strict with
-            { execution = strict.execution with { diagnostics = new() { errorCodes = [BindingDiagnosticCodes.C_OWNERSHIP] } }, semantics = strict.semantics with
-                { borrowedResults = [new() { function = "bgcs_get_context", lifetime = NativeLifetimeKind.Module }] } };
+            {
+                execution = strict.execution with { diagnostics = new() { errorCodes = [BindingDiagnosticCodes.C_OWNERSHIP] } },
+                semantics = strict.semantics with
+                { borrowedResults = [new() { function = "bgcs_get_context", lifetime = NativeLifetimeKind.Module }] }
+            };
             GenerationResult recovered = await host.GenerateAsync(new(declared, root));
             Assert.True(recovered.success, recovered.GetDiagnosticSummary());
             Assert.DoesNotContain(recovered.diagnostics, diagnostic => diagnostic.code == BindingDiagnosticCodes.C_OWNERSHIP);
@@ -163,7 +166,8 @@ public sealed class NeutralUnifiedModelParityTests
 
     private static BindingConfiguration Configuration(bool singleFile) => new()
     {
-        schemaVersion = 2, library = new() { id = "unified-model", nativeName = "unified_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "unified-model", nativeName = "unified_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.Unified", name = "UnifiedApi" },
         semantics = new()
@@ -175,7 +179,7 @@ public sealed class NeutralUnifiedModelParityTests
             stringResults = [new() { function = "bgcs_create_name", encoding = NativeTextEncoding.Utf8, zeroTerminated = true, allowsNull = true }]
         },
         output = new() { layout = singleFile ? "singleFile" : "split", singleFileName = "Bindings.cs" },
-         cache = new() { enabled = true },
+        cache = new() { enabled = true },
         execution = new() { diagnostics = new() { errorCodes = ["vendor.unrelated-warning"] } }
     };
 

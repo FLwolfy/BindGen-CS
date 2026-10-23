@@ -22,8 +22,10 @@ public sealed class NativeCppBooleanTests
     [InlineData("source", false)]
     [InlineData("package", true)]
     [InlineData("source", true)]
-    public async Task NativeBool_NormalizesFriendlyValuesAndPreservesRawAndExplicitRecipe(string runtimeMode, bool custom)
-    {
+    public async Task NativeBool_NormalizesFriendlyValuesAndPreservesRawAndExplicitRecipe(
+        string runtimeMode,
+        bool custom
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-cpp-bool-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -46,16 +48,21 @@ public sealed class NativeCppBooleanTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "boolean", nativeName = "boolean_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "boolean", nativeName = "boolean_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["boolean.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeBoolean", name = "BooleanApi" },
-                bridge = new() { typeLowerings = custom ? [new TypeLoweringRecipe {
+                bridge = new()
+                {
+                    typeLowerings = custom ? [new TypeLoweringRecipe {
                     id = "explicit-bool-int", typePattern = "bool", cAbiType = "uint8_t",
                     parameterExpression = "static_cast<bool>({value})", resultExpression = "static_cast<uint8_t>({value})",
                     managedProjection = new ManagedRecipeProjection("int", "(byte)({value} != 0 ? 1 : 0)", "{value} != 0 ? 1 : 0")
-                }] : ImmutableArray<TypeLoweringRecipe>.Empty },
+                }] : ImmutableArray<TypeLoweringRecipe>.Empty
+                },
                 semantics = new() { ownedResults = [new() { function = "Demo::Toggle::Toggle(bool)", releaseThreadDomain = "any" }] },
-                runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
+                runtime = new() { mode = runtimeMode },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -66,8 +73,12 @@ public sealed class NativeCppBooleanTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void Invoke(string sources, string binary, string runtimeMode, bool custom)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        string runtimeMode,
+        bool custom
+    ) {
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         string runtime = runtimeMode == "package" ? "BGCS.Runtime" : "Generated.NativeBoolean.Runtime";
         string consumer = """

@@ -21,8 +21,10 @@ public sealed class NativeOwnedInstanceCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task OwnedMemberCallbacksRetainTheWholeNativeFrameAndCleanEveryOwnedResult(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task OwnedMemberCallbacksRetainTheWholeNativeFrameAndCleanEveryOwnedResult(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-owned-instance-callback-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -30,20 +32,38 @@ public sealed class NativeOwnedInstanceCallbackTests
             await File.WriteAllTextAsync(Path.Combine(root, "widget.hpp"), Header);
             string[] functions = ["Widget::Widget(int)", "Widget::~Widget", "Widget::Value", "Widget::Clone", "Widget::CallPlain", "Widget::CallState",
                 "Widget::Spawn", "Widget::Touch", "Widget::Composed", "Widget::CloneFill", "Widget::SpawnFill", "Live", "Last", "Destroyed"];
-            CallbackParameterConfiguration Callback(string member, bool userData, string? fallback) => new()
+            CallbackParameterConfiguration Callback(
+                string member,
+                bool userData,
+                string? fallback
+            ) => new()
             {
-                function = "Widget::" + member, parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
-                threading = NativeCallbackThreading.CallerThread, userDataParameter = userData ? "userdata" : null,
-                callableUserDataIndex = userData ? 1 : null, failureReturn = fallback
+                function = "Widget::" + member,
+                parameter = "callback",
+                lifetime = NativeLifetimeKind.Call,
+                retained = false,
+                threading = NativeCallbackThreading.CallerThread,
+                userDataParameter = userData ? "userdata" : null,
+                callableUserDataIndex = userData ? 1 : null,
+                failureReturn = fallback
             };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "owned_callbacks", nativeName = "owned_callbacks_fixture" },
-                source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false,
-                    includeTransitivelyReferencedHeaders = false, selection = new() { includeDeclarations = functions.ToImmutableArray() } },
+                schemaVersion = 2,
+                library = new() { id = "owned_callbacks", nativeName = "owned_callbacks_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.Cpp,
+                    headers = ["widget.hpp"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false,
+                    selection = new() { includeDeclarations = functions.ToImmutableArray() }
+                },
                 api = new()
                 {
-                    @namespace = "Generated.OwnedCallbacks", name = "OwnedApi", importMode = mode,
+                    @namespace = "Generated.OwnedCallbacks",
+                    name = "OwnedApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget(int)", "CreateWidget")
                         .Add("Widget::Value", "Value").Add("Widget::Clone", "Clone").Add("Widget::CallPlain", "CallPlain")
@@ -75,7 +95,7 @@ public sealed class NativeOwnedInstanceCallbackTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

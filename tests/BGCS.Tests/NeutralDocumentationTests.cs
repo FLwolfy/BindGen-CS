@@ -19,8 +19,10 @@ public sealed class NeutralDocumentationTests
     [InlineData(SourceLanguage.C, true)]
     [InlineData(SourceLanguage.Cpp, false)]
     [InlineData(SourceLanguage.Cpp, true)]
-    public async Task WorkerDocumentationSectionsSurviveNeutralAnalysisAndBridgeReparse(SourceLanguage language, bool singleFile)
-    {
+    public async Task WorkerDocumentationSectionsSurviveNeutralAnalysisAndBridgeReparse(
+        SourceLanguage language,
+        bool singleFile
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-neutral-documentation-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -34,7 +36,8 @@ public sealed class NeutralDocumentationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "documentation", nativeName = "unused" },
+                schemaVersion = 2,
+                library = new() { id = "documentation", nativeName = "unused" },
                 source = new() { language = language, headers = ["docs.h"], parseMacros = false },
                 api = new() { @namespace = "Generated.Documentation", name = "Api", names = ImmutableDictionary<string, string>.Empty.Add("compute::input", "renamed") },
                 output = new() { layout = singleFile ? "singleFile" : "split" },

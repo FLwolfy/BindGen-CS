@@ -13,10 +13,28 @@ namespace BGCS.Tests;
 
 public sealed class NativeGeneratedClassProviderTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Construct(int value, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Read(nint self, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Construct(
+        int value,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Read(
+        nint self,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Count(
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
 
     [Fact]
     public async Task GeneratedClassSourcesConstructReadAndDestroyThroughExternallyCompiledFixture()
@@ -45,7 +63,9 @@ public sealed class NativeGeneratedClassProviderTests
                 schemaVersion = 2,
                 library = new() { id = "provider_class", nativeName = "provider_class_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["counter.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());

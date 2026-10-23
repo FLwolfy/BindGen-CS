@@ -89,7 +89,8 @@ public sealed class DoctorCommandTests
         File.WriteAllText(Path.Combine(scenario.root, "native.h"), "int native_value(void);\n");
         File.WriteAllText(Path.Combine(scenario.root, "bindgen.json"), JsonSerializer.Serialize(new
         {
-            schemaVersion = 2, library = new { id = "doctor_probe", nativeName = "doctor_probe" },
+            schemaVersion = 2,
+            library = new { id = "doctor_probe", nativeName = "doctor_probe" },
             source = new { language = "c", headers = new[] { "native.h" } },
             cache = new { enabled = false }
         }));
@@ -116,8 +117,10 @@ public sealed class DoctorCommandTests
                 File.Copy(Path.Combine(AppContext.BaseDirectory, name), Path.Combine(root, name));
         }
 
-        internal JsonDocument Doctor(int expected, params string[] arguments)
-        {
+        internal JsonDocument Doctor(
+            int expected,
+            params string[] arguments
+        ) {
             using StringWriter output = new();
             using StringWriter error = new();
             int actual = CliInvocation.Run(["doctor", .. arguments, "--json"], root, output, error,

@@ -28,8 +28,10 @@ public sealed class StringResultProjectionTests
     [InlineData(BindingImportMode.LibraryImport, NativeTextEncoding.Utf8)]
     [InlineData(BindingImportMode.LibraryImport, NativeTextEncoding.Utf16)]
     [InlineData(BindingImportMode.LibraryImport, NativeTextEncoding.Utf32)]
-    public async Task OwnedResultsProtectExactDecodeExtentNullAndReleaseAfterProcessing(BindingImportMode mode, NativeTextEncoding encoding)
-    {
+    public async Task OwnedResultsProtectExactDecodeExtentNullAndReleaseAfterProcessing(
+        BindingImportMode mode,
+        NativeTextEncoding encoding
+    ) {
         ManagedApiModel model = Project(Module(encoding));
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
@@ -132,8 +134,12 @@ public sealed class StringResultProjectionTests
         InteropFunction getter = original.functions[0];
         OwnershipContract borrowed = new(NativeOwnershipKind.Borrowed,
             new(NativeLifetimeKind.Module, null, getter.returnOwnership!.evidence), getter.returnOwnership.evidence);
-        getter = getter with { returnOwnership = borrowed, returnString = getter.returnString! with
-        { ownership = borrowed, lifetime = borrowed.lifetime, allowsNull = true, zeroTerminated = false, fixedLength = 3 } };
+        getter = getter with
+        {
+            returnOwnership = borrowed,
+            returnString = getter.returnString! with
+            { ownership = borrowed, lifetime = borrowed.lifetime, allowsNull = true, zeroTerminated = false, fixedLength = 3 }
+        };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types, original.functions.SetItem(0, getter), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(module), new("native", new NeutralBackendTests.MemorySink()));
         CSharpStringResultPlan result = Assert.Single(plan.stringResults);

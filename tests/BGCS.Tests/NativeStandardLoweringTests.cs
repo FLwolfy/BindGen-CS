@@ -21,19 +21,86 @@ namespace BGCS.Tests;
 
 public sealed class NativeStandardLoweringTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Make(out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CreateInteger(int value, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int StaticInteger(int value, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(nint self, out ulong result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerAt(nint self, ulong index, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int ByteAt(nint self, ulong index, out byte result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CopyUnits(nint self, nint destination, ulong capacity, out ulong written, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerValue(nint self, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int LongValue(nint self, out long result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int PointerValue(nint self, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Consume(nint holder, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerReference(nint value, out int result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Make(
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int CreateInteger(
+        int value,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int StaticInteger(
+        int value,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Count(
+        nint self,
+        out ulong result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerAt(
+        nint self,
+        ulong index,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ByteAt(
+        nint self,
+        ulong index,
+        out byte result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int CopyUnits(
+        nint self,
+        nint destination,
+        ulong capacity,
+        out ulong written,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerValue(
+        nint self,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int LongValue(
+        nint self,
+        out long result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int PointerValue(
+        nint self,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Consume(
+        nint holder,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerReference(
+        nint value,
+        out int result,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void ReleaseError(nint error);
 
     [Fact]
@@ -100,7 +167,9 @@ public sealed class NativeStandardLoweringTests
                 library = new() { id = "standard", nativeName = "standard_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Standard", name = "StandardApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -142,34 +211,34 @@ public sealed class NativeStandardLoweringTests
                 if (name is "MakeString" or "MakePath")
                 {
                     var protocol = interop.types.Single(type => type.sourceNativeType == valueType && type.valueProtocol is not null).valueProtocol!;
-                    Assert.Equal(BGCS.Core.Interop.NativeValueReleaseScope.CreatingCall,protocol.scopedRelease!.scope);
-                    Assert.Equal(BGCS.Core.Common.EvidenceLevel.Declared,protocol.scopedRelease.evidence.level);
-                    Assert.Equal(0, Function<Count>(Access(name=="MakeString"?StandardValueAction.Count:StandardValueAction.PathUtf8Count))(value,out ulong units,out error));
-                    Assert.Equal(0,error);
-                    nint storage=Marshal.AllocHGlobal(checked((int)units+1));
+                    Assert.Equal(BGCS.Core.Interop.NativeValueReleaseScope.CreatingCall, protocol.scopedRelease!.scope);
+                    Assert.Equal(BGCS.Core.Common.EvidenceLevel.Declared, protocol.scopedRelease.evidence.level);
+                    Assert.Equal(0, Function<Count>(Access(name == "MakeString" ? StandardValueAction.Count : StandardValueAction.PathUtf8Count))(value, out ulong units, out error));
+                    Assert.Equal(0, error);
+                    nint storage = Marshal.AllocHGlobal(checked((int)units + 1));
                     try
                     {
-                        for(int offset=0;offset<=checked((int)units);offset++)Marshal.WriteByte(storage,offset,0xCC);
-                        CopyUnits copy=Function<CopyUnits>(Access(StandardValueAction.CopyCodeUnits));
-                        Assert.Equal(1,copy(value,storage,units-1,out ulong written,out error));
-                        Assert.Equal(0UL,written);Assert.NotEqual(0,error);releaseError(error);
-                        Assert.Equal(0xCC,Marshal.ReadByte(storage));
-                        Assert.Equal(1,copy(value,0,units,out written,out error));
-                        Assert.Equal(0UL,written);Assert.NotEqual(0,error);releaseError(error);
-                        Assert.Equal(0,copy(value,storage,units,out written,out error));
-                        Assert.Equal(units,written);Assert.Equal(0,error);
-                        byte[] copied=new byte[checked((int)units)];Marshal.Copy(storage,copied,0,copied.Length);
-                        Assert.Equal(name=="MakeString"?new byte[]{65,0,66}:Encoding.UTF8.GetBytes("目录/😀.txt"),copied);
-                        Assert.Equal(0xCC,Marshal.ReadByte(storage,checked((int)units)));
-                        if(name=="MakeString")
+                        for (int offset = 0; offset <= checked((int)units); offset++) Marshal.WriteByte(storage, offset, 0xCC);
+                        CopyUnits copy = Function<CopyUnits>(Access(StandardValueAction.CopyCodeUnits));
+                        Assert.Equal(1, copy(value, storage, units - 1, out ulong written, out error));
+                        Assert.Equal(0UL, written); Assert.NotEqual(0, error); releaseError(error);
+                        Assert.Equal(0xCC, Marshal.ReadByte(storage));
+                        Assert.Equal(1, copy(value, 0, units, out written, out error));
+                        Assert.Equal(0UL, written); Assert.NotEqual(0, error); releaseError(error);
+                        Assert.Equal(0, copy(value, storage, units, out written, out error));
+                        Assert.Equal(units, written); Assert.Equal(0, error);
+                        byte[] copied = new byte[checked((int)units)]; Marshal.Copy(storage, copied, 0, copied.Length);
+                        Assert.Equal(name == "MakeString" ? new byte[] { 65, 0, 66 } : Encoding.UTF8.GetBytes("目录/😀.txt"), copied);
+                        Assert.Equal(0xCC, Marshal.ReadByte(storage, checked((int)units)));
+                        if (name == "MakeString")
                         {
-                            BridgeExport construct=Access(StandardValueAction.Construct);
-                            Assert.Equal(0,Function<Make>(construct)(out nint empty,out error));Assert.Equal(0,error);
-                            owned.Add((construct,empty));
-                            Assert.Equal(0,copy(empty,0,0,out written,out error));Assert.Equal(0UL,written);Assert.Equal(0,error);
+                            BridgeExport construct = Access(StandardValueAction.Construct);
+                            Assert.Equal(0, Function<Make>(construct)(out nint empty, out error)); Assert.Equal(0, error);
+                            owned.Add((construct, empty));
+                            Assert.Equal(0, copy(empty, 0, 0, out written, out error)); Assert.Equal(0UL, written); Assert.Equal(0, error);
                         }
                     }
-                    finally{Marshal.FreeHGlobal(storage);}
+                    finally { Marshal.FreeHGlobal(storage); }
                 }
                 if (name is "MakeString" or "MakeVector" or "MakeBoolVector" or "MakeSpan" or "MakeArray" or "MakeMap" or "MakeSet" or "MakeUnorderedMap" or "MakeUnorderedSet")
                 {
@@ -341,7 +410,9 @@ public sealed class NativeStandardLoweringTests
                 source = new() { language = SourceLanguage.Cpp, headers = ["before.hpp", "fixture.hpp"], preamble = "#define BGCS_TEMPLATE_USER_PREAMBLE 1\n", parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 bridge = new() { cpp = new() { templateInstantiations = new() { types = [new("integer-box", "Demo::Box<int>"), new("full-selector", "Demo::Selector<int>"), new("partial-selector", "Demo::Selector<float*>")], functions = [new("twice", "Demo::Twice<int>", "int", ["int"]), new("take", "Demo::Take<int>", "int", ["int&&"])] } } },
                 api = new() { @namespace = "Generated.Templates", name = "TemplatesApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -452,16 +523,22 @@ public sealed class NativeStandardLoweringTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "recipes", nativeName = "recipes_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "recipes", nativeName = "recipes_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                bridge = new() { typeLowerings = [new()
+                bridge = new()
+                {
+                    typeLowerings = [new()
                 {
                     id = "quantity", typePattern = "Demo::Quantity", cAbiType = "int32_t",
                     parameterExpression = "{nativeType}({value} + 1)", resultExpression = "static_cast<int>({value}) - 1",
                     managedProjection = new("long", "checked((int){value})", "(long){value} + 100")
-                }] },
+                }]
+                },
                 api = new() { @namespace = "Generated.Recipes", name = "RecipesApi", names = ImmutableDictionary<string, string>.Empty.Add("Demo::Echo", "Echo") },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -518,16 +595,26 @@ public sealed class NativeStandardLoweringTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "owned_recipe", nativeName = "owned_recipe_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "owned_recipe", nativeName = "owned_recipe_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                bridge = new() { typeLowerings = [new()
+                bridge = new()
+                {
+                    typeLowerings = [new()
                 {
                     id = "token", typePattern = "Demo::Token", cAbiType = "uint64_t*", resultExpression = "Demo::Allocate({value}.value)",
                     ownedResultRelease = new("Demo::Release", "tokens") { releaseThreadDomain = "any" }
-                }] },
-                api = new() { @namespace = "Generated.OwnedRecipe", name = "OwnedRecipeApi",
-                    names = ImmutableDictionary<string, string>.Empty.Add("Demo::MakeToken", "CreateToken").Add("Demo::Live", "Live") },
-                runtime = new() { mode = "package" }, cache = new() { enabled = false }};
+                }]
+                },
+                api = new()
+                {
+                    @namespace = "Generated.OwnedRecipe",
+                    name = "OwnedRecipeApi",
+                    names = ImmutableDictionary<string, string>.Empty.Add("Demo::MakeToken", "CreateToken").Add("Demo::Live", "Live")
+                },
+                runtime = new() { mode = "package" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

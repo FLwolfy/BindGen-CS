@@ -204,14 +204,17 @@ public sealed class NeutralDtoStorageTests
         NativeDeclaration transform = new(new("transform"), "Function", "Transform", "Sample::Transform", null, at) { returnType = packet.id, children = [new("value")] };
         NativeDeclaration value = new(new("value"), "Parameter", "value", "value", packet.id, at) { parent = transform.id };
         return new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [integer, boolean, flags, packet, standalone],
-            [packetDecl, count, bits, standaloneDecl, number, transform, value], []) { language = SourceLanguage.Cpp };
+            [packetDecl, count, bits, standaloneDecl, number, transform, value], [])
+        { language = SourceLanguage.Cpp };
     }
 
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content)
-        {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) {
             files.Add(relativePath, content);
             return relativePath;
         }

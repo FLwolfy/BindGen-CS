@@ -23,17 +23,24 @@ public class FactPlugin : IBindingPlugin, IExternalInputProvider
     {
         configurationSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object", additionalProperties = false, required = new[] { "externalFile" },
+            type = "object",
+            additionalProperties = false,
+            required = new[] { "externalFile" },
             properties = new { externalFile = new { type = "string", minLength = 1 }, mode = new { type = "string" } }
         })
     };
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration settings)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration settings
+    ) {
         configuration = settings;
         registry.RegisterFactory<IClangFactContributor>("clang.fixture.facts", _ => CreateContributor(settings));
     }
     protected virtual FactContributor CreateContributor(PluginConfiguration settings) => new(settings);
-    public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken token)
+    public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+        ExternalInputContext context,
+        CancellationToken token
+    )
         => configuration is null ? [] : [new(configuration.ResolveInputPath("/externalFile"), ExternalInputKind.File)];
     public void Dispose() { }
 }
@@ -41,10 +48,15 @@ public class FactPlugin : IBindingPlugin, IExternalInputProvider
 public sealed class FingerprintedFactPlugin : FactPlugin, ICacheFingerprintProvider
 {
     protected override FactContributor CreateContributor(PluginConfiguration settings) => new FingerprintedFactContributor(settings);
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken token)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken token
+    )
         => Fingerprint(configuration!, 0);
-    internal static CacheFingerprintContribution Fingerprint(PluginConfiguration settings, int calls)
-    {
+    internal static CacheFingerprintContribution Fingerprint(
+        PluginConfiguration settings,
+        int calls
+    ) {
         string path = settings.ResolveInputPath("/externalFile");
         string mode = settings.settings.TryGetProperty("mode", out JsonElement value) ? value.GetString() ?? "" : "";
         string content = settings.settings.GetRawText() + "\n" + File.ReadAllText(path) + (mode == "changeFingerprint" ? "\n" + calls : "");
@@ -57,8 +69,11 @@ public class FactContributor(PluginConfiguration configuration) : IClangFactCont
     private ClangFactContributionContext? m_context;
     protected int calls;
     protected PluginConfiguration settings => configuration;
-    public NativeModule Contribute(ClangFactContributionContext context, NativeModule module, CancellationToken token)
-    {
+    public NativeModule Contribute(
+        ClangFactContributionContext context,
+        NativeModule module,
+        CancellationToken token
+    ) {
         m_context = context;
         if (context.request.purpose != FrontendRequestPurpose.SourceAnalysis) return module;
         calls++;
@@ -96,8 +111,14 @@ public class FactContributor(PluginConfiguration configuration) : IClangFactCont
 
 public sealed class FingerprintedFactContributor(PluginConfiguration configuration) : FactContributor(configuration), ICacheFingerprintProvider, IExternalInputProvider
 {
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken token)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken token
+    )
         => FingerprintedFactPlugin.Fingerprint(settings, calls);
-    public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken token)
+    public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+        ExternalInputContext context,
+        CancellationToken token
+    )
         => [new(settings.ResolveInputPath("/externalFile"), ExternalInputKind.File)];
 }

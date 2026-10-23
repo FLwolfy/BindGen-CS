@@ -14,8 +14,10 @@ public sealed class LanguageStandardConfigurationTests
     [InlineData(SourceLanguage.Cpp, "c17")]
     [InlineData(SourceLanguage.Cpp, "gnu17")]
     [InlineData(SourceLanguage.Cpp, "iso9899:2017")]
-    public void KnownMismatchedStandardFailsBeforeStartingAnyFrontend(SourceLanguage language, string standard)
-    {
+    public void KnownMismatchedStandardFailsBeforeStartingAnyFrontend(
+        SourceLanguage language,
+        string standard
+    ) {
         ArgumentException rejected = Assert.Throws<ArgumentException>(() => new GenerationRequest(Configuration() with
         { source = new() { headers = ["native.h"], language = language, languageStandard = standard } }, Path.GetTempPath()));
         Assert.Contains("source.languageStandard", rejected.Message, StringComparison.Ordinal);
@@ -36,6 +38,8 @@ public sealed class LanguageStandardConfigurationTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "standards", nativeName = "standards" }, source = new() { headers = ["native.h"] }
+        schemaVersion = 2,
+        library = new() { id = "standards", nativeName = "standards" },
+        source = new() { headers = ["native.h"] }
     };
 }

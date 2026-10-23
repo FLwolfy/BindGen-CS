@@ -230,6 +230,7 @@ class PackageClosureTests(unittest.TestCase):
     def create_packages(self):
         output = self.root / "delivered"
         output.mkdir()
+        shutil.copyfile(ROOT / "THIRD-PARTY-NOTICES.md", self.root / "THIRD-PARTY-NOTICES.md")
         for product in PACK.MANIFEST["products"] + PACK.MANIFEST["optionalProducts"]:
             if product != "BindGen-CS":
                 with zipfile.ZipFile(output / (product + ".0.0.0-test.nupkg"), "w") as archive:
@@ -239,6 +240,8 @@ class PackageClosureTests(unittest.TestCase):
                     if product == "BGCS": self.sdk_payload(archive)
                     elif product in ("BGCS.Core", "BGCS.Runtime"):
                         archive.writestr(product + ".nuspec", "<package><metadata><dependencies><group targetFramework='net10.0' /></dependencies></metadata></package>")
+                        if product == "BGCS.Runtime":
+                            archive.writestr("THIRD-PARTY-NOTICES.md", (ROOT / "THIRD-PARTY-NOTICES.md").read_bytes())
                     elif product in PACK.OPTIONAL_PRODUCTS:
                         archive.writestr(product + ".nuspec", '<package><metadata><dependencies><group targetFramework="net10.0"><dependency id="BGCS.Core" version="[0.0.0-test]" /></group></dependencies></metadata></package>')
         for product in PACK.MANIFEST["symbolProducts"]:
@@ -279,6 +282,22 @@ class PackageClosureTests(unittest.TestCase):
         (output / "BGCS.Runtime.0.0.0-test.snupkg").unlink()
         with self.assertRaisesRegex(RuntimeError, "symbol package set"):
             PACK.verify_packages(output, "0.0.0-test", False)
+
+    def test_runtime_distribution_rejects_missing_or_changed_license_notice(self):
+        output = self.create_packages()
+        PACK.verify_packages(output, "0.0.0-test", False)
+        path = output / "BGCS.Runtime.0.0.0-test.nupkg"
+        with zipfile.ZipFile(path) as archive:
+            original = {name: archive.read(name) for name in archive.namelist()}
+        for fault in ("missing", "changed"):
+            with self.subTest(fault=fault):
+                files = dict(original)
+                if fault == "missing": del files["THIRD-PARTY-NOTICES.md"]
+                else: files["THIRD-PARTY-NOTICES.md"] = b"incomplete notice"
+                with zipfile.ZipFile(path, "w") as archive:
+                    for name, value in files.items(): archive.writestr(name, value)
+                with self.assertRaisesRegex(RuntimeError, "exact MIT license"):
+                    PACK.verify_packages(output, "0.0.0-test", False)
 
     def test_partial_macos_closure_requires_the_explicit_parser_supplement(self):
         output = self.create_packages()
@@ -566,7 +585,7 @@ class PackageClosureTests(unittest.TestCase):
             self.assertEqual((source / name).read_bytes(), (output / 'resources/english-words' / name).read_bytes())
         notice = output / 'THIRD-PARTY-NOTICES.md'
         self.assertEqual((ROOT / 'THIRD-PARTY-NOTICES.md').read_bytes(), notice.read_bytes())
-        original = notice.read_text(encoding='utf-8').split('## HexaGen\n', 1)[1].split('```text\n', 1)[1].split('\n```', 1)[0] + '\n'
+        original = notice.read_text(encoding='utf-8').split('## MIT license\n', 1)[1].split('```text\n', 1)[1].split('\n```', 1)[0] + '\n'
         self.assertEqual('14c7f3bdb1cb325dffb0ccca7288a8edd0338231615a50c8321fadb64d143453',
                          hashlib.sha256(original.encode('utf-8')).hexdigest())
         self.assertFalse((output / 'source').exists())

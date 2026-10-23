@@ -13,7 +13,14 @@ namespace BGCS.Tests;
 
 public sealed class NativeArgumentGroupTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Sum(nint data, ulong length, int bias, out int result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Sum(
+        nint data,
+        ulong length,
+        int bias,
+        out int result,
+        out nint error
+    );
 
     [Fact]
     public async Task MultiCarrierRecipe_ReparsesExactAbiBuildsAndInvokesOriginalNativeArgument()
@@ -40,14 +47,19 @@ public sealed class NativeArgumentGroupTests
                 schemaVersion = 2,
                 library = new() { id = "arguments", nativeName = "arguments_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                bridge = new() { typeLowerings = [new()
+                bridge = new()
+                {
+                    typeLowerings = [new()
                 {
                     id = "range", typePattern = "Demo::Range", cAbiType = "uint64_t",
                     abiParameters = [new("data", "const int32_t*"), new("length", "uint64_t")],
                     parameterExpression = "{nativeType}({data}, static_cast<std::size_t>({length}))"
-                }] },
+                }]
+                },
                 api = new() { @namespace = "Generated.Arguments", name = "ArgumentsApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);

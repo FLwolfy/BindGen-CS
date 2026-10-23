@@ -23,8 +23,11 @@ public sealed class NeutralRecipeTests
     {
         var lowering = new LoweringRecipeCompiler().Compile(new()
         {
-            id = "quantity", typePattern = "Demo::Quantity", cAbiType = "int32_t",
-            parameterExpression = "{nativeType}({value} + 1)", resultExpression = "static_cast<int>({value}) - 1"
+            id = "quantity",
+            typePattern = "Demo::Quantity",
+            cAbiType = "int32_t",
+            parameterExpression = "{nativeType}({value} + 1)",
+            resultExpression = "static_cast<int>({value}) - 1"
         });
         NativeBridgePlan module = new NativeBridgePlanner(new LoweringRegistry([(new global::BGCS.Core.Plugins.ExtensionDescriptor("fixture.recipe", global::BGCS.Core.Plugins.ExtensionPort.NativeTypeLowering), lowering)]), [new()
         { id = "observe", functionPattern = "Demo::Echo", exportName = "fixture_echo", invocationExpression = "observe({invocation})" }]).Plan(Context());
@@ -102,8 +105,11 @@ public sealed class NeutralRecipeTests
     [InlineData(8, "size_t", "uint64_t")]
     [InlineData(4, "ptrdiff_t", "int32_t")]
     [InlineData(8, "intptr_t", "int64_t")]
-    public void NativeSizeRecipeAliases_UseTheParsedTargetWidth(int pointerSize, string alias, string expected)
-    {
+    public void NativeSizeRecipeAliases_UseTheParsedTargetWidth(
+        int pointerSize,
+        string alias,
+        string expected
+    ) {
         TypeLoweringRecipe recipe = new() { id = "size", typePattern = "*", cAbiType = alias };
         var carrier = new LoweringRecipeCompiler().GetCarrier(recipe, pointerSize);
         Assert.Equal(expected, Assert.Single(carrier.types).cName);
@@ -124,6 +130,9 @@ public sealed class NeutralRecipeTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

@@ -59,7 +59,7 @@ public sealed class NeutralDeclarationSelectionTests
     public void ExcludingRequiredRecordOrField_ReportsACompleteDependencyConflict(string excluded)
     {
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Select(new()
-            { includeDeclarations = ["Demo::ReadItem"], excludeDeclarations = [excluded] }));
+        { includeDeclarations = ["Demo::ReadItem"], excludeDeclarations = [excluded] }));
         Assert.Contains("required native storage or cleanup", failure.Message);
         Assert.Contains("ReadItem", failure.Message);
         Assert.Contains(excluded, failure.Message);
@@ -71,7 +71,7 @@ public sealed class NeutralDeclarationSelectionTests
     public void ExcludingRequiredHeader_DoesNotTruncateThePointerPointee()
     {
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Select(new()
-            { includeDeclarations = ["Demo::ReadItem"], excludeHeaders = ["dependency.hpp"] }));
+        { includeDeclarations = ["Demo::ReadItem"], excludeHeaders = ["dependency.hpp"] }));
         Assert.Contains(s_dependency, failure.Message);
         Assert.Contains("Demo::Item", failure.Message);
     }
@@ -81,8 +81,12 @@ public sealed class NeutralDeclarationSelectionTests
     [InlineData(true)]
     public void ExcludingExplicitCleanupByHeaderOrDeclaration_IsRejected(bool byHeader)
     {
-        DeclarationSelectionRequest request = new() { includeDeclarations = ["Demo::Plain"],
-            excludeHeaders = byHeader ? ["dependency.hpp"] : [], excludeDeclarations = byHeader ? [] : ["Demo::Release"] };
+        DeclarationSelectionRequest request = new()
+        {
+            includeDeclarations = ["Demo::Plain"],
+            excludeHeaders = byHeader ? ["dependency.hpp"] : [],
+            excludeDeclarations = byHeader ? [] : ["Demo::Release"]
+        };
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Select(request, required: ["Demo::Release"]));
         Assert.Contains("Release", failure.Message);
         Assert.Contains("required native storage or cleanup", failure.Message);
@@ -171,7 +175,8 @@ public sealed class NeutralDeclarationSelectionTests
     {
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new DeclarationSelector(global::System.StringComparer.Ordinal).Select(Source(), new()
         {
-            includeDeclarations = ["Demo::Plain"], excludeHeaders = byHeader ? ["dependency.hpp"] : [],
+            includeDeclarations = ["Demo::Plain"],
+            excludeHeaders = byHeader ? ["dependency.hpp"] : [],
             excludeDeclarations = byHeader ? [] : ["Demo::Release"]
         }, [s_entry], s_root, additionalPublicDeclarations: ["release"]));
         Assert.Contains("explicit generation request", failure.Message);
@@ -245,8 +250,10 @@ public sealed class NeutralDeclarationSelectionTests
     [Theory]
     [InlineData(NativeDeclarationCategory.Callbacks, "callback")]
     [InlineData(NativeDeclarationCategory.TypeAliases, "integer-alias")]
-    public void CallbackPointerAliasesHaveASeparateTypedCategory(NativeDeclarationCategory category, string expected)
-    {
+    public void CallbackPointerAliasesHaveASeparateTypedCategory(
+        NativeDeclarationCategory category,
+        string expected
+    ) {
         NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
         NativeType function = new(new("function-type"), NativeTypeCategory.Function, "int(int)", null, null)
         { returnType = integer.id, parameterTypes = [integer.id], callingConvention = "C", hasPrototype = true };
@@ -262,7 +269,11 @@ public sealed class NeutralDeclarationSelectionTests
         Assert.Empty(new NativeModuleVerifier().Validate(selected.module));
     }
 
-    private static DeclarationSelection Select(DeclarationSelectionRequest request, bool transitive = true, string[]? required = null)
+    private static DeclarationSelection Select(
+        DeclarationSelectionRequest request,
+        bool transitive = true,
+        string[]? required = null
+    )
         => new DeclarationSelector(global::System.StringComparer.Ordinal).Select(Source(), request, [s_entry], s_root, transitive, requiredDeclarations: required);
 
     [Fact]
@@ -362,7 +373,8 @@ public sealed class NeutralDeclarationSelectionTests
         NativeDeclaration serviceDeclaration = Record("service", "Service", service.id, entry, [new("service-field"), new("service-constructor"), new("service-read")]) with { role = "Class" };
         NativeDeclaration serviceField = new(new("service-field"), "Field", "value", "Demo::Service::value", integer.id, entry) { parent = serviceDeclaration.id, offset = 0 };
         NativeDeclaration constructor = Function("service-constructor", "Service", entry, empty.id, [new("constructor-input")])
-            with { parent = serviceDeclaration.id, qualifiedName = "Demo::Service::Service", role = "Constructor" };
+            with
+        { parent = serviceDeclaration.id, qualifiedName = "Demo::Service::Service", role = "Constructor" };
         NativeDeclaration serviceRead = Function("service-read", "Read", entry, integer.id, []) with { parent = serviceDeclaration.id, qualifiedName = "Demo::Service::Read", isConst = true };
         NativeDeclaration behaviorDeclaration = Record("behavior", "Behavior", behavior.id, entry, [new("behavior-field"), new("behavior-hidden")]);
         NativeDeclaration behaviorField = new(new("behavior-field"), "Field", "value", "Demo::Behavior::value", integer.id, entry) { parent = behaviorDeclaration.id, offset = 0 };
@@ -376,12 +388,38 @@ public sealed class NeutralDeclarationSelectionTests
                 behaviorDeclaration, behaviorField, hidden, unrelatedDeclaration, unrelatedField], [])
         { language = SourceLanguage.Cpp, byteOrder = NativeByteOrder.LittleEndian };
 
-        NativeDeclaration Record(string id, string name, StableId type, SourceLocation location, ImmutableArray<StableId> children)
-            => new(new(id), "Class", name, "Demo::" + name, type, location) { parent = scope.id, role = "Struct", children = children,
-                isCompleteDefinition = true, isDefaultConstructible = true, isStandardLayout = true, isTriviallyCopyable = true };
-        NativeDeclaration Function(string id, string name, SourceLocation location, StableId result, ImmutableArray<StableId> parameters)
+        NativeDeclaration Record(
+            string id,
+            string name,
+            StableId type,
+            SourceLocation location,
+            ImmutableArray<StableId> children
+        )
+            => new(new(id), "Class", name, "Demo::" + name, type, location)
+            {
+                parent = scope.id,
+                role = "Struct",
+                children = children,
+                isCompleteDefinition = true,
+                isDefaultConstructible = true,
+                isStandardLayout = true,
+                isTriviallyCopyable = true
+            };
+        NativeDeclaration Function(
+            string id,
+            string name,
+            SourceLocation location,
+            StableId result,
+            ImmutableArray<StableId> parameters
+        )
             => new(new(id), "Function", name, "Demo::" + name, null, location) { parent = scope.id, returnType = result, children = parameters, role = "Function", callingConvention = "C" };
-        static NativeDeclaration Parameter(string id, string name, StableId parent, StableId type, SourceLocation location)
+        static NativeDeclaration Parameter(
+            string id,
+            string name,
+            StableId parent,
+            StableId type,
+            SourceLocation location
+        )
             => new(new(id), "Parameter", name, name, type, location) { parent = parent };
     }
 }

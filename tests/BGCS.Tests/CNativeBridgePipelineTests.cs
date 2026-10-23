@@ -42,9 +42,15 @@ public sealed class CNativeBridgePipelineTests
                 Sample Echo(Sample value) { value.value *= 2; return value; }
                 Sample Invoke(Transform callback, Sample value, void* state) { return callback(value, state); }
                 """);
-            BindingConfiguration config = Configuration(mode) with { semantics = new() { callbackParameters = [new()
+            BindingConfiguration config = Configuration(mode) with
+            {
+                semantics = new()
+                {
+                    callbackParameters = [new()
             { function = "Invoke", parameter = "callback", lifetime = NativeLifetimeKind.Call, retained = false,
-                threading = NativeCallbackThreading.CallerThread, userDataParameter = "state", callableUserDataIndex = 1 }] } };
+                threading = NativeCallbackThreading.CallerThread, userDataParameter = "state", callableUserDataIndex = 1 }]
+                }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(config, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
@@ -118,18 +124,21 @@ public sealed class CNativeBridgePipelineTests
                     return count;
                 }
                 """);
-            BindingConfiguration config = Configuration(BindingImportMode.FunctionTable) with { semantics = new()
+            BindingConfiguration config = Configuration(BindingImportMode.FunctionTable) with
             {
-                callbackParameters = [new()
+                semantics = new()
+                {
+                    callbackParameters = [new()
                 { function = "Register", parameter = "callback", lifetime = asynchronous ? NativeLifetimeKind.Operation : NativeLifetimeKind.Registration,
                     retained = true, threading = NativeCallbackThreading.AnyThread, userDataParameter = "state", callableUserDataIndex = 2,
                     unregisterFunction = "Stop", unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
                     registration = new() { unregisterHandleParameter = "handle", nullResultQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
                         releaseThreadDomain = "any" } }],
-                asyncOperations = asynchronous ? [new() { function = "Register", completionCallback = "callback",
+                    asyncOperations = asynchronous ? [new() { function = "Register", completionCallback = "callback",
                     completionQuiescence = NativeQuiescenceKind.NoNewInvocations, resultArgumentIndex = 0, statusArgumentIndex = 1,
                     successStatus = "0", cancellationStatus = "1", cancelFunction = "Cancel", cancelHandleParameter = "handle" }] : []
-            } };
+                }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(config, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
@@ -233,12 +242,18 @@ public sealed class CNativeBridgePipelineTests
             BindingConfiguration config = Configuration(BindingImportMode.FunctionTable);
             config = config with
             {
-                source = config.source with { variadicVariants = [
+                source = config.source with
+                {
+                    variadicVariants = [
                     new() { function = "Sum", name = "SumShort", parameters = [new("extra", "short")] },
-                    new() { function = "Sum", name = "SumInt", parameters = [new("extra", "int")] }] },
-                semantics = new() { bufferParameters = [new() { function = "Sum", parameter = "values", lengthParameter = "count",
+                    new() { function = "Sum", name = "SumInt", parameters = [new("extra", "int")] }]
+                },
+                semantics = new()
+                {
+                    bufferParameters = [new() { function = "Sum", parameter = "values", lengthParameter = "count",
                     lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call,
-                    retainsPointer = false, allowsNull = false }] }
+                    retainsPointer = false, allowsNull = false }]
+                }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(config, root));
@@ -349,8 +364,14 @@ public sealed class CNativeBridgePipelineTests
                 int ReadTag(const struct 𐐀Tag* value) { return value->value; }
                 """);
             BindingConfiguration config = Configuration(BindingImportMode.FunctionTable);
-            config = config with { api = config.api with { names = ImmutableDictionary<string, string>.Empty
-                .Add("選択", "Choice").Add("値", "AnonymousRecord").Add("𐐀Tag", "SupplementaryTag") } };
+            config = config with
+            {
+                api = config.api with
+                {
+                    names = ImmutableDictionary<string, string>.Empty
+                .Add("選択", "Choice").Add("値", "AnonymousRecord").Add("𐐀Tag", "SupplementaryTag")
+                }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(config, root));
             Assert.True(generated.success, generated.GetDiagnosticSummary());
@@ -379,38 +400,62 @@ public sealed class CNativeBridgePipelineTests
 
     private sealed class CustomType : INativeTypeLowering
     {
-        public bool CanLower(NativeTypeView type, LoweringContext context) => type.type.category == NativeTypeCategory.Record && type.declaration?.name == "Sample";
-        public NativeTypeLoweringPlan Lower(NativeTypeView type, LoweringContext context, CancellationToken cancellationToken)
-        {
+        public bool CanLower(
+            NativeTypeView type,
+            LoweringContext context
+        ) => type.type.category == NativeTypeCategory.Record && type.declaration?.name == "Sample";
+        public NativeTypeLoweringPlan Lower(
+            NativeTypeView type,
+            LoweringContext context,
+            CancellationToken cancellationToken
+        ) {
             BridgeType integer = new(new("custom-c-integer"), BridgeTypeKind.Scalar, "int32_t");
             return new(integer.id, [integer], BridgeConversionKind.SourceExpression, BridgeConversionKind.SourceExpression)
-            { parameterBindings = [new("left", integer.id), new("right", integer.id)],
+            {
+                parameterBindings = [new("left", integer.id), new("right", integer.id)],
                 parameterExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-type", "({nativeType}){ {left} + {right} }"),
-                resultExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-type", "{value}.value + 1") };
+                resultExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-type", "{value}.value + 1")
+            };
         }
     }
     private sealed class CustomCallable : INativeCallableLowering
     {
-        public bool CanLower(NativeDeclaration callable, LoweringContext context) => callable.name == "Echo";
-        public NativeCallableLoweringPlan Lower(NativeDeclaration callable, LoweringContext context, CancellationToken cancellationToken)
-        {
+        public bool CanLower(
+            NativeDeclaration callable,
+            LoweringContext context
+        ) => callable.name == "Echo";
+        public NativeCallableLoweringPlan Lower(
+            NativeDeclaration callable,
+            LoweringContext context,
+            CancellationToken cancellationToken
+        ) {
             NativeDeclaration original = context.module.GetDeclaration(callable.children.Single());
             BridgeType integer = new(new("custom-c-integer"), BridgeTypeKind.Scalar, "int32_t");
             BridgeParameter input = new(new("custom-c-input"), "value", integer.id, original.type!.Value, BridgeConversionKind.SourceExpression)
             { conversionExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-call", "({nativeType}){ {value} + 5 }") };
             return new(new(new("custom-c-export"), "custom_c_echo", [input], new(BridgeOperationKind.FreeCall, callable.id, null, null))
-            { resultType = integer.id, nativeResultType = callable.returnType, resultInOutputParameter = false, usesErrorChannel = false,
-                resultConversion = BridgeConversionKind.SourceExpression, resultExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-call", "{value}.value") }, [integer], []);
+            {
+                resultType = integer.id,
+                nativeResultType = callable.returnType,
+                resultInOutputParameter = false,
+                usesErrorChannel = false,
+                resultConversion = BridgeConversionKind.SourceExpression,
+                resultExpression = LoweringRecipeCompiler.Expression("fixture.custom-c-call", "{value}.value")
+            }, [integer], []);
         }
     }
     private static BindingConfiguration Configuration(BindingImportMode mode) => new()
     {
-        schemaVersion = 2, library = new() { id = "c_pipeline", nativeName = "c_pipeline_native" },
+        schemaVersion = 2,
+        library = new() { id = "c_pipeline", nativeName = "c_pipeline_native" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-        api = new() { @namespace = "Generated.CBridge", name = "BridgeApi", importMode = mode }, cache = new() { enabled = false }
+        api = new() { @namespace = "Generated.CBridge", name = "BridgeApi", importMode = mode },
+        cache = new() { enabled = false }
     };
-    private static InteropType ResolveCallable(InteropModule module, StableId id)
-    {
+    private static InteropType ResolveCallable(
+        InteropModule module,
+        StableId id
+    ) {
         InteropType type = module.GetType(id);
         while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified or NativeTypeCategory.Pointer) type = module.GetType(type.elementType!.Value);
         return type;

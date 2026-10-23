@@ -22,11 +22,14 @@ public sealed class ManagedDefaultArgumentTests
     [InlineData("unknown-parameter", "identify exactly one native parameter")]
     [InlineData("unbounded-expansion", "exceeds its explicit limit")]
     [InlineData("ambiguous-omission", "Managed overload")]
-    public void InvalidOrAmbiguousConveniencesFailBeforeAnyArtifactWrite(string mutation, string reason)
-    {
+    public void InvalidOrAmbiguousConveniencesFailBeforeAnyArtifactWrite(
+        string mutation,
+        string reason
+    ) {
         bool unsigned = mutation is "overflow" or "negative-unsigned";
         InteropType integer = new(new("integer"), unsigned ? "unsigned char" : "int", NativeTypeCategory.Primitive,
-            unsigned ? 1 : 4, unsigned ? 1 : 4) { primitiveKind = unsigned ? "UnsignedChar" : "Int", isSigned = !unsigned };
+            unsigned ? 1 : 4, unsigned ? 1 : 4)
+        { primitiveKind = unsigned ? "UnsignedChar" : "Int", isSigned = !unsigned };
         InteropFunction function = new(new("read"), "read", integer.id,
             [new(new("a"), "a", integer.id), new(new("b"), "b", integer.id)], "C");
         ManagedDefaultValue value = mutation switch
@@ -56,6 +59,9 @@ public sealed class ManagedDefaultArgumentTests
     private sealed class NoWrites : IArtifactSink
     {
         internal int writes { get; private set; }
-        public string WriteText(string relativePath, string content) { writes++; return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { writes++; return relativePath; }
     }
 }

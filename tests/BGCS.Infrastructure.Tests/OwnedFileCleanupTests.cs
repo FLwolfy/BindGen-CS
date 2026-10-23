@@ -33,8 +33,10 @@ public sealed class OwnedFileCleanupTests : IDisposable
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task ReplacedPhysicalParentCannotRedirectPendingFileCleanup(bool nested, bool priorFailure)
-    {
+    public async Task ReplacedPhysicalParentCannotRedirectPendingFileCleanup(
+        bool nested,
+        bool priorFailure
+    ) {
         string owner = Path.Combine(m_root, "owner"), foreign = Path.Combine(m_root, "foreign"), moved = Path.Combine(m_root, "moved");
         string relative = nested ? Path.Combine("nested", "original.txt") : "original.txt";
         string original = Path.Combine(owner, relative), foreignFile = Path.Combine(foreign, relative);
@@ -47,8 +49,10 @@ public sealed class OwnedFileCleanupTests : IDisposable
         FaultInjectingPaths observed = new(m_paths);
         ArtifactDescriptor descriptor = new(relative.Replace('\\', '/'), "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("original")))));
         using CandidateTextEditor editor = new(owner, [descriptor], observed);
-        observed.beforeEquality = (_, _) =>
-        {
+        observed.beforeEquality = (
+            _,
+            _
+        ) => {
             if (!Directory.EnumerateFiles(owner, ".bgcs-edit-*", SearchOption.AllDirectories).Any()) return;
             observed.beforeEquality = null;
             Directory.Move(owner, moved);
@@ -120,8 +124,10 @@ public sealed class OwnedFileCleanupTests : IDisposable
         new DirectoryArtifactSink(publisher.candidateRoot, observed).WriteText("value.txt", "value");
         byte[] pending = Encoding.UTF8.GetBytes("previous recovery journal bytes");
         string journal = Path.Combine(publisher.candidateRoot, ".bgcs-artifacts.json");
-        observed.beforeEquality = (left, _) =>
-        {
+        observed.beforeEquality = (
+            left,
+            _
+        ) => {
             if (!m_paths.Equals(left, journal)) return;
             observed.beforeEquality = null;
             File.WriteAllBytes(journal + ".tmp", pending);
@@ -132,8 +138,10 @@ public sealed class OwnedFileCleanupTests : IDisposable
         Assert.False(File.Exists(journal));
     }
 
-    private async Task Link(string path, string target)
-    {
+    private async Task Link(
+        string path,
+        string target
+    ) {
         Assert.StartsWith(m_root + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
         if (OperatingSystem.IsWindows())
         {

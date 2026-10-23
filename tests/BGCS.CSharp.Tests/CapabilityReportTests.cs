@@ -53,9 +53,10 @@ public sealed class CapabilityReportTests
     {
         var original = NeutralBackendTests.ModelWithStorage();
         InteropType alias = new(new("count-alias"), "Count", NativeTypeCategory.Alias, 4, 4)
-            { elementType = new("int"), declarationName = "Count", sourceDeclaration = new("count-declaration") };
+        { elementType = new("int"), declarationName = "Count", sourceDeclaration = new("count-declaration") };
         InteropModule module = new(original.interop.libraryId, original.interop.targetId, original.interop.pointerSize,
-            original.interop.types.Add(alias), original.interop.functions, []) { byteOrder = original.interop.byteOrder };
+            original.interop.types.Add(alias), original.interop.functions, [])
+        { byteOrder = original.interop.byteOrder };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Capability", "CapabilityApi"), CancellationToken.None);
         var plan = new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink()));
         var typedef = Assert.Single(plan.capabilities, report => report.declarationId == alias.id);

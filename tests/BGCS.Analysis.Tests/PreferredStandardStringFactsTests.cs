@@ -18,8 +18,11 @@ public sealed class PreferredStandardStringFactsTests
     [InlineData("__cxx11", NativeTextEncoding.Utf8, 1)]
     [InlineData("__1", NativeTextEncoding.Utf16, 2)]
     [InlineData("__1", NativeTextEncoding.Utf32, 4)]
-    public void PreferredAliasRetainsActualStandardTemplateAndCodeUnitIdentity(string? abiNamespace, NativeTextEncoding encoding, int width)
-    {
+    public void PreferredAliasRetainsActualStandardTemplateAndCodeUnitIdentity(
+        string? abiNamespace,
+        NativeTextEncoding encoding,
+        int width
+    ) {
         NativeModule module = Module(abiNamespace, width);
         CppFamilyBinding binding = Binding("Text", encoding);
         StandardLibraryFactReader configured = new([binding]);
@@ -49,7 +52,9 @@ public sealed class PreferredStandardStringFactsTests
         { elementType = other.id, canonicalType = other.id };
         NativeDeclaration otherDeclaration = declaration with
         {
-            id = other.declaration!.Value, type = other.id, qualifiedName = other.spelling,
+            id = other.declaration!.Value,
+            type = other.id,
+            qualifiedName = other.spelling,
             templateArguments = declaration.templateArguments.SetItem(2, new("AsType", "std::polymorphic_allocator<char>", new("other-allocator")))
         };
         NativeModule module = Copy(original,
@@ -127,11 +132,16 @@ public sealed class PreferredStandardStringFactsTests
 
     private static readonly SourceLocation At = new("preferred.hpp", 1, 1);
 
-    private static CppFamilyBinding Binding(string name, NativeTextEncoding encoding) => new()
+    private static CppFamilyBinding Binding(
+        string name,
+        NativeTextEncoding encoding
+    ) => new()
     { nativeType = name, family = StandardValueKind.String, stringEncoding = encoding, evidence = new(EvidenceLevel.UserAsserted, "declared-encoding") };
 
-    private static NativeModule Module(string? abiNamespace, int width)
-    {
+    private static NativeModule Module(
+        string? abiNamespace,
+        int width
+    ) {
         NativeType unit = new(new("unit"), NativeTypeCategory.Primitive, width == 1 ? "char" : "char" + (width * 8) + "_t", width, width)
         { primitiveKind = width == 1 ? "Char" : width == 2 ? "Char16" : "Char32", isSigned = false };
         NativeType record = new(new("record"), NativeTypeCategory.Record, "std::string", 24, 8) { declaration = new("record-decl") };
@@ -139,7 +149,9 @@ public sealed class PreferredStandardStringFactsTests
         NativeDeclaration standard = new(new("std"), "Namespace", "std", "std", null, At);
         NativeDeclaration owner = new(new("record-decl"), "Class", "basic_string", "std::string", record.id, At)
         {
-            parent = new(abiNamespace is null ? "std" : "abi"), isCompleteDefinition = true, templateKind = "TemplateSpecializedClass",
+            parent = new(abiNamespace is null ? "std" : "abi"),
+            isCompleteDefinition = true,
+            templateKind = "TemplateSpecializedClass",
             templateArguments = [new("AsType", unit.spelling, unit.id), new("AsType", "std::char_traits", new("traits")), new("AsType", "std::allocator", new("allocator"))]
         };
         ImmutableArray<NativeDeclaration> declarations = [standard, owner];
@@ -148,9 +160,17 @@ public sealed class PreferredStandardStringFactsTests
             [unit, record, alias, new(new("traits"), NativeTypeCategory.Record, "std::char_traits", 1, 1), new(new("allocator"), NativeTypeCategory.Record, "std::allocator", 1, 1)], declarations, []);
     }
 
-    private static ImmutableArray<NativeDeclaration> Replace(ImmutableArray<NativeDeclaration> declarations, string id, Func<NativeDeclaration, NativeDeclaration> update)
+    private static ImmutableArray<NativeDeclaration> Replace(
+        ImmutableArray<NativeDeclaration> declarations,
+        string id,
+        Func<NativeDeclaration, NativeDeclaration> update
+    )
         => declarations.Select(item => item.id.value == id ? update(item) : item).ToImmutableArray();
 
-    private static NativeModule Copy(NativeModule original, ImmutableArray<NativeType> types, ImmutableArray<NativeDeclaration> declarations)
+    private static NativeModule Copy(
+        NativeModule original,
+        ImmutableArray<NativeType> types,
+        ImmutableArray<NativeDeclaration> declarations
+    )
         => new(original.targetId, original.triple, original.pointerSize, types, declarations, original.diagnostics);
 }

@@ -19,8 +19,10 @@ public sealed class NativeAggregateTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedAggregateCallsPreserveNativeArgumentsReturnsAlignmentAndClassification(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedAggregateCallsPreserveNativeArgumentsReturnsAlignmentAndClassification(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs aggregate " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -29,13 +31,14 @@ public sealed class NativeAggregateTests
             await File.WriteAllTextAsync(Path.Combine(root, "aggregates.c"), NativeSource);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "aggregate_fixture", nativeName = "aggregate_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "aggregate_fixture", nativeName = "aggregate_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["aggregates.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.AggregateFixture", name = "AggregateApi", importMode = mode },
                 bridge = new() { aggregateStrategy = AggregateCallStrategy.Direct },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime && mode == BindingImportMode.LibraryImport ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

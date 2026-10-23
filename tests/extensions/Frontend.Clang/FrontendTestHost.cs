@@ -16,9 +16,13 @@ namespace BGCS.Frontend.Clang.Tests;
 public abstract class FrontendTestHost : IDisposable
 {
     protected HostServices host { get; } = new HostServicesProvider().Create(new(AppContext.BaseDirectory, JsonSerializer.SerializeToElement(new { })));
-    protected async Task<FrontendResult> ParseSourceAsync(string source, NativeTargetDescriptor? target = null, SourceLanguage language = SourceLanguage.Cpp,
-        System.Collections.Immutable.ImmutableArray<string> defines = default, string? standard = null)
-    {
+    protected async Task<FrontendResult> ParseSourceAsync(
+        string source,
+        NativeTargetDescriptor? target = null,
+        SourceLanguage language = SourceLanguage.Cpp,
+        System.Collections.Immutable.ImmutableArray<string> defines = default,
+        string? standard = null
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-public-frontend-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try

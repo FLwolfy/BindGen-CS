@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "productVersion": "4.0.0",
+  "productVersion": "4.1.0",
   "scope": "Current 4.0 candidate public API shape extracted from compiled assemblies; not feature, runtime, platform, package or release certification.",
   "releaseCertification": false,
   "sourceRevision": "93e05894e19bef4ae0cf623b8bfbcdfcd24d8778",

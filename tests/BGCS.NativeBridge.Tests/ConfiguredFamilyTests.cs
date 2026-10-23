@@ -95,10 +95,13 @@ public sealed class ConfiguredFamilyTests
         if (mutation is "arguments" or "standard")
         {
             NativeModule module = context.module;
-            context = context with { module = new(module.targetId, module.triple, module.pointerSize,
+            context = context with
+            {
+                module = new(module.targetId, module.triple, module.pointerSize,
                 module.types.Select(type => mutation == "standard" && type.id == new StableId("record") ? type with { spelling = "std::vector<int>" } : type).ToImmutableArray(),
                 module.declarations.Select(declaration => mutation == "arguments" && declaration.id == new StableId("owner") ? declaration with { templateArguments = [] } : declaration).ToImmutableArray(), [])
-            { language = SourceLanguage.Cpp } };
+                { language = SourceLanguage.Cpp }
+            };
             if (mutation == "standard") binding = binding with { nativeTemplate = "std::vector", family = StandardValueKind.Optional };
         }
         Assert.ThrowsAny<Exception>(() => new NativeBridgePlanner(familyBindings: [binding]).Plan(context));
@@ -125,7 +128,9 @@ public sealed class ConfiguredFamilyTests
 
     private static CppFamilyBinding Binding(StandardValueKind family) => new()
     {
-        nativeTemplate = "custom::Collection", family = family, evidence = new(EvidenceLevel.UserAsserted, "fixture-user-protocol"),
+        nativeTemplate = "custom::Collection",
+        family = family,
+        evidence = new(EvidenceLevel.UserAsserted, "fixture-user-protocol"),
         stringEncoding = family == StandardValueKind.String ? NativeTextEncoding.Utf8 : NativeTextEncoding.Unknown
     };
 
@@ -152,6 +157,9 @@ public sealed class ConfiguredFamilyTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

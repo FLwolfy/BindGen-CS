@@ -76,8 +76,12 @@ public sealed class NeutralSequenceAdapterTests
         NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
         NativeType record = new(new("record"), NativeTypeCategory.Record, spelling, 24, 8) { declaration = new("record-declaration") };
         NativeDeclaration declaration = new(new("record-declaration"), "Class", spelling, spelling, record.id, location)
-        { isCompleteDefinition = true, isSystemDeclaration = true, templateArguments = spelling.StartsWith("std::array", StringComparison.Ordinal)
-            ? [new("Type", "int", integer.id), new("AsInteger", "3", null)] : [new("Type", "int", integer.id)] };
+        {
+            isCompleteDefinition = true,
+            isSystemDeclaration = true,
+            templateArguments = spelling.StartsWith("std::array", StringComparison.Ordinal)
+            ? [new("Type", "int", integer.id), new("AsInteger", "3", null)] : [new("Type", "int", integer.id)]
+        };
         NativeDeclaration callable = new(new("call"), "Function", "Sum", "Demo::Sum", null, location) { returnType = integer.id, children = [new("parameter")] };
         NativeDeclaration parameter = new(new("parameter"), "Parameter", "values", "values", record.id, location) { parent = callable.id };
         NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [integer, record], [declaration, callable, parameter], []) { language = SourceLanguage.Cpp };
@@ -88,6 +92,9 @@ public sealed class NeutralSequenceAdapterTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

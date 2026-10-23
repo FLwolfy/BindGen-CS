@@ -51,8 +51,10 @@ public sealed class AppleSdkDiscoveryTests
     [Theory]
     [InlineData("iphoneos", "ios-arm64-darwin")]
     [InlineData("iphonesimulator", "ios-simulator-arm64-darwin")]
-    public void MacSdkRootCannotBeSelectedForDeviceOrSimulator(string family, string targetId)
-    {
+    public void MacSdkRootCannotBeSelectedForDeviceOrSimulator(
+        string family,
+        string targetId
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-apple-sdk-family-" + Guid.NewGuid().ToString("N"));
         string sdk = CreateSdk(root);
         string? previousSdk = Environment.GetEnvironmentVariable("SDKROOT"), previousDeveloper = Environment.GetEnvironmentVariable("DEVELOPER_DIR");

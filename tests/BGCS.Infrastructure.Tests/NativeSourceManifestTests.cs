@@ -45,9 +45,12 @@ public sealed class NativeSourceManifestTests
     [Fact]
     public void InputIdentitiesRetainCaseIndependentlyOfGeneratedArtifactCollisionPolicy()
     {
-        NativeSourceManifest manifest = Manifest() with { inputs = [
+        NativeSourceManifest manifest = Manifest() with
+        {
+            inputs = [
             new("user", "Item.h", 1, s_digest, "Dependency"), new("user", "item.h", 1, s_digest, "Dependency"),
-            new("user", "native.h", 1, s_digest, "EntryHeader")] };
+            new("user", "native.h", 1, s_digest, "EntryHeader")]
+        };
         NativeSourceManifestVerifier.Validate(manifest, [s_source]);
     }
 
@@ -56,9 +59,12 @@ public sealed class NativeSourceManifestTests
     {
         NativeSourceManifest manifest = Manifest();
         var original = manifest.exportBindings[0];
-        NativeSourceManifestVerifier.Validate(manifest with { exportBindings = [original,
+        NativeSourceManifestVerifier.Validate(manifest with
+        {
+            exportBindings = [original,
             new(new("call:adapter"), original.sourceDeclaration, "compute_adapter", "test-library"),
-            new(new("support:release"), null, "release_error", "test-library")] }, [s_source]);
+            new(new("support:release"), null, "release_error", "test-library")]
+        }, [s_source]);
         Assert.Throws<InvalidDataException>(() => NativeSourceManifestVerifier.Validate(manifest with { exportBindings = [original, original] }, [s_source]));
         Assert.Throws<InvalidDataException>(() => NativeSourceManifestVerifier.Validate(manifest with { exportBindings = [original with { moduleId = "another-module" }] }, [s_source]));
         Assert.Throws<InvalidDataException>(() => NativeSourceManifestVerifier.Validate(manifest with { schemaVersion = 1 }, [s_source]));
@@ -71,8 +77,11 @@ public sealed class NativeSourceManifestTests
         ManagedRuntimeProfile profile = new("fixture/execution-v1", new("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable,
             [BindingImportMode.FunctionTable], false, true)
         {
-            nativeTargetId = manifest.targetId, nativeTriple = manifest.triple, pointerSize = 8,
-            byteOrder = NativeByteOrder.LittleEndian, callAbi = new CallAbiId("fixture.abi")
+            nativeTargetId = manifest.targetId,
+            nativeTriple = manifest.triple,
+            pointerSize = 8,
+            byteOrder = NativeByteOrder.LittleEndian,
+            callAbi = new CallAbiId("fixture.abi")
         };
         NativeRuntimeRequirements requirement = new(profile, BindingImportMode.FunctionTable);
         NativeSourceManifestVerifier.Validate(manifest with { runtimeRequirements = requirement }, [s_source]);

@@ -114,7 +114,10 @@ public sealed class NeutralPluginLoaderTests
     private sealed class Registry(ExtensionActivationContext context) : IExtensionRegistryBuilder
     {
         private Func<INativeModuleTransform>? m_factory;
-        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
+        public void RegisterFactory<TService>(
+            string id,
+            Func<ExtensionActivationContext, TService> factory
+        ) where TService : class
         {
             Assert.Equal("acceptance-probe", id);
             Assert.Equal(typeof(INativeModuleTransform), typeof(TService));
@@ -136,14 +139,19 @@ public sealed class NeutralPluginLoaderTests
         private readonly IHostPathService m_paths = HostTestPaths.Create();
         internal string root { get; } = Path.Combine(Path.GetTempPath(), "bgcs-neutral-plugin-loader-" + Guid.NewGuid().ToString("N"));
         internal Scratch() => Directory.CreateDirectory(root);
-        internal LockedPluginManifest Write(Type entry, PluginDescriptor descriptor)
-        {
+        internal LockedPluginManifest Write(
+            Type entry,
+            PluginDescriptor descriptor
+        ) {
             byte[] bytes = File.ReadAllBytes(entry.Assembly.Location);
             const string assembly = "NeutralFixture.dll";
             File.WriteAllBytes(Path.Combine(root, assembly), bytes);
             PluginManifest manifest = new()
             {
-                schemaVersion = 1, assembly = assembly, entryType = entry.FullName!, plugin = descriptor,
+                schemaVersion = 1,
+                assembly = assembly,
+                entryType = entry.FullName!,
+                plugin = descriptor,
                 assets = [new(assembly, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))))]
             };
             string path = Path.Combine(root, "plugin.json");

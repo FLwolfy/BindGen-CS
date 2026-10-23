@@ -13,8 +13,11 @@ public sealed class DotNetProviderTests
 {
     [Theory]
     [InlineData("dotnet.coreclr", false, true)]
-    public void ExplicitRuntimeSelectionBindsExactFacts(string identity, bool staticThunks, bool blocking)
-    {
+    public void ExplicitRuntimeSelectionBindsExactFacts(
+        string identity,
+        bool staticThunks,
+        bool blocking
+    ) {
         NativeTargetDescriptor target = Target(identity == "dotnet.mono-wasm");
         Assert.True(new DotNetRuntimeProvider().TryResolve(new(new(identity), target), out ManagedRuntimeProfile? profile));
         Assert.Equal(target.targetId.value, profile!.nativeTargetId);
@@ -159,8 +162,10 @@ public sealed class DotNetProviderTests
     }
 
     private static InteropType Integer() => new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-    private static ManagedRuntimeProfile Runtime(NativeTargetDescriptor target, string id = "dotnet.coreclr")
-    {
+    private static ManagedRuntimeProfile Runtime(
+        NativeTargetDescriptor target,
+        string id = "dotnet.coreclr"
+    ) {
         Assert.True(new DotNetRuntimeProvider().TryResolve(new(new(id), target), out ManagedRuntimeProfile? profile));
         return profile!;
     }

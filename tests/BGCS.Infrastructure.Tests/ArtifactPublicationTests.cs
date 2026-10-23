@@ -143,8 +143,10 @@ public sealed class ArtifactPublicationTests
     [InlineData("prepared", false)]
     [InlineData("prepared", true)]
     [InlineData("committed", true)]
-    public void InterruptedPublication_RecoversTheJournaledCompleteCollection(string state, bool candidateInstalled)
-    {
+    public void InterruptedPublication_RecoversTheJournaledCompleteCollection(
+        string state,
+        bool candidateInstalled
+    ) {
         using Scratch scratch = new();
         Publish(scratch.output, "old.cs", "previous");
         string candidate = Path.Combine(scratch.root, ".bgcs-staging-" + Guid.NewGuid().ToString("N"));
@@ -187,14 +189,20 @@ public sealed class ArtifactPublicationTests
         Assert.Throws<IOException>(() => verifier.Verify(scratch.output, [Descriptor("../escape.cs", "value")]));
     }
 
-    private void Publish(string output, string path, string content)
-    {
+    private void Publish(
+        string output,
+        string path,
+        string content
+    ) {
         using ArtifactPublisher publisher = new(output, "example", m_paths);
         new DirectoryArtifactSink(publisher.candidateRoot, m_paths).WriteText(path, content);
         publisher.Commit([Descriptor(path, content)]);
     }
 
-    private static ArtifactDescriptor Descriptor(string path, string text) => new(path, "text/x-csharp", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))));
+    private static ArtifactDescriptor Descriptor(
+        string path,
+        string text
+    ) => new(path, "text/x-csharp", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))));
 
     private sealed class Scratch : IDisposable
     {

@@ -20,8 +20,10 @@ public sealed class NativeFiniteVariadicTests
     [InlineData(SourceLanguage.Cpp, BindingImportMode.FunctionTable)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.DllImport)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.LibraryImport)]
-    public async Task RealNativeFixedAdaptersApplyDefaultPromotionsAndRetainTheOriginalEllipsisFacts(SourceLanguage language, BindingImportMode importMode)
-    {
+    public async Task RealNativeFixedAdaptersApplyDefaultPromotionsAndRetainTheOriginalEllipsisFacts(
+        SourceLanguage language,
+        BindingImportMode importMode
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-finite-varargs-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -84,8 +86,11 @@ public sealed class NativeFiniteVariadicTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "variadic.h"), Header + "\nFIXTURE_EXPORT int Unrelated(void);\n");
             BindingConfiguration configuration = Configuration(language, BindingImportMode.FunctionTable);
-            configuration = configuration with { source = configuration.source with
-                { selection = new() { includeDeclarations = ["Unrelated"] } } };
+            configuration = configuration with
+            {
+                source = configuration.source with
+                { selection = new() { includeDeclarations = ["Unrelated"] } }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -120,12 +125,19 @@ public sealed class NativeFiniteVariadicTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static BindingConfiguration Configuration(SourceLanguage language, BindingImportMode importMode) => new()
+    private static BindingConfiguration Configuration(
+        SourceLanguage language,
+        BindingImportMode importMode
+    ) => new()
     {
-        schemaVersion = 2, library = new() { id = "finitevarargs", nativeName = "variadic_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "finitevarargs", nativeName = "variadic_fixture" },
         source = new()
         {
-            language = language, headers = ["variadic.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
+            language = language,
+            headers = ["variadic.h"],
+            parseMacros = false,
+            includeTransitivelyReferencedHeaders = false,
             selection = new() { includeDeclarations = ["Analyze(int, ...)"] },
             variadicVariants = [new()
             {

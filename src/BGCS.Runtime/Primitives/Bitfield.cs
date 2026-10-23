@@ -3,18 +3,31 @@ namespace BGCS.Runtime;
 using System;
 using System.Runtime.CompilerServices;
 
+/*
+ * MIT License
+ *
+ * Copyright (c) 2023 Juna Meinhold
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 /// <summary>
-/// A utility for accessing bit fields.
-///
-/// Fast enough™
-///
-/// .NET 9.0.7 (9.0.725.31616), X64 RyuJIT AVX-512F+CD+BW+DQ+VL+VBMI
-/// HardwareIntrinsics=AVX-512F+CD+BW+DQ+VL+VBMI,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT VectorSize=256
-///
-/// | Method | Mean     | Error     | StdDev    |
-/// |------- |---------:|----------:|----------:|
-/// | GetA   | 1.077 ns | 0.0078 ns | 0.0065 ns |
-/// | SetA   | 1.930 ns | 0.0127 ns | 0.0106 ns |
+/// Reads and updates explicitly described native bit ranges and integer storage units.
 /// </summary>
 public static unsafe class Bitfield
 {

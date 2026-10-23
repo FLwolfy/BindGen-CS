@@ -22,8 +22,11 @@ public sealed class NativeCRecordTagProofTests
     [InlineData("Union", "union", false)]
     [InlineData("Struct", "struct", true)]
     [InlineData("Union", "union", true)]
-    public async Task C17StorageAndCallableProofsKeepTagsDistinctFromSameNamedTypedefs(string role, string keyword, bool anonymous)
-    {
+    public async Task C17StorageAndCallableProofsKeepTagsDistinctFromSameNamedTypedefs(
+        string role,
+        string keyword,
+        bool anonymous
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-c-tag-proof-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -43,7 +46,8 @@ public sealed class NativeCRecordTagProofTests
                 [new(record, "Class", "Pair", "Pair", pair, new(header, 1, 1)) { role = role, isCompleteDefinition = true, children = [field] },
                  new(field, "Field", "value", "Pair::value", integer, new(header, 1, 1)) { parent = record, visibility = "Public", offset = 0, bitOffset = 0 },
                  new(function, "Function", "read_pair", "read_pair", null, new(header, 3, 1)) { role = "Function", returnType = integer, children = [parameter], callingConvention = "C" },
-                 new(parameter, "Parameter", "value", "value", pointer, new(header, 3, 1)) { parent = function }], []) { language = SourceLanguage.C };
+                 new(parameter, "Parameter", "value", "value", pointer, new(header, 3, 1)) { parent = function }], [])
+            { language = SourceLanguage.C };
             string proof = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(" + storageType + ") == 4", proof, StringComparison.Ordinal);
             Assert.Contains(storageType + " *", proof, StringComparison.Ordinal);

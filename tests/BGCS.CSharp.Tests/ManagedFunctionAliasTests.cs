@@ -33,6 +33,9 @@ public sealed class ManagedFunctionAliasTests
     private sealed class NoWrites : IArtifactSink
     {
         internal int writes { get; private set; }
-        public string WriteText(string relativePath, string content) { writes++; return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { writes++; return relativePath; }
     }
 }

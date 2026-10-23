@@ -26,17 +26,21 @@ public sealed class TemporaryAllocatorContractTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ProcessedTextCannotChangeItsExactSessionFactoryOrMatchingAllocation(BindingImportMode mode, bool shared)
-    {
+    public async Task ProcessedTextCannotChangeItsExactSessionFactoryOrMatchingAllocation(
+        BindingImportMode mode,
+        bool shared
+    ) {
         InteropType octet = new(new("octet"), "char", NativeTypeCategory.Primitive, 1, 1) { primitiveKind = "Char", isSigned = true };
         InteropType pointer = new(new("text-pointer"), "const char*", NativeTypeCategory.Pointer, 8, 8) { elementType = octet.id };
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:explicit-nonretained-text");
         StringContract contract = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input,
-            new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, retainsPointer = false, allowsNull = false };
+            new(NativeLifetimeKind.Call, null, evidence), evidence)
+        { zeroTerminated = true, retainsPointer = false, allowsNull = false };
         InteropParameter parameter = new(new("text"), "text", pointer.id) { text = contract };
         InteropModule interop = new("temporary-allocator", "windows-x64-msvc", 8, [octet, pointer, integer],
-            [new(new("text-size"), "text_size", integer.id, [parameter], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [new(new("text-size"), "text_size", integer.id, [parameter], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop,
             new("Generated.Allocator", "AllocatorApi") { style = shared ? ManagedApiStyle.Static : ManagedApiStyle.Instance }, CancellationToken.None);
         Sink sink = new();
@@ -73,11 +77,13 @@ public sealed class TemporaryAllocatorContractTests
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:text-and-native-factory-name");
         StringContract text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input,
-            new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, retainsPointer = false, allowsNull = false };
+            new(NativeLifetimeKind.Call, null, evidence), evidence)
+        { zeroTerminated = true, retainsPointer = false, allowsNull = false };
         string factory = mode == BindingImportMode.FunctionTable ? "load" : "create";
         InteropModule interop = new("collision", "windows-x64-msvc", 8, [octet, pointer, integer],
             [new(new("read"), "read", integer.id, [new(new("text"), "text", pointer.id) { text = text }], "C"),
-             new(new("factory"), factory, integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+             new(new("factory"), factory, integer.id, [], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.Collision", "CollisionApi"), CancellationToken.None);
         Sink sink = new();
         InvalidOperationException rejected = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -89,6 +95,9 @@ public sealed class TemporaryAllocatorContractTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 }

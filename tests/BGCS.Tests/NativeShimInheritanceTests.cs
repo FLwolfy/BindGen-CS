@@ -14,12 +14,41 @@ namespace BGCS.Tests;
 
 public sealed class NativeShimInheritanceTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Add(int left, int right, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CreateInteger(int value, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Create(out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Cast(nint self, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Read(nint self, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Add(
+        int left,
+        int right,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int CreateInteger(
+        int value,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Create(
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Cast(
+        nint self,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Read(
+        nint self,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
 
     [Fact]
     public async Task ProjectOwnedCShim_UsesDeclaredHeadersSourcesAndExactCLinkage()
@@ -87,7 +116,10 @@ public sealed class NativeShimInheritanceTests
             Assert.Equal(0, Function<Create>(another)(out nint other, out error));
             Assert.Equal(0, error);
             owned.Add((another, other));
-            BridgeExport Upcast(BridgeExport constructor, string destination) => plan.exports.Single(export => export.operation.kind == BridgeOperationKind.BaseCast
+            BridgeExport Upcast(
+                BridgeExport constructor,
+                string destination
+            ) => plan.exports.Single(export => export.operation.kind == BridgeOperationKind.BaseCast
                 && export.operation.ownerType == constructor.operation.ownerType && plan.source.GetType(export.operation.castTarget!.Value).spelling == "Demo::" + destination);
             Assert.Equal(0, Function<Cast>(Upcast(widget, "Left"))(instance, out nint left, out error));
             Assert.Equal(0, error);
@@ -127,13 +159,18 @@ public sealed class NativeShimInheritanceTests
 
     private static BindingConfiguration Configuration(string id) => new()
     {
-        schemaVersion = 2, library = new() { id = id, nativeName = id + "_bridge" },
+        schemaVersion = 2,
+        library = new() { id = id, nativeName = id + "_bridge" },
         source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated." + id, name = "FixtureApi" },
-        runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+        runtime = new() { mode = "source" },
+        cache = new() { enabled = false }
+    };
 
-    private static async Task<(NativeBridgePlan Plan, string Binary)> Build(BindingConfiguration configuration, string root)
-    {
+    private static async Task<(NativeBridgePlan Plan, string Binary)> Build(
+        BindingConfiguration configuration,
+        string root
+    ) {
         string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
         await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker).Build();
         GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);

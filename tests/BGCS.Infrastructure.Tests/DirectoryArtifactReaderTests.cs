@@ -54,7 +54,10 @@ public sealed class DirectoryArtifactReaderTests : IDisposable
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => reader.ReadBytesAsync("data.bin", canceled.Token).AsTask());
     }
 
-    private static ArtifactDescriptor Descriptor(string path, byte[] bytes)
+    private static ArtifactDescriptor Descriptor(
+        string path,
+        byte[] bytes
+    )
         => new(path, "text/plain", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
 
     public void Dispose() => Directory.Delete(m_root, recursive: true);

@@ -97,7 +97,7 @@ def stage_optional_extension(root, work, configuration, browser):
     path = directory / "plugin.json"
     path.write_text(json.dumps({"schemaVersion": 1, "assembly": product + ".dll",
         "entryType": product + (".BrowserWasmPlugin" if browser else ".NativeAotPlugin"),
-        "plugin": {"id": extension_id, "version": "4.0.0", "contractsMajor": 4, "services": services},
+        "plugin": {"id": extension_id, "version": "4.1.0", "contractsMajor": 4, "services": services},
         "assets": files}, indent=2), encoding="utf-8")
     return path
 

@@ -24,7 +24,8 @@ public sealed class CandidateMetadataNormalizerTests
             await File.WriteAllTextAsync(Path.Combine(root, "native.hpp"), "struct Point { int x; int y; }; inline int total(Point p) { return p.x + p.y; }");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "metadata_paths", nativeName = "metadata_paths" },
+                schemaVersion = 2,
+                library = new() { id = "metadata_paths", nativeName = "metadata_paths" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["native.hpp"], parseMacros = false },
                 api = new() { @namespace = "Generated.MetadataPaths", name = "MetadataApi" },
                 output = new() { layout = singleFile ? "singleFile" : "split" }
@@ -67,8 +68,12 @@ public sealed class CandidateMetadataNormalizerTests
         {
             await File.WriteAllTextAsync(Path.Combine(root, "native.h"), "int add(int left, int right);");
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(TestWorkerRoot()).Build();
-            GenerationRequest request = new(new() { schemaVersion = 2, library = new() { id = "metadata_cancel", nativeName = "metadata_cancel" },
-                source = new() { headers = ["native.h"], parseMacros = false } }, root);
+            GenerationRequest request = new(new()
+            {
+                schemaVersion = 2,
+                library = new() { id = "metadata_cancel", nativeName = "metadata_cancel" },
+                source = new() { headers = ["native.h"], parseMacros = false }
+            }, root);
             GenerationResult first = await host.GenerateAsync(request);
             Assert.True(first.success, first.GetDiagnosticSummary());
             string[] previous = Metadata(first);

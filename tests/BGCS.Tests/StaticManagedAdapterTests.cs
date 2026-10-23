@@ -39,7 +39,8 @@ public sealed class StaticManagedAdapterTests
             NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(SourceLanguage.C);
             NativeTargetDescriptor fixtureTarget = new(new("desktop-static-fixture"), resolved.platformId, resolved.architectureId,
                 resolved.abiId, resolved.triple, resolved.toolchain,
-                new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
+                new(false, false), resolved.byteOrder)
+            { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
             BindingConfiguration configuration = new()
             {
                 schemaVersion = 2,
@@ -47,7 +48,9 @@ public sealed class StaticManagedAdapterTests
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false },
                 targets = [new() { id = fixtureTarget.targetId.value }],
                 api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = new ManagedRuntimeId("fixture.static") },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).UseFixtureStaticRuntime()
                 .RegisterFactory<INativeTargetProvider>(new("fixture/static-target", ExtensionPort.NativeTargetProvider), _ => new StaticFixtureTargetProvider(fixtureTarget)).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
@@ -69,8 +72,10 @@ public sealed class StaticManagedAdapterTests
     [InlineData(BindingImportMode.DllImport, "__Internal")]
     [InlineData(BindingImportMode.LibraryImport, "static_fixture_native")]
     [InlineData(BindingImportMode.LibraryImport, "__Internal")]
-    public async Task StaticTargetPreservesConfiguredDirectImportModule(BindingImportMode importMode, string nativeName)
-    {
+    public async Task StaticTargetPreservesConfiguredDirectImportModule(
+        BindingImportMode importMode,
+        string nativeName
+    ) {
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs static import name " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -78,7 +83,8 @@ public sealed class StaticManagedAdapterTests
             await File.WriteAllTextAsync(Path.Combine(temporary, "native.h"), "int twice(int value);\n");
             NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(SourceLanguage.C);
             NativeTargetDescriptor fixtureTarget = new(new("desktop-static-fixture"), resolved.platformId, resolved.architectureId,
-                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
+                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder)
+            { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
             BindingConfiguration configuration = new()
             {
                 schemaVersion = 2,
@@ -86,7 +92,8 @@ public sealed class StaticManagedAdapterTests
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false },
                 targets = [new() { id = fixtureTarget.targetId.value }],
                 api = new() { @namespace = "Generated.StaticFixture", name = "StaticFixtureApi", runtime = new ManagedRuntimeId("fixture.static"), importMode = importMode },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).UseFixtureStaticRuntime()
                 .RegisterFactory<INativeTargetProvider>(new("fixture/static-target", ExtensionPort.NativeTargetProvider), _ => new StaticFixtureTargetProvider(fixtureTarget)).Build();
@@ -107,14 +114,20 @@ public sealed class StaticManagedAdapterTests
         finally { Directory.Delete(temporary, recursive: true); }
     }
 
-    private static void AssertConfiguredMetadata(GenerationResult generated, string targetId, string nativeName)
-    {
+    private static void AssertConfiguredMetadata(
+        GenerationResult generated,
+        string targetId,
+        string nativeName
+    ) {
         using JsonDocument metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(generated.outputRoot, targetId, "metadata", "abi.manifest.json")));
         Assert.Equal(nativeName, metadata.RootElement.GetProperty("managedLibrary").GetProperty("nativeName").GetString());
     }
 
-    private static void InvokeGeneratedFromStatic(string managedRoot, nint module, string nativeName)
-    {
+    private static void InvokeGeneratedFromStatic(
+        string managedRoot,
+        nint module,
+        string nativeName
+    ) {
         var trees = Directory.GetFiles(managedRoot, "*.cs", SearchOption.AllDirectories)
             .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new CSharpParseOptions(LanguageVersion.CSharp14), path));
         string[] assemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))!.Split(Path.PathSeparator);
@@ -130,8 +143,11 @@ public sealed class StaticManagedAdapterTests
         try
         {
             Assembly assembly = context.LoadFromStream(stream);
-            NativeLibrary.SetDllImportResolver(assembly, (name, _, _) =>
-            {
+            NativeLibrary.SetDllImportResolver(assembly, (
+                name,
+                _,
+                _
+            ) => {
                 Assert.Equal(nativeName, name);
                 return module;
             });
@@ -148,8 +164,10 @@ public sealed class StaticManagedAdapterTests
 
     private sealed class StaticFixtureTargetProvider(NativeTargetDescriptor descriptor) : INativeTargetProvider
     {
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = request.targetId == descriptor.targetId ? descriptor : null;
             return target is not null;
         }

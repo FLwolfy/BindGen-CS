@@ -70,18 +70,33 @@ public sealed class NativeLongDoublePointerTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "long-double-pointer", nativeName = "long_double_pointer_fixture" },
-                source = new() { language = SourceLanguage.C, headers = ["extended.h"], parseMacros = false,
-                    includeTransitivelyReferencedHeaders = false, selection = new() { excludeDeclarations = ["extended_unproved_value"] } },
+                schemaVersion = 2,
+                library = new() { id = "long-double-pointer", nativeName = "long_double_pointer_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.C,
+                    headers = ["extended.h"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false,
+                    selection = new() { excludeDeclarations = ["extended_unproved_value"] }
+                },
                 targets = [new() { id = "host", settings = new() { compilerPath = compiler } }],
-                api = new() { @namespace = "Generated.ExtendedPointer", name = "ExtendedApi", importMode = mode,
+                api = new()
+                {
+                    @namespace = "Generated.ExtendedPointer",
+                    name = "ExtendedApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("extended_create", "CreateValue").Add("extended_destroy", "DestroyValue")
                         .Add("extended_write", "WriteValue").Add("extended_read", "ReadValue").Add("extended_double_shim", "DoubleShim")
                         .Add("extended_size", "Size").Add("extended_alignment", "Alignment").Add("extended_address_aligned", "AddressAligned")
-                        .Add("extended_live", "Live").Add("extended_released", "Released") },
-                semantics = new() { ownedResults = [new() { function = "extended_create", releaseFunction = "extended_destroy",
-                    releaseDomain = "extended-native-allocation", releaseThreadDomain = "any" }] },
-                 cache = new() { enabled = false }
+                        .Add("extended_live", "Live").Add("extended_released", "Released")
+                },
+                semantics = new()
+                {
+                    ownedResults = [new() { function = "extended_create", releaseFunction = "extended_destroy",
+                    releaseDomain = "extended-native-allocation", releaseThreadDomain = "any" }]
+                },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

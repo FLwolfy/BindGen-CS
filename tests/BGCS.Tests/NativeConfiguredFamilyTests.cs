@@ -21,12 +21,42 @@ namespace BGCS.Tests;
 
 public sealed class NativeConfiguredFamilyTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Factory(out nint value, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(nint self, out ulong value, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerAt(nint self, ulong index, out int value, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerValue(nint self, out int value, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int ByteAt(nint self, ulong index, out byte value, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Release(nint self, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Factory(
+        out nint value,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Count(
+        nint self,
+        out ulong value,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerAt(
+        nint self,
+        ulong index,
+        out int value,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerValue(
+        nint self,
+        out int value,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ByteAt(
+        nint self,
+        ulong index,
+        out byte value,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Release(
+        nint self,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void ReleaseError(nint error);
 
     [Theory]
@@ -36,8 +66,10 @@ public sealed class NativeConfiguredFamilyTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ActualCustomFamiliesKeepTheirTypeAndUseCheckedNativeOperations(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ActualCustomFamiliesKeepTheirTypeAndUseCheckedNativeOperations(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = NewRoot();
         try
         {
@@ -140,8 +172,10 @@ public sealed class NativeConfiguredFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void CheckNative(NativeBridgePlan bridge, string binary)
-    {
+    private static void CheckNative(
+        NativeBridgePlan bridge,
+        string binary
+    ) {
         nint library = NativeLibrary.Load(binary);
         try
         {
@@ -190,25 +224,43 @@ public sealed class NativeConfiguredFamilyTests
         finally { NativeLibrary.Free(library); }
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime)
-    {
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string[] functions = ["MakeVector", "MakeText", "MakeArray", "MakeBrokenArray", "MakeSpan", "MakeOptional", "MakeEmptyOptional", "SumVector", "SumText", "SumArray", "SumSpan", "SetBrokenSpan"];
-        CppFamilyBinding Binding(string native, StandardValueKind family) => new()
+        CppFamilyBinding Binding(
+            string native,
+            StandardValueKind family
+        ) => new()
         {
-            nativeTemplate = "look::" + native, family = family, evidence = new(EvidenceLevel.UserAsserted, "fixture-declared-protocol:" + native),
+            nativeTemplate = "look::" + native,
+            family = family,
+            evidence = new(EvidenceLevel.UserAsserted, "fixture-declared-protocol:" + native),
             stringEncoding = family == StandardValueKind.String ? NativeTextEncoding.Utf8 : NativeTextEncoding.Unknown
         };
-        SequenceInputAdapterRequest Sequence(string name, bool borrowed = false) => new("look::" + name,
+        SequenceInputAdapterRequest Sequence(
+            string name,
+            bool borrowed = false
+        ) => new("look::" + name,
             [new("values") { retainsArgument = borrowed ? false : null, lifetime = borrowed ? NativeLifetimeKind.Call : NativeLifetimeKind.Unknown }]);
         return new()
         {
-            schemaVersion = 2, library = new() { id = "family", nativeName = "family_fixture" },
-            source = new() { language = SourceLanguage.Cpp, headers = ["custom.hpp"], parseMacros = false,
-                includeTransitivelyReferencedHeaders = false, selection = new() { includeDeclarations = functions.Select(name => "look::" + name).ToImmutableArray() } },
+            schemaVersion = 2,
+            library = new() { id = "family", nativeName = "family_fixture" },
+            source = new()
+            {
+                language = SourceLanguage.Cpp,
+                headers = ["custom.hpp"],
+                parseMacros = false,
+                includeTransitivelyReferencedHeaders = false,
+                selection = new() { includeDeclarations = functions.Select(name => "look::" + name).ToImmutableArray() }
+            },
             api = new() { @namespace = "Generated.Family", name = "FamilyApi", importMode = mode },
             bridge = new() { cpp = new() { familyBindings = [Binding("Vector", StandardValueKind.Vector), Binding("Text", StandardValueKind.String), Binding("Array", StandardValueKind.Array), Binding("Span", StandardValueKind.Span), Binding("Optional", StandardValueKind.Optional)], sequenceInputAdapters = [Sequence("SumVector"), Sequence("SumText"), Sequence("SumArray"), Sequence("SumSpan", true)] } },
-            runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-             cache = new() { enabled = false }
+            runtime = new() { mode = sourceRuntime ? "source" : "package" },
+            output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+            cache = new() { enabled = false }
         };
     }
 

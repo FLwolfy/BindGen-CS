@@ -20,8 +20,10 @@ public sealed class NativeCountedStringInputTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CountedUnicodePreservesActualNativeUnitsAndRejectsNarrowCountsBeforeInvocation(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CountedUnicodePreservesActualNativeUnitsAndRejectsNarrowCountsBeforeInvocation(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-counted-text-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -70,18 +72,28 @@ public sealed class NativeCountedStringInputTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "counted-text", nativeName = "counted_text_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "counted-text", nativeName = "counted_text_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["text.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                api = new() { @namespace = "Generated.CountedNative", name = "TextApi", importMode = mode,
+                api = new()
+                {
+                    @namespace = "Generated.CountedNative",
+                    name = "TextApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("counted_utf8", "Utf8").Add("counted_signed", "Signed").Add("counted_utf16le", "Utf16Le")
-                        .Add("counted_utf16be", "Utf16Be").Add("counted_utf32be", "Utf32Be").Add("counted_calls", "Calls") },
-                semantics = new() { stringParameters = [Text("counted_utf8", NativeTextEncoding.Utf8, 1, NativeTextByteOrder.Native, NativeLengthUnit.CodeUnits),
+                        .Add("counted_utf16be", "Utf16Be").Add("counted_utf32be", "Utf32Be").Add("counted_calls", "Calls")
+                },
+                semantics = new()
+                {
+                    stringParameters = [Text("counted_utf8", NativeTextEncoding.Utf8, 1, NativeTextByteOrder.Native, NativeLengthUnit.CodeUnits),
                     Text("counted_signed", NativeTextEncoding.Utf8, 1, NativeTextByteOrder.Native, NativeLengthUnit.CodeUnits),
                     Text("counted_utf16le", NativeTextEncoding.Utf16, 2, NativeTextByteOrder.LittleEndian, NativeLengthUnit.CodeUnits),
                     Text("counted_utf16be", NativeTextEncoding.Utf16, 2, NativeTextByteOrder.BigEndian, NativeLengthUnit.CodeUnits),
-                    Text("counted_utf32be", NativeTextEncoding.Utf32, 4, NativeTextByteOrder.BigEndian, NativeLengthUnit.Bytes)] },
-                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
+                    Text("counted_utf32be", NativeTextEncoding.Utf32, 4, NativeTextByteOrder.BigEndian, NativeLengthUnit.Bytes)]
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -115,10 +127,30 @@ public sealed class NativeCountedStringInputTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static StringParameterConfiguration Text(string function, NativeTextEncoding encoding, int width, NativeTextByteOrder order, NativeLengthUnit unit)
-        => new() { function = function, parameter = "text", encoding = encoding, codeUnitWidth = width, byteOrder = order, lengthUnit = unit,
-            direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true, zeroTerminated = false,
-            lengthParameter = "count", lengthDirection = NativeParameterDirection.Input, maximumCodeUnits = 300 };
+    private static StringParameterConfiguration Text(
+        string function,
+        NativeTextEncoding encoding,
+        int width,
+        NativeTextByteOrder order,
+        NativeLengthUnit unit
+    )
+        => new()
+        {
+            function = function,
+            parameter = "text",
+            encoding = encoding,
+            codeUnitWidth = width,
+            byteOrder = order,
+            lengthUnit = unit,
+            direction = NativeParameterDirection.Input,
+            lifetime = NativeLifetimeKind.Call,
+            retainsPointer = false,
+            allowsNull = true,
+            zeroTerminated = false,
+            lengthParameter = "count",
+            lengthDirection = NativeParameterDirection.Input,
+            maximumCodeUnits = 300
+        };
 
     private static string WorkerRoot()
     {

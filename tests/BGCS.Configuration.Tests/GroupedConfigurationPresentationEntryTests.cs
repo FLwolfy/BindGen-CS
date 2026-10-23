@@ -19,6 +19,9 @@ public sealed class GroupedConfigurationPresentationEntryTests : GroupedConfigur
     [InlineData("AdditionalArguments", "config.no-args")]
     [InlineData("GeneratePlaceholderComments", "config")]
     [InlineData("GeneratePlaceholderComments", "config.true")]
-    public Task NamesArgumentsAndDocumentationPreserveTheirExactBehavior(string fixture, string variant)
+    public Task NamesArgumentsAndDocumentationPreserveTheirExactBehavior(
+        string fixture,
+        string variant
+    )
         => VerifyAsync(fixture, variant);
 }

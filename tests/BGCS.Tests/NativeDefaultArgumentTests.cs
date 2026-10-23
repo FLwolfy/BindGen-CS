@@ -26,8 +26,10 @@ public sealed class NativeDefaultArgumentTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task TypedDefaultsShareConversionsWithAliasesViewsAndSharedContexts(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-default-arguments-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -52,11 +54,14 @@ public sealed class NativeDefaultArgumentTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "defaults", nativeName = "default_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "defaults", nativeName = "default_fixture" },
                 source = new() { headers = ["defaults.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new()
                 {
-                    @namespace = "Generated.Defaults", name = "DefaultApi", importMode = mode,
+                    @namespace = "Generated.Defaults",
+                    name = "DefaultApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("calculate::value", "input"),
                     functionAliases = [new("calculate", "Plus")],
@@ -69,12 +74,15 @@ public sealed class NativeDefaultArgumentTests
                         new("identity_i") { defaults = [new("value", new(ManagedDefaultValueKind.ConstantReference, "global::System.Int32.MaxValue"))] }
                     ]
                 },
-                semantics = new() { stringParameters = [new() { function = "calculate", parameter = "label", encoding = NativeTextEncoding.Utf8,
+                semantics = new()
+                {
+                    stringParameters = [new() { function = "calculate", parameter = "label", encoding = NativeTextEncoding.Utf8,
                     codeUnitWidth = 1, lengthUnit = NativeLengthUnit.CodeUnits, direction = NativeParameterDirection.Input,
-                    lifetime = NativeLifetimeKind.Call, zeroTerminated = true, retainsPointer = false, allowsNull = false }] },
+                    lifetime = NativeLifetimeKind.Call, zeroTerminated = true, retainsPointer = false, allowsNull = false }]
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -100,7 +108,10 @@ public sealed class NativeDefaultArgumentTests
                             call.Expression is MemberAccessExpressionSyntax member && member.Name.Identifier.ValueText == "Calculate"))
                     .ToArray();
                 replacements += constants.Length;
-                return (source.Path, Text: syntax.ReplaceNodes(constants, (original, _) =>
+                return (source.Path, Text: syntax.ReplaceNodes(constants, (
+                    original,
+                    _
+                ) =>
                     SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(8)).WithTriviaFrom(original)).ToFullString());
             }).ToArray();
             Assert.True(replacements > 0, "The fixture must alter at least one emitted default forwarding constant.");
@@ -135,7 +146,10 @@ public sealed class NativeDefaultArgumentTests
 
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit files.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit files.");
     }
     private static string WorkerRoot()
     {

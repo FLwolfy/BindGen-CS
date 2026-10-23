@@ -29,8 +29,10 @@ public sealed class NativeCOwnedReceiverTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitCOwnersAndReceiversPreserveContextDomainsCallsAndMatchingCleanup(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExplicitCOwnersAndReceiversPreserveContextDomainsCallsAndMatchingCleanup(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-c-owned-receiver-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -89,16 +91,20 @@ public sealed class NativeCOwnedReceiverTests
             string[] members = ["widget_add", "widget_alias", "widget_fill", "widget_a_only", "widget_get"];
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "c-owned", nativeName = "c_owned_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "c-owned", nativeName = "c_owned_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["widget.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new()
                 {
-                    @namespace = "Generated.COwned", name = "WidgetApi", importMode = mode, style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
+                    @namespace = "Generated.COwned",
+                    name = "WidgetApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("widget_create_a", "MakeA").Add("widget_create_b", "MakeB")
                         .Add("widget_create_fill", "MakeFill")
                         .Add("widget_add", "Add").Add("widget_alias", "Alias").Add("widget_fill", "Fill").Add("widget_a_only", "AOnly").Add("widget_get", "Get"),
                     memberFunctions = members.Select(function => new ManagedReceiverRequest(function, "Widget", "self")
-                        { objectName = "WidgetObject", releaseDomain = function == "widget_a_only" ? "native-a" : null }).ToImmutableArray(),
+                    { objectName = "WidgetObject", releaseDomain = function == "widget_a_only" ? "native-a" : null }).ToImmutableArray(),
                     functionAliases = [new("widget_create_a", "MakeAlias"), new("widget_add", "AddAlias")],
                     functionContainers = [new("Widgets", [new("widget_create_a", "Make"), new("widget_add", "Add")])],
                     functions = [new("widget_create_a") { defaults = [new("label", new(ManagedDefaultValueKind.String, "A"))] }]
@@ -108,23 +114,32 @@ public sealed class NativeCOwnedReceiverTests
                     ownedResults = [Owned("widget_create_a", "widget_destroy_a", "native-a"), Owned("widget_create_b", "widget_destroy_b", "native-b"),
                         Owned("widget_create_fill", "widget_destroy_a", "native-a")],
                     borrowedParameters = members.Select(function => new BorrowedParameterConfiguration
-                        { function = function, parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }).ToImmutableArray(),
+                    { function = function, parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }).ToImmutableArray(),
                     valueParameters = [Value("widget_create_a", "seed", NativeParameterDirection.Input), Value("widget_create_b", "seed", NativeParameterDirection.Input),
                         Value("widget_add", "input", NativeParameterDirection.Input), Value("widget_add", "state", NativeParameterDirection.InputOutput), Value("widget_add", "output", NativeParameterDirection.Output),
                         Value("widget_alias", "input", NativeParameterDirection.Input), Value("widget_alias", "state", NativeParameterDirection.InputOutput), Value("widget_alias", "output", NativeParameterDirection.Output)],
                     stringParameters = new[] { "widget_create_a", "widget_create_b" }.Select(function => new StringParameterConfiguration
                     {
-                        function = function, parameter = "label", encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1, byteOrder = NativeTextByteOrder.Native,
-                        lengthUnit = NativeLengthUnit.CodeUnits, direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call,
-                        zeroTerminated = true, retainsPointer = false, allowsNull = false
+                        function = function,
+                        parameter = "label",
+                        encoding = NativeTextEncoding.Utf8,
+                        codeUnitWidth = 1,
+                        byteOrder = NativeTextByteOrder.Native,
+                        lengthUnit = NativeLengthUnit.CodeUnits,
+                        direction = NativeParameterDirection.Input,
+                        lifetime = NativeLifetimeKind.Call,
+                        zeroTerminated = true,
+                        retainsPointer = false,
+                        allowsNull = false
                     }).ToImmutableArray(),
                     bufferParameters = [new() { function = "widget_fill", parameter = "buffer", capacityParameter = "capacity", writtenCountParameter = "written",
                         lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true },
                         new() { function = "widget_create_fill", parameter = "buffer", capacityParameter = "capacity", writtenCountParameter = "written",
                             lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true }]
                 },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -134,7 +149,9 @@ public sealed class NativeCOwnedReceiverTests
             string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
-                importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.COwned.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
+                importMode = mode,
+                runtimeNamespace = sourceRuntime ? "Generated.COwned.Runtime" : "BGCS.Runtime",
+                includeRuntimeSource = sourceRuntime,
                 managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
             });
             Assert.Equal(3, plan.directOwnedFactories.Length);
@@ -157,7 +174,10 @@ public sealed class NativeCOwnedReceiverTests
                     SyntaxNode syntax = CSharpSyntaxTree.ParseText(source.Text).GetRoot();
                     var guards = syntax.DescendantNodes().OfType<IfStatementSyntax>().Where(check).ToArray();
                     changed += guards.Length;
-                    return (source.Path, syntax.ReplaceNodes(guards, (_, rewritten) => rewritten.WithCondition(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression))).ToFullString());
+                    return (source.Path, syntax.ReplaceNodes(guards, (
+                        _,
+                        rewritten
+                    ) => rewritten.WithCondition(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression))).ToFullString());
                 }).ToArray();
                 Assert.True(changed > 0, "Expected C ownership guard was absent.");
                 Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan, mutations, configuration.library.nativeName));
@@ -226,9 +246,17 @@ public sealed class NativeCOwnedReceiverTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static OwnedResultConfiguration Owned(string function, string release, string domain) => new()
+    private static OwnedResultConfiguration Owned(
+        string function,
+        string release,
+        string domain
+    ) => new()
     { function = function, releaseFunction = release, releaseDomain = domain, releaseThreadDomain = "any" };
-    private static ValueParameterConfiguration Value(string function, string parameter, NativeParameterDirection direction) => new()
+    private static ValueParameterConfiguration Value(
+        string function,
+        string parameter,
+        NativeParameterDirection direction
+    ) => new()
     { function = function, parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false };
     private static string WorkerRoot()
     {
@@ -238,5 +266,10 @@ public sealed class NativeCOwnedReceiverTests
         return Path.Combine(directory!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
     private sealed class NoWrites : IArtifactSink
-    { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning must not write artifacts."); }
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning must not write artifacts.");
+    }
 }

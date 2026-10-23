@@ -128,7 +128,7 @@ public sealed class NativeDeclarationStorageIdentityTests : FrontendTestHost
             await File.WriteAllTextAsync(header, source);
             NativeTargetDescriptor target = new(new("native-declaration-identity"), "test", "test", "test", triple, new());
             NativeModule module = (await new ClangFrontend(host).ParseAsync(new(target, language, [header])
-                { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
+            { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             assertions(module);
         }

@@ -42,10 +42,16 @@ public sealed class NativeOwnedBufferValueTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "owned_protocol", nativeName = "owned_protocol" },
+                schemaVersion = 2,
+                library = new() { id = "owned_protocol", nativeName = "owned_protocol" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false },
-                api = new() { @namespace = "Generated.OwnedProtocol", name = "WidgetApi", importMode = mode,
-                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Update", "Update").Add("Widget::Fill", "Fill") },
+                api = new()
+                {
+                    @namespace = "Generated.OwnedProtocol",
+                    name = "WidgetApi",
+                    importMode = mode,
+                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Update", "Update").Add("Widget::Fill", "Fill")
+                },
                 semantics = new()
                 {
                     ownedResults = [new() { function = "Widget::Widget", releaseThreadDomain = "any" }],
@@ -55,7 +61,7 @@ public sealed class NativeOwnedBufferValueTests
                     bufferParameters = [new() { function = "Widget::Fill", parameter = "buffer", capacityParameter = "capacity", writtenCountParameter = "written",
                         lengthUnit = NativeLengthUnit.Elements, direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true }]
                 },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -99,7 +105,11 @@ public sealed class NativeOwnedBufferValueTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static ValueParameterConfiguration Value(string function, string parameter, NativeParameterDirection direction) => new()
+    private static ValueParameterConfiguration Value(
+        string function,
+        string parameter,
+        NativeParameterDirection direction
+    ) => new()
     { function = function, parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false };
     private static string WorkerRoot()
     {

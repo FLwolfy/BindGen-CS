@@ -28,8 +28,10 @@ public sealed class ExplicitPresentationSelectionParityTests
     [InlineData(BindingImportMode.LibraryImport, 0)]
     [InlineData(BindingImportMode.LibraryImport, 1)]
     [InlineData(BindingImportMode.LibraryImport, 2)]
-    public async Task ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall(BindingImportMode mode, int selected)
-    {
+    public async Task ExplicitMemberWhitelistCanDisableOrSelectConveniencesWithoutRemovingAnyRawCall(
+        BindingImportMode mode,
+        int selected
+    ) {
         InteropModule module = Module(valueProtocol: true);
         ImmutableArray<ManagedReceiverRequest> members = selected switch
         {
@@ -65,8 +67,10 @@ public sealed class ExplicitPresentationSelectionParityTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers(BindingImportMode mode, bool enabled)
-    {
+    public async Task NamedNonowningHandleViewsAreOptionalAndNeverReplaceRawNativeCarriers(
+        BindingImportMode mode,
+        bool enabled
+    ) {
         InteropModule module = Module(valueProtocol: false);
         ManagedProjectionRequest choices = new("Generated.Selection", "SelectionApi")
         {
@@ -106,7 +110,10 @@ public sealed class ExplicitPresentationSelectionParityTests
     }
 
     private static ManagedReceiverRequest Member(string function) => new(function, "Node", "self") { kind = ManagedReceiverKind.Value };
-    private static ManagedApiModel Project(InteropModule module, ManagedProjectionRequest request)
+    private static ManagedApiModel Project(
+        InteropModule module,
+        ManagedProjectionRequest request
+    )
         => new DefaultManagedProjection().Project(module, request with
         { names = ImmutableDictionary<string, string>.Empty.Add("native_read", "Read").Add("native_write", "Write") }, CancellationToken.None);
     private static string[] Signatures(CSharpEmissionPlan plan) => plan.methods.Select(method => method.nativeExport.value + ":" + method.exportName

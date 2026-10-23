@@ -81,10 +81,10 @@ public sealed class NativeReferenceFieldStorageTests
     {
         StableId recordId = new("record"), recordType = new("record-type"), large = new("large"), reference = new("reference"), alias = new("alias"), fieldId = new("field"), aliasId = new("member-alias");
         NativeDeclaration record = new(recordId, "Class", "Holder", "Holder", recordType, new("native.hpp", 1, 1))
-            { isCompleteDefinition = true, children = [fieldId, aliasId] };
+        { isCompleteDefinition = true, children = [fieldId, aliasId] };
         NativeDeclaration memberAlias = new(aliasId, "Typedef", "Reference", "Holder::Reference", alias, new("native.hpp", 2, 1)) { parent = recordId };
         NativeDeclaration field = new(fieldId, "Field", "value", "Holder::value", alias, new("native.hpp", 2, 1))
-            { parent = recordId, offset = 0, storageSize = 8, storageEvidence = new(EvidenceLevel.Declared, "fixture:compiler-slot") };
+        { parent = recordId, offset = 0, storageSize = 8, storageEvidence = new(EvidenceLevel.Declared, "fixture:compiler-slot") };
         field = condition switch
         {
             "missing" => field with { storageSize = null, storageEvidence = null },
@@ -99,7 +99,7 @@ public sealed class NativeReferenceFieldStorageTests
              new(large, NativeTypeCategory.Record, "LargeReferent", 64, 1),
              new(reference, NativeTypeCategory.Reference, "LargeReferent &", 64, 1) { elementType = large },
              new(alias, NativeTypeCategory.Alias, "Reference", 64, 1) { elementType = reference }], [record, field, memberAlias], [])
-            { language = SourceLanguage.Cpp };
+        { language = SourceLanguage.Cpp };
         var diagnostics = new NativeModuleVerifier().Validate(module);
         if (condition == "valid") Assert.Empty(diagnostics);
         else Assert.Contains(diagnostics, diagnostic => diagnostic.isFailure && diagnostic.message.Contains(condition switch
@@ -113,10 +113,13 @@ public sealed class NativeReferenceFieldStorageTests
             Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(module, [], new("", "", new("X86_64SysV", false))));
     }
 
-    private static NativeModule Copy(NativeModule source, NativeDeclaration field)
+    private static NativeModule Copy(
+        NativeModule source,
+        NativeDeclaration field
+    )
         => new(source.targetId, source.triple, source.pointerSize, source.types,
             source.declarations.Select(declaration => declaration.id == field.id ? field : declaration).ToImmutableArray(), source.diagnostics)
-            { language = source.language, byteOrder = source.byteOrder };
+        { language = source.language, byteOrder = source.byteOrder };
 
     private static string WorkerRoot()
     {

@@ -19,8 +19,10 @@ public sealed class QuantityValidator : IGenerationValidator, IDisposable
     /// <summary>Gets whether the validator has released its session resources.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public async ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-    {
+    public async ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+        ValidationRequest request,
+        CancellationToken cancellationToken
+    ) {
         if (!request.interop.functions.Any(function => function.sourceQualifiedName == "Sample::add_quantity"))
             return [new(BindingDiagnosticSeverity.Error, "The selected domain operation was omitted from the final ABI.", "QUANTITY-EXPORT")];
         string path = request.artifacts.Single(artifact => artifact.relativePath.EndsWith("/metadata/abi.manifest.json", StringComparison.Ordinal)).relativePath;

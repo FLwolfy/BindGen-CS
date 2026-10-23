@@ -22,8 +22,10 @@ public sealed class NativeBufferTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task DeclaredBuffers_PinExactBoundsPreserveAliasingAndRejectUnsafeCalls(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task DeclaredBuffers_PinExactBoundsPreserveAliasingAndRejectUnsafeCalls(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-native-buffer-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -57,19 +59,38 @@ public sealed class NativeBufferTests
                 EXPORT size_t inspect_aligned(const int* data, size_t length) { ++calls; return (size_t)((uintptr_t)data % 64); }
                 EXPORT int get_calls(void) { return calls; }
                 """);
-            BufferParameterConfiguration Rule(string function, NativeParameterDirection direction, string parameter = "data", NativeLengthUnit unit = NativeLengthUnit.Elements)
-                => new() { function = function, parameter = parameter, lengthParameter = "length", direction = direction, lengthUnit = unit,
-                    lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true };
+            BufferParameterConfiguration Rule(
+                string function,
+                NativeParameterDirection direction,
+                string parameter = "data",
+                NativeLengthUnit unit = NativeLengthUnit.Elements
+            )
+                => new()
+                {
+                    function = function,
+                    parameter = parameter,
+                    lengthParameter = "length",
+                    direction = direction,
+                    lengthUnit = unit,
+                    lifetime = NativeLifetimeKind.Call,
+                    retainsPointer = false,
+                    allowsNull = true
+                };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "buffers", nativeName = "buffer_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "buffers", nativeName = "buffer_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["buffers.h"], parseMacros = false },
                 api = new() { @namespace = "Generated.Buffers", name = "BufferApi", importMode = mode },
-                semantics = new() { bufferParameters = [Rule("sum", NativeParameterDirection.Input), Rule("sum_bytes", NativeParameterDirection.Input, unit: NativeLengthUnit.Bytes),
+                semantics = new()
+                {
+                    bufferParameters = [Rule("sum", NativeParameterDirection.Input), Rule("sum_bytes", NativeParameterDirection.Input, unit: NativeLengthUnit.Bytes),
                     Rule("increment", NativeParameterDirection.InputOutput), Rule("fill", NativeParameterDirection.Output),
                     Rule("mix", NativeParameterDirection.Input, "input"), Rule("mix", NativeParameterDirection.Output, "output"),
-                    Rule("small_count", NativeParameterDirection.Input), Rule("inspect_aligned", NativeParameterDirection.Input) with { requiredAlignment = 64, allowsNull = false }] },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" },  cache = new() { enabled = false }
+                    Rule("small_count", NativeParameterDirection.Input), Rule("inspect_aligned", NativeParameterDirection.Input) with { requiredAlignment = 64, allowsNull = false }]
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
@@ -129,8 +150,10 @@ public sealed class NativeBufferTests
         finally { Directory.Delete(temporary, recursive: true); }
     }
 
-    private static async Task<string> RunAsync(string directory, params string[] arguments)
-    {
+    private static async Task<string> RunAsync(
+        string directory,
+        params string[] arguments
+    ) {
         string? root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         string executable = string.IsNullOrEmpty(root) ? "dotnet" : Path.Combine(root, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
         ProcessStartInfo start = new(executable) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };

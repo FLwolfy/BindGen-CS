@@ -46,7 +46,8 @@ public sealed class ConfiguredExactTypeFamilyTests
         LoweringContext context = Context();
         NativeModule module = context.module;
         module = new(module.targetId, module.triple, module.pointerSize, module.types,
-            module.declarations.Select(declaration => declaration.id == new StableId("text-declaration") ? declaration with { isSystemDeclaration = true } : declaration).ToImmutableArray(), []) { language = module.language };
+            module.declarations.Select(declaration => declaration.id == new StableId("text-declaration") ? declaration with { isSystemDeclaration = true } : declaration).ToImmutableArray(), [])
+        { language = module.language };
         DeclarationSelection selected = new DeclarationSelector(global::System.StringComparer.Ordinal).Select(module, new() { includeDeclarations = ["Make"] }, ["exact.hpp"], System.IO.Directory.GetCurrentDirectory());
         Assert.DoesNotContain(selected.module.declarations, declaration => declaration.id == new StableId("unit-declaration"));
         Assert.Single(selected.callables);
@@ -127,12 +128,15 @@ public sealed class ConfiguredExactTypeFamilyTests
         if (mutation is "template-class" or "private-unit" or "missing-unit")
         {
             NativeModule module = context.module;
-            context = context with { module = new(module.targetId, module.triple, module.pointerSize, module.types,
+            context = context with
+            {
+                module = new(module.targetId, module.triple, module.pointerSize, module.types,
                 module.declarations.Select(declaration => declaration.id == new StableId("text-declaration")
                     ? mutation == "template-class" ? declaration with { templateArguments = [new("Type", "char", new("char"))] }
                         : mutation == "missing-unit" ? declaration with { children = [] } : declaration
                     : mutation == "private-unit" && declaration.id == new StableId("unit-declaration") ? declaration with { visibility = "Private" } : declaration).ToImmutableArray(), [])
-                { language = module.language } };
+                { language = module.language }
+            };
         }
         Assert.ThrowsAny<Exception>(() => new NativeBridgePlanner(familyBindings: settings).Plan(context));
     }
@@ -149,10 +153,20 @@ public sealed class ConfiguredExactTypeFamilyTests
         Assert.Empty(sink.files);
     }
 
-    private static CppFamilyBinding Binding(string type) => new() { nativeType = type, family = StandardValueKind.String,
-        stringEncoding = NativeTextEncoding.Utf8, evidence = new(EvidenceLevel.UserAsserted, "exact-string-protocol") };
-    private static CppFamilyBinding PathBinding() => new() { nativeType = "custom::TextAlias", family = StandardValueKind.Path,
-        pathFormat = NativePathFormat.GenericUtf8, evidence = new(EvidenceLevel.UserAsserted, "exact-path-protocol") };
+    private static CppFamilyBinding Binding(string type) => new()
+    {
+        nativeType = type,
+        family = StandardValueKind.String,
+        stringEncoding = NativeTextEncoding.Utf8,
+        evidence = new(EvidenceLevel.UserAsserted, "exact-string-protocol")
+    };
+    private static CppFamilyBinding PathBinding() => new()
+    {
+        nativeType = "custom::TextAlias",
+        family = StandardValueKind.Path,
+        pathFormat = NativePathFormat.GenericUtf8,
+        evidence = new(EvidenceLevel.UserAsserted, "exact-path-protocol")
+    };
 
     private static LoweringContext Context()
     {
@@ -160,14 +174,14 @@ public sealed class ConfiguredExactTypeFamilyTests
         NativeType unit = new(new("char"), NativeTypeCategory.Primitive, "char", 1, 1) { primitiveKind = "Char", isSigned = true };
         NativeType text = new(new("text"), NativeTypeCategory.Record, "custom::Text", 24, 8) { declaration = new("text-declaration") };
         NativeType unitAlias = new(new("unit-alias"), NativeTypeCategory.Alias, "custom::Text::value_type", 1, 1)
-            { elementType = unit.id, canonicalType = unit.id, declaration = new("unit-declaration") };
+        { elementType = unit.id, canonicalType = unit.id, declaration = new("unit-declaration") };
         NativeType textAlias = new(new("text-alias"), NativeTypeCategory.Alias, "custom::TextAlias", 24, 8)
-            { elementType = text.id, canonicalType = text.id, declaration = new("alias-declaration") };
+        { elementType = text.id, canonicalType = text.id, declaration = new("alias-declaration") };
         NativeDeclaration owner = new(new("text-declaration"), "Class", "Text", text.spelling, text.id, source)
         { role = "Class", isCompleteDefinition = true, isDefaultConstructible = true, children = [new("unit-declaration")] };
         NativeDeclaration alias = new(new("alias-declaration"), "Typedef", "TextAlias", textAlias.spelling, textAlias.id, source);
         NativeDeclaration valueType = new(new("unit-declaration"), "Typedef", "value_type", unitAlias.spelling, unitAlias.id, source)
-            { parent = owner.id, visibility = "Public" };
+        { parent = owner.id, visibility = "Public" };
         NativeDeclaration make = new(new("make"), "Function", "Make", "Make", null, source) { returnType = textAlias.id };
         NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [unit, text, unitAlias, textAlias], [owner, alias, valueType, make], []) { language = SourceLanguage.Cpp };
         NativeTargetDescriptor target = new(new(module.targetId), "windows", "x64", "msvc", module.triple, new());
@@ -177,6 +191,9 @@ public sealed class ConfiguredExactTypeFamilyTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

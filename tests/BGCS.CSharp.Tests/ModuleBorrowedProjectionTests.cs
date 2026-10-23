@@ -84,7 +84,8 @@ public sealed class ModuleBorrowedProjectionTests
         getter = getter with { returnOwnership = borrowing };
         if (fault == "input") getter = getter with { parameters = [new(new("unproven"), "unproven", getter.returnType)] };
         InteropModule interop = new(original.libraryId, original.targetId, original.pointerSize, original.types,
-            original.functions.SetItem(0, getter), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            original.functions.SetItem(0, getter), [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = Project(interop);
         NeutralBackendTests.MemorySink sink = new();
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, new("native", sink));
@@ -123,7 +124,8 @@ public sealed class ModuleBorrowedProjectionTests
         if (readOnlyMember)
             functions = functions.SetItem(1, functions[1] with { parameters = [functions[1].parameters[0] with { type = pointer.id }] });
         InteropModule interop = new(baseline.libraryId, baseline.targetId, baseline.pointerSize,
-            baseline.types.AddRange(ImmutableArray.Create(qualified, pointer)), functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            baseline.types.AddRange(ImmutableArray.Create(qualified, pointer)), functions, [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(interop), new("native", new NeutralBackendTests.MemorySink()));
         Assert.Single(plan.directBorrowedFactories);
         if (readOnlyMember) Assert.Single(Assert.Single(plan.objects).directMethods);

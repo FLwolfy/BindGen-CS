@@ -27,9 +27,15 @@ public sealed class FlatIdentifierNamingTests
             BindingConfiguration config = new()
             {
                 schemaVersion = 2,
-                library = new() { id = "flat_names", nativeName = "flat_names" }, source = new() { headers = ["native.h"], parseMacros = false },
-                api = new() { @namespace = "Generated.FlatNames", name = "FlatApi", naming = new()
-                    { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English, functions = new() { casing = ManagedNameCasing.Pascal } } }
+                library = new() { id = "flat_names", nativeName = "flat_names" },
+                source = new() { headers = ["native.h"], parseMacros = false },
+                api = new()
+                {
+                    @namespace = "Generated.FlatNames",
+                    name = "FlatApi",
+                    naming = new()
+                    { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English, functions = new() { casing = ManagedNameCasing.Pascal } }
+                }
             };
             GenerationResult first = await host.GenerateAsync(new(config, root));
             Assert.True(first.success, first.GetDiagnosticSummary());
@@ -41,8 +47,14 @@ public sealed class FlatIdentifierNamingTests
             GenerationResult warm = await host.GenerateAsync(new(config, root));
             Assert.True(warm.success, warm.GetDiagnosticSummary());
             Assert.Equal("hit", Assert.Single(warm.cacheStages, stage => stage.stage == "csharpEmission").status);
-            config = config with { api = config.api with { naming = config.api.naming with
-                { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.Custom, flatIdentifierWords = ["createwindow", "depthbuffer", "getmousepos"] } } };
+            config = config with
+            {
+                api = config.api with
+                {
+                    naming = config.api.naming with
+                    { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.Custom, flatIdentifierWords = ["createwindow", "depthbuffer", "getmousepos"] }
+                }
+            };
             GenerationResult changed = await host.GenerateAsync(new(config, root));
             Assert.True(changed.success, changed.GetDiagnosticSummary());
             Assert.Equal("miss", Assert.Single(changed.cacheStages, stage => stage.stage == "csharpEmission").status);

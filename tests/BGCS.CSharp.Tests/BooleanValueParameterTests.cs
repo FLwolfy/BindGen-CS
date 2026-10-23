@@ -28,8 +28,10 @@ public sealed class BooleanValueParameterTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitNativeBooleanBorrowsKeepOriginalAddressesAndSeparateRawCarriers(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExplicitNativeBooleanBorrowsKeepOriginalAddressesAndSeparateRawCarriers(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         InteropModule module = Module();
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.BooleanValues", "BooleanApi")
         {
@@ -38,8 +40,13 @@ public sealed class BooleanValueParameterTests
             functionContainers = [new("Booleans", [new("change", "Apply")])]
         }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.BooleanValues.Runtime" : "BGCS.Runtime" };
+        EmissionRequest request = new("native", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            singleFile = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.BooleanValues.Runtime" : "BGCS.Runtime"
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpMethodPlan method = Assert.Single(plan.methods);
         Assert.All(method.parameterTypes, type => Assert.Equal("byte*", type));
@@ -71,7 +78,8 @@ public sealed class BooleanValueParameterTests
         {
             string replacement = mutation switch
             {
-                "fixed (bool*" => "fixed (byte*", "Unsafe.SkipInit" => "Unsafe.AsRef",
+                "fixed (bool*" => "fixed (byte*",
+                "Unsafe.SkipInit" => "Unsafe.AsRef",
                 _ => mutation.Replace("bool", "byte", StringComparison.Ordinal)
             };
             var changed = sources.Select(source =>
@@ -82,7 +90,10 @@ public sealed class BooleanValueParameterTests
                     SyntaxNode root = CSharpSyntaxTree.ParseText(source.Text).GetRoot();
                     var casts = root.DescendantNodes().OfType<CastExpressionSyntax>().Where(cast => cast.Type is PointerTypeSyntax
                         && cast.Expression is IdentifierNameSyntax address && address.Identifier.ValueText.StartsWith("__bgcsValueAddress", StringComparison.Ordinal)).ToArray();
-                    altered = root.ReplaceNodes(casts, (original, _) => original.WithExpression(
+                    altered = root.ReplaceNodes(casts, (
+                        original,
+                        _
+                    ) => original.WithExpression(
                         SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(0)).WithTriviaFrom(original.Expression))).ToFullString();
                 }
                 return (source.Path, Text: altered);
@@ -109,17 +120,23 @@ public sealed class BooleanValueParameterTests
         InteropType boolean = types[0];
         boolean = fault switch
         {
-            "Bool32" => boolean with { size = 4, alignment = 4 }, "unknown-size" => boolean with { size = null },
-            "unknown-alignment" => boolean with { alignment = null }, "different-alignment" => boolean with { alignment = 2 },
-            "integer-convention" => boolean with { primitiveKind = "Bool32", size = 4, alignment = 4 }, _ => boolean
+            "Bool32" => boolean with { size = 4, alignment = 4 },
+            "unknown-size" => boolean with { size = null },
+            "unknown-alignment" => boolean with { alignment = null },
+            "different-alignment" => boolean with { alignment = 2 },
+            "integer-convention" => boolean with { primitiveKind = "Bool32", size = 4, alignment = 4 },
+            _ => boolean
         };
         types = types.SetItem(0, boolean);
         if (fault == "alias-alignment") types = types.SetItem(1, types[1] with { alignment = 2 });
         if (fault == "const-output") types = types.SetItem(1, types[1] with { qualifier = "Const" });
         InteropFunction function = original.functions[0];
         InteropParameter parameter = function.parameters[1];
-        parameter = parameter with { singleValue = parameter.singleValue! with
-        { requiredAlignment = fault == "requested-alignment" ? 2 : null, retainsPointer = fault == "retained" } };
+        parameter = parameter with
+        {
+            singleValue = parameter.singleValue! with
+            { requiredAlignment = fault == "requested-alignment" ? 2 : null, retainsPointer = fault == "retained" }
+        };
         function = function with { parameters = function.parameters.SetItem(1, parameter) };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.NotNull(new ValueParameterAnalyzer().GetRestriction(module, function, parameter));
@@ -147,7 +164,11 @@ public sealed class BooleanValueParameterTests
         InteropType pointer = new(new("pointer"), "NativeFlag*", NativeTypeCategory.Pointer, 8, 8) { elementType = alias.id };
         InteropType read = new(new("read"), "const NativeFlag*", NativeTypeCategory.Pointer, 8, 8) { elementType = constant.id };
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-        InteropParameter Parameter(string id, StableId type, NativeParameterDirection direction) => new(new(id), id, type)
+        InteropParameter Parameter(
+            string id,
+            StableId type,
+            NativeParameterDirection direction
+        ) => new(new(id), id, type)
         { singleValue = new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence) { allowsNull = false, retainsPointer = false } };
         InteropFunction function = new(new("change"), "change", integer.id,
             [Parameter("input", read.id, NativeParameterDirection.Input), Parameter("output", pointer.id, NativeParameterDirection.Output), Parameter("state", pointer.id, NativeParameterDirection.InputOutput)], "C");

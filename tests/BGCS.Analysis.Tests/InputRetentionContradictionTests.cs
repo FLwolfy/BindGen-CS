@@ -21,8 +21,10 @@ public sealed class InputRetentionContradictionTests
     [InlineData("text-storage", true)]
     [InlineData("text-storage", false)]
     [InlineData("text-storage", null)]
-    public void ExplicitRetainingOwnershipCannotBeOverriddenByANonretainingConvenienceContract(string protocol, bool? retainsPointer)
-    {
+    public void ExplicitRetainingOwnershipCannotBeOverriddenByANonretainingConvenienceContract(
+        string protocol,
+        bool? retainsPointer
+    ) {
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:retention");
         LifetimeContract lifetime = new(NativeLifetimeKind.Call, null, evidence);
         OwnershipContract ownership = new(NativeOwnershipKind.Borrowed, lifetime, evidence) { retainsPointer = retainsPointer };
@@ -36,13 +38,20 @@ public sealed class InputRetentionContradictionTests
                 parameter = parameter with { ownership = ownership, singleValue = new(NativeParameterDirection.InputOutput, lifetime, evidence) { retainsPointer = false, allowsNull = false } };
                 break;
             case "buffer":
-                parameter = parameter with { ownership = ownership, buffer = new(unit.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput, lifetime, evidence)
-                { lengthParameter = new("length"), retainsPointer = false, allowsNull = false } };
+                parameter = parameter with
+                {
+                    ownership = ownership,
+                    buffer = new(unit.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput, lifetime, evidence)
+                    { lengthParameter = new("length"), retainsPointer = false, allowsNull = false }
+                };
                 break;
             default:
-                parameter = parameter with { ownership = protocol == "text-parameter" ? ownership : null,
+                parameter = parameter with
+                {
+                    ownership = protocol == "text-parameter" ? ownership : null,
                     text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input, lifetime, evidence)
-                    { zeroTerminated = true, retainsPointer = false, allowsNull = false, ownership = protocol == "text-storage" ? ownership : null } };
+                    { zeroTerminated = true, retainsPointer = false, allowsNull = false, ownership = protocol == "text-storage" ? ownership : null }
+                };
                 break;
         }
         InteropFunction function = new(new("read"), "read", count.id, [parameter, new(new("length"), "length", count.id)], "C");

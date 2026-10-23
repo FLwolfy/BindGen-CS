@@ -37,7 +37,9 @@ public sealed class PointerCarrierConfigurationTests
     {
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 2, library = new() { id = "addresses", nativeName = "addresses" }, source = new() { headers = ["native.h"] },
+            schemaVersion = 2,
+            library = new() { id = "addresses", nativeName = "addresses" },
+            source = new() { headers = ["native.h"] },
             api = new() { pointerCarriers = [new("NativeValue", "ValueAddress") { pointerDepth = depth }] }
         };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
@@ -48,7 +50,9 @@ public sealed class PointerCarrierConfigurationTests
     {
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 2, library = new() { id = "addresses", nativeName = "addresses" }, source = new() { headers = ["native.h"] },
+            schemaVersion = 2,
+            library = new() { id = "addresses", nativeName = "addresses" },
+            source = new() { headers = ["native.h"] },
             api = new() { pointerFunctions = [new("native_read")] }
         };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));

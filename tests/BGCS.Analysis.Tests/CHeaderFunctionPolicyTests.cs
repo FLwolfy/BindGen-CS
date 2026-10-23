@@ -85,8 +85,12 @@ public sealed class CHeaderFunctionPolicyTests
         Assert.Contains("source.includeHeaderHelpers", diagnostic.message, StringComparison.Ordinal);
     }
 
-    private static DeclarationSelection Select(DeclarationSelectionRequest? request = null, bool include = false,
-        ImmutableArray<string> required = default, ImmutableArray<string> additional = default)
+    private static DeclarationSelection Select(
+        DeclarationSelectionRequest? request = null,
+        bool include = false,
+        ImmutableArray<string> required = default,
+        ImmutableArray<string> additional = default
+    )
         => new DeclarationSelector(StringComparer.Ordinal).Select(Module(), request ?? new(), [Header], Path.GetDirectoryName(Header)!,
             requiredDeclarations: required.IsDefault ? [] : required, additionalPublicDeclarations: additional.IsDefault ? [] : additional,
             includeCHeaderHelpers: include);
@@ -101,15 +105,24 @@ public sealed class CHeaderFunctionPolicyTests
         NativeDeclaration statik = Function("static", "Static") with { isStatic = true, isDefinition = true };
         NativeDeclaration inline = Function("inline", "Inline") with { isInline = true, isDefinition = true };
         NativeDeclaration internalLinkage = Function("internal", "Internal") with { nativeLinkage = NativeLinkageKind.Internal, isDefinition = true };
-        NativeDeclaration intrinsic = Function("intrinsic", "Intrinsic") with { addressability = NativeCallableAddressability.DirectCallOnly,
-            addressabilityEvidence = new(EvidenceLevel.Declared, "fixture:addressability") };
+        NativeDeclaration intrinsic = Function("intrinsic", "Intrinsic") with
+        {
+            addressability = NativeCallableAddressability.DirectCallOnly,
+            addressabilityEvidence = new(EvidenceLevel.Declared, "fixture:addressability")
+        };
         return new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, [none],
             [external, statik, inline, internalLinkage, intrinsic, Alias("external-alias", external), Alias("helper-alias", inline)], [])
         { language = SourceLanguage.C };
 
-        NativeDeclaration Function(string id, string name) => new(new(id), "Function", name, name, null, source)
+        NativeDeclaration Function(
+            string id,
+            string name
+        ) => new(new(id), "Function", name, name, null, source)
         { returnType = none.id, nativeLinkage = NativeLinkageKind.External, callingConvention = "C", linkage = "C" };
-        NativeDeclaration Alias(string id, NativeDeclaration target) => new(new(id), "Macro", id, id, null, source)
+        NativeDeclaration Alias(
+            string id,
+            NativeDeclaration target
+        ) => new(new(id), "Macro", id, id, null, source)
         { macro = new(false, [], true) { functionAlias = target.id, functionAliasEvidence = new(EvidenceLevel.Declared, "fixture:alias") } };
     }
 }

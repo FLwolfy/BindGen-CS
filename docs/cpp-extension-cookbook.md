@@ -419,7 +419,7 @@ Inspect `<target>/native/metadata/bridge.module.json` for typed operations and `
 
 ## Concrete templates and virtual slots
 
-`cpp.templateInstantiations.types` contains `{ "id": "...", "nativeType": "Engine::Box<int>" }`. Function entries contain `id`, `nativeCallable`, `returnType`, and `parameterTypes`. The worker materializes concrete facts; generated function wrappers use `std::forward` according to the declared parameter types.
+`bridge.cpp.templateInstantiations.types` contains `{ "id": "...", "nativeType": "Engine::Box<int>" }`. Function entries contain `id`, `nativeCallable`, `returnType`, and `parameterTypes`. The worker materializes concrete facts; generated function wrappers use `std::forward` according to the declared parameter types.
 
 `bridge.cpp.virtualCallbacks` contains `{ "id": "listener", "nativeInterface": "Engine::Listener" }`. A second ordinary C++ parse validates the generated proxy. Named C callback typedefs are independently reparsed; final `InteropModule.virtualProxies` records exact method names, callback value channels, factory/user-data identities, the real pointer-adjusting interface cast, and paired concrete destruction. The native retention boundary and quiescence remain unknown.
 

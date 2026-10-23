@@ -122,8 +122,10 @@ public sealed class EmittedInteropContractTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CompleteSources_AreRecheckedForAllImportModesAndLayouts(BindingImportMode mode, bool singleFile)
-    {
+    public async Task CompleteSources_AreRecheckedForAllImportModesAndLayouts(
+        BindingImportMode mode,
+        bool singleFile
+    ) {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native_fixture", sink) { importMode = mode, singleFile = singleFile };
         var model = NeutralBackendTests.ModelWithStorage();
@@ -170,8 +172,10 @@ public sealed class EmittedInteropContractTests
     [InlineData(BindingImportMode.LibraryImport, "convention")]
     [InlineData(BindingImportMode.LibraryImport, "export")]
     [InlineData(BindingImportMode.LibraryImport, "library")]
-    public async Task EditedActualImports_AreRejectedEvenWhenTheOriginalPlanIsUnchanged(BindingImportMode mode, string change)
-    {
+    public async Task EditedActualImports_AreRejectedEvenWhenTheOriginalPlanIsUnchanged(
+        BindingImportMode mode,
+        string change
+    ) {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native_fixture", sink) { importMode = mode };
         var model = NeutralBackendTests.Model();

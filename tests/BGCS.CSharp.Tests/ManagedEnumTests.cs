@@ -19,8 +19,11 @@ public sealed class ManagedEnumTests
     [Theory]
     [InlineData(ManagedIntegralKind.UInt64, "18446744073709551615", "18446744073709551615UL")]
     [InlineData(ManagedIntegralKind.Int64, "-9223372036854775808", "-9223372036854775808L")]
-    public void FullWidthConstantsArePreserved(ManagedIntegralKind kind, string value, string literal)
-    {
+    public void FullWidthConstantsArePreserved(
+        ManagedIntegralKind kind,
+        string value,
+        string literal
+    ) {
         CSharpManagedEnumPlan plan = Assert.Single(new ManagedEnumPlanner().Plan([new("Flags", kind, [new("Value", value)])]));
         Assert.Equal(literal, Assert.Single(plan.values).value);
     }
@@ -33,7 +36,10 @@ public sealed class ManagedEnumTests
     [InlineData(ManagedIntegralKind.UInt8, "256")]
     [InlineData(ManagedIntegralKind.UInt32, "1 << 31")]
     [InlineData(ManagedIntegralKind.Unknown, "1")]
-    public void OverflowAndSourceExpressionsAreRejected(ManagedIntegralKind kind, string value)
+    public void OverflowAndSourceExpressionsAreRejected(
+        ManagedIntegralKind kind,
+        string value
+    )
         => Assert.Throws<ArgumentException>(() => new ManagedEnumPlanner().Plan([new("Flags", kind, [new("Value", value)])]));
 
     [Fact]

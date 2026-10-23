@@ -19,15 +19,22 @@ namespace BGCS.Tests;
 public sealed class PortableNativeSourceTests
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CCompute(int value);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CppCompute(int value, out int result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int CppCompute(
+        int value,
+        out int result,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate nuint StaticGetExport(uint index);
 
     [Theory]
     [InlineData(SourceLanguage.C, false)]
     [InlineData(SourceLanguage.Cpp, false)]
     [InlineData(SourceLanguage.Cpp, true)]
-    public async Task RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(SourceLanguage language, bool staticAdapter)
-    {
+    public async Task RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden(
+        SourceLanguage language,
+        bool staticAdapter
+    ) {
         using Scratch scratch = new();
         string header = Path.Combine(scratch.source, "headers", "public", "native.h");
         Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(header)!, "detail"));
@@ -42,9 +49,13 @@ public sealed class PortableNativeSourceTests
         {
             NativeTargetDescriptor resolved = NativeConsumerHarness.ParserTarget(language);
             staticTarget = new(new("portable-static-fixture"), resolved.platformId, resolved.architectureId,
-                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder) { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
-            configuration = configuration with { targets = [new() { id = staticTarget.targetId.value }],
-                api = configuration.api with { runtime = new ManagedRuntimeId("fixture.static") } };
+                resolved.abiId, resolved.triple, resolved.toolchain, new(false, false), resolved.byteOrder)
+            { sourceConventions = resolved.sourceConventions, headerSearchPaths = resolved.headerSearchPaths };
+            configuration = configuration with
+            {
+                targets = [new() { id = staticTarget.targetId.value }],
+                api = configuration.api with { runtime = new ManagedRuntimeId("fixture.static") }
+            };
         }
         await using BindingHost host = Host(staticTarget);
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.source));
@@ -208,11 +219,14 @@ public sealed class PortableNativeSourceTests
         using Scratch scratch = new();
         await File.WriteAllTextAsync(Path.Combine(scratch.source, "native.h"), "inline int compute() { return 42; }\n");
         BindingConfiguration configuration = scratch.Configuration(SourceLanguage.Cpp);
-        configuration = configuration with { source = configuration.source with
+        configuration = configuration with
         {
-            preamble = "/* #include \"C:/comment.h\" */\n// #include \"/comment.h\"\n",
-            postamble = "static constexpr int numeric = 1'000 + 0x1'AB;\nstatic constexpr const char* example = R\"sample(\n#include \"C:/string.h\"\n)sample\";\n"
-        } };
+            source = configuration.source with
+            {
+                preamble = "/* #include \"C:/comment.h\" */\n// #include \"/comment.h\"\n",
+                postamble = "static constexpr int numeric = 1'000 + 0x1'AB;\nstatic constexpr const char* example = R\"sample(\n#include \"C:/string.h\"\n)sample\";\n"
+            }
+        };
         await using BindingHost host = Host();
         GenerationResult result = await host.GenerateAsync(new(configuration, scratch.source));
         Assert.True(result.success, result.GetDiagnosticSummary());
@@ -231,15 +245,19 @@ public sealed class PortableNativeSourceTests
 
     private sealed class StaticTargetProvider(NativeTargetDescriptor descriptor) : INativeTargetProvider
     {
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = request.targetId == descriptor.targetId ? descriptor : null;
             return target is not null;
         }
     }
 
-    private static void CopyTree(string source, string destination)
-    {
+    private static void CopyTree(
+        string source,
+        string destination
+    ) {
         Directory.CreateDirectory(destination);
         foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {

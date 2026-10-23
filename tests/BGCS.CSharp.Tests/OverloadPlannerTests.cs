@@ -45,10 +45,13 @@ public sealed class OverloadPlannerTests
     public async Task ManagedConversions_CannotMakeDistinctRawOverloadsAmbiguous()
     {
         ManagedApiModel model = Project(Module());
-        model = model with { methods = model.methods.SetItem(1, model.methods[1] with
+        model = model with
         {
-            valueProjections = [new(model.interop.functions[1].parameters[0].id, new("global::System.Int32", "(double){value}"))]
-        }) };
+            methods = model.methods.SetItem(1, model.methods[1] with
+            {
+                valueProjections = [new(model.interop.functions[1].parameters[0].id, new("global::System.Int32", "(double){value}"))]
+            })
+        };
         NeutralBackendTests.MemorySink sink = new();
         InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Contains("Evaluate(System.Int32)", error.Message);
@@ -82,10 +85,13 @@ public sealed class OverloadPlannerTests
             sourceSignature = "Demo::Evaluate0(double)"
         });
         ManagedApiModel model = Project(WithFunctions(original, functions.ToImmutable()));
-        model = model with { methods = model.methods.SetItem(256, model.methods[256] with
+        model = model with
         {
-            valueProjections = [new(new("late_value"), new("global::System.Int32", "(double){value}"))]
-        }) };
+            methods = model.methods.SetItem(256, model.methods[256] with
+            {
+                valueProjections = [new(new("late_value"), new("global::System.Int32", "(double){value}"))]
+            })
+        };
         NeutralBackendTests.MemorySink sink = new();
         InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await new CSharpTestBackend().EmitAsync(model, new("unused", sink), CancellationToken.None));
         Assert.Contains("OverloadApi.Evaluate0(System.Int32)", error.Message);
@@ -103,7 +109,11 @@ public sealed class OverloadPlannerTests
         InteropType utf8 = new(new("utf8"), "char*", NativeTypeCategory.Pointer, 8, 8) { elementType = octet.id };
         InteropType utf16 = new(new("utf16"), "unsigned short*", NativeTypeCategory.Pointer, 8, 8) { elementType = unit.id };
         Evidence evidence = new(EvidenceLevel.UserAsserted, "overload-fixture");
-        StringContract Text(NativeTextEncoding encoding, int width, bool nullable) => new(encoding, width, NativeLengthUnit.CodeUnits,
+        StringContract Text(
+            NativeTextEncoding encoding,
+            int width,
+            bool nullable
+        ) => new(encoding, width, NativeLengthUnit.CodeUnits,
             NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
         { byteOrder = NativeTextByteOrder.Native, allowsNull = nullable, retainsPointer = false, zeroTerminated = true };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize,
@@ -135,8 +145,11 @@ public sealed class OverloadPlannerTests
         InteropModule original = Module();
         InteropModule module = WithFunctions(original, original.functions.SetItem(1, original.functions[1] with
         { parameters = [original.functions[1].parameters[0] with { type = original.types[0].id }], sourceSignature = "Demo::Evaluate(long)" }));
-        ManagedProjectionRequest request = new("Generated.Overloads", "OverloadApi") { names = ImmutableDictionary<string, string>.Empty
-            .Add("Demo::Evaluate", "Evaluate").Add("Demo::Evaluate(long)", "EvaluateLong").Add("native_eval_f64", "EvaluateOther") };
+        ManagedProjectionRequest request = new("Generated.Overloads", "OverloadApi")
+        {
+            names = ImmutableDictionary<string, string>.Empty
+            .Add("Demo::Evaluate", "Evaluate").Add("Demo::Evaluate(long)", "EvaluateLong").Add("native_eval_f64", "EvaluateOther")
+        };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, request, CancellationToken.None);
         Assert.Equal("EvaluateOther", model.methods[1].name);
         NeutralBackendTests.MemorySink sink = new();
@@ -146,7 +159,10 @@ public sealed class OverloadPlannerTests
     }
 
     private static ManagedApiModel Project(InteropModule module) => new DefaultManagedProjection().Project(module, new("Generated.Overloads", "OverloadApi"), CancellationToken.None);
-    private static InteropModule WithFunctions(InteropModule original, ImmutableArray<InteropFunction> functions)
+    private static InteropModule WithFunctions(
+        InteropModule original,
+        ImmutableArray<InteropFunction> functions
+    )
         => new(original.libraryId, original.targetId, original.pointerSize, original.types, functions, original.diagnostics) { byteOrder = original.byteOrder };
     private static InteropModule Module()
     {
@@ -156,7 +172,8 @@ public sealed class OverloadPlannerTests
             [new(new("eval_i32"), "native_eval_i32", integer.id, [new(new("i32"), "value", integer.id)], "C")
             { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(int)", sourceRole = "Function" },
                 new(new("eval_f64"), "native_eval_f64", real.id, [new(new("f64"), "value", real.id)], "C")
-            { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(double)", sourceRole = "Function" }], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            { sourceName = "Evaluate", sourceQualifiedName = "Demo::Evaluate", sourceSignature = "Demo::Evaluate(double)", sourceRole = "Function" }], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
     private static unsafe IEnumerable<KeyValuePair<string, nint>> Exports() => new Dictionary<string, nint>
     {
@@ -180,5 +197,9 @@ public sealed class OverloadPlannerTests
         AssemblyLoadContext context = new("BGCS.NativeOverloads.Test", isCollectible: true);
         return new(context, context.LoadFromStream(stream));
     }
-    private sealed record CompiledSources(AssemblyLoadContext context, Assembly assembly) : IDisposable { public void Dispose() => context.Unload(); }
+    private sealed record CompiledSources(
+        AssemblyLoadContext context,
+        Assembly assembly
+    ) : IDisposable
+    { public void Dispose() => context.Unload(); }
 }

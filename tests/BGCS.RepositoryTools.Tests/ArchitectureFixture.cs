@@ -28,8 +28,11 @@ internal sealed class ArchitectureFixture : IDisposable
     }
 
     internal string ProjectDirectory(string project) => Path.Combine(root, "src", project);
-    internal void WriteProject(string project, string content = "", bool includeReviewedReferences = true)
-    {
+    internal void WriteProject(
+        string project,
+        string content = "",
+        bool includeReviewedReferences = true
+    ) {
         string directory = ProjectDirectory(project);
         Directory.CreateDirectory(directory);
         string references = includeReviewedReferences && m_dependencies.TryGetValue(project, out string[]? dependencies)
@@ -37,7 +40,10 @@ internal sealed class ArchitectureFixture : IDisposable
         string executable = m_executables.Contains(project) ? "<PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>" : "";
         File.WriteAllText(Path.Combine(directory, project + ".csproj"), "<Project Sdk='Microsoft.NET.Sdk'>" + executable + references + content + "</Project>");
     }
-    internal void WriteSource(string project, string content) => File.WriteAllText(Path.Combine(ProjectDirectory(project), "Example.cs"), content);
+    internal void WriteSource(
+        string project,
+        string content
+    ) => File.WriteAllText(Path.Combine(ProjectDirectory(project), "Example.cs"), content);
     internal int Validate()
     {
         using StringWriter output = new(), error = new();

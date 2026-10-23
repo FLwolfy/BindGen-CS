@@ -32,8 +32,11 @@ public sealed class NativeTargetProviderTests : FrontendTestHost
     [InlineData("ios-arm64-darwin", "arm64-apple-ios", "ios")]
     [InlineData("ios-simulator-arm64-darwin", "arm64-apple-ios-simulator", "ios-simulator")]
     [InlineData("ios-simulator-x64-darwin", "x86_64-apple-ios-simulator", "ios-simulator")]
-    public void MobileDevicesAndSimulatorsRequireTheirExplicitProvider(string id, string triple, string platform)
-    {
+    public void MobileDevicesAndSimulatorsRequireTheirExplicitProvider(
+        string id,
+        string triple,
+        string platform
+    ) {
         Assert.False(new BGCS.Targets.Desktop.DesktopTargetProvider().TryResolve(new(new(id)), out _));
         Assert.True(new AppleMobileTargetProvider().TryResolve(new(new(id)), out NativeTargetDescriptor? target));
         Assert.Equal(triple, target!.triple); Assert.Equal(platform, target.platformId);
@@ -65,8 +68,10 @@ public sealed class NativeTargetProviderTests : FrontendTestHost
     }
     private sealed class FixtureTargetProvider : INativeTargetProvider
     {
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = request.targetId.value == "fixture-riscv64-gnu" ? new(request.targetId, "fixture", "riscv64", "gnu", "riscv64-unknown-linux-gnu", new(defines: ["FIXTURE_FEATURE=1"], arguments: ["-fno-builtin"]), new(false, true), NativeByteOrder.LittleEndian) : null;
             return target is not null;
         }

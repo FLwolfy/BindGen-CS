@@ -23,8 +23,11 @@ return result.success ? 0 : 1;
 
 internal sealed class SampleRules : INativeModuleTransform
 {
-    public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken)
-    {
+    public NativeModule Transform(
+        NativeModule module,
+        AnalysisContext context,
+        CancellationToken cancellationToken
+    ) {
         cancellationToken.ThrowIfCancellationRequested();
         return new NativeModule(module.targetId, module.triple, module.pointerSize, module.types,
             module.declarations.Select(declaration => declaration.kind == "Function" && declaration.documentation is null

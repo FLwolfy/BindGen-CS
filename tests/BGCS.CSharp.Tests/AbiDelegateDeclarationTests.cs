@@ -50,7 +50,7 @@ public sealed class AbiDelegateDeclarationTests
     {
         ManagedApiModel original = Model(withMethod: true);
         ManagedApiModel model = new DefaultManagedProjection().Project(original.interop, new("Generated.Delegates", "NativeApi")
-            { emitCallbackDelegates = false }, CancellationToken.None);
+        { emitCallbackDelegates = false }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink);
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);

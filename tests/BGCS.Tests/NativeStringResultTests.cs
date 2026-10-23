@@ -30,8 +30,10 @@ public sealed class NativeStringResultTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExactTextCopiesUseMatchingNativeCleanupAcrossSuccessFailureAndContextClosure(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExactTextCopiesUseMatchingNativeCleanupAcrossSuccessFailureAndContextClosure(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-string-result-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -52,20 +54,30 @@ public sealed class NativeStringResultTests
                     "big16" or "big32" => rule with { byteOrder = NativeTextByteOrder.BigEndian },
                     "fixed8" => rule with { zeroTerminated = false, fixedLength = 3 },
                     "input8" => rule with { zeroTerminated = false, lengthParameter = "count", lengthDirection = NativeParameterDirection.Input },
-                    "output8" or "overflow8" or "bytes16" => rule with { zeroTerminated = false, lengthParameter = "length", lengthDirection = NativeParameterDirection.Output,
-                        lengthOutputCallBounded = true, lengthUnit = rule.function == "bytes16" ? NativeLengthUnit.Bytes : NativeLengthUnit.CodeUnits },
+                    "output8" or "overflow8" or "bytes16" => rule with
+                    {
+                        zeroTerminated = false,
+                        lengthParameter = "length",
+                        lengthDirection = NativeParameterDirection.Output,
+                        lengthOutputCallBounded = true,
+                        lengthUnit = rule.function == "bytes16" ? NativeLengthUnit.Bytes : NativeLengthUnit.CodeUnits
+                    },
                     _ => rule
                 }).ToImmutableArray();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "string-result", nativeName = "string_result_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "string-result", nativeName = "string_result_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["text.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new()
                 {
-                    @namespace = "Generated.StringResults", name = "TextApi", importMode = mode,
+                    @namespace = "Generated.StringResults",
+                    name = "TextApi",
+                    importMode = mode,
                     names = owned8.Concat(owned16).Concat(owned32).Concat(borrowed).ToImmutableDictionary(function => function,
                         function => function switch { "wrong_width" => "WrongWidth", _ => char.ToUpperInvariant(function[0]) + function[1..] }, StringComparer.Ordinal),
-                    functionAliases = [new("text8", "ReadAlias")], functionContainers = [new("Texts", [new("text8", "Read")])],
+                    functionAliases = [new("text8", "ReadAlias")],
+                    functionContainers = [new("Texts", [new("text8", "Read")])],
                     functions = [new("text8") { defaults = [new("mode", new(ManagedDefaultValueKind.Integer, "0"))] }]
                 },
                 semantics = new()
@@ -78,8 +90,9 @@ public sealed class NativeStringResultTests
                         byteOrder = NativeTextByteOrder.Native, direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits,
                         lifetime = NativeLifetimeKind.Call, zeroTerminated = true, allowsNull = false, retainsPointer = false }]
                 },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -88,7 +101,9 @@ public sealed class NativeStringResultTests
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
-                importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.StringResults.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
+                importMode = mode,
+                runtimeNamespace = sourceRuntime ? "Generated.StringResults.Runtime" : "BGCS.Runtime",
+                includeRuntimeSource = sourceRuntime,
                 managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
             });
             Assert.Equal(13, plan.stringResults.Length);
@@ -164,18 +179,31 @@ public sealed class NativeStringResultTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static StringResultConfiguration Rule(string function, NativeTextEncoding encoding) => new()
+    private static StringResultConfiguration Rule(
+        string function,
+        NativeTextEncoding encoding
+    ) => new()
     { function = function, encoding = encoding, allowsNull = false, zeroTerminated = true, maximumCodeUnits = 8 };
-    private static OwnedResultConfiguration Owned(string function, string release) => new()
+    private static OwnedResultConfiguration Owned(
+        string function,
+        string release
+    ) => new()
     { function = function, releaseFunction = release, releaseDomain = "width-checked-native-heap", releaseThreadDomain = "any" };
     private sealed class NoWrites : IArtifactSink
-    { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning must not write artifacts."); }
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning must not write artifacts.");
+    }
     private sealed class Tamper : IArtifactProcessor
     {
         public string id => "string-result.tamper";
         public int priority => 0;
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             foreach (ArtifactDescriptor artifact in request.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp"))
             {
                 string text = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken);

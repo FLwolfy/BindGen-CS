@@ -122,8 +122,10 @@ public sealed class DirectoryMembershipLinkTests : IDisposable
         Assert.Throws<IOException>(() => PhysicalPathResolver.Resolve(Path.Combine(a, "missing"), m_paths));
     }
 
-    private async Task CreateAlias(string path, string target)
-    {
+    private async Task CreateAlias(
+        string path,
+        string target
+    ) {
         Assert.StartsWith(m_root + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
         Assert.StartsWith(m_root + Path.DirectorySeparatorChar, Path.GetFullPath(target), StringComparison.Ordinal);
         if (OperatingSystem.IsWindows())

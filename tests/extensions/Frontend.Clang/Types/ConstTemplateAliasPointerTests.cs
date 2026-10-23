@@ -60,7 +60,11 @@ public sealed class ConstTemplateAliasPointerTests(ITestOutputHelper output) : F
             var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"), new(compilerPath: compiler))), SourceLanguage.Cpp);
             FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false,
+                pathBase = root,
+                languageStandard = "c++23",
+                systemIncludeDirectories = [sdk],
+                parseMacros = false,
+                parseSystemIncludes = false,
             };
             NativeModule module = (await new ClangFrontend(host).ParseAsync(request, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);

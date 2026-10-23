@@ -24,8 +24,10 @@ public sealed class NativeBitfieldTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NativeRecords_PreserveSignedCrossByteEnumAndFullWidthBits(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NativeRecords_PreserveSignedCrossByteEnumAndFullWidthBits(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-bitfields-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -74,11 +76,12 @@ public sealed class NativeBitfieldTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "bits", nativeName = "bitfield_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "bits", nativeName = "bitfield_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["bits.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeBits", name = "BitsApi", importMode = mode },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -90,8 +93,13 @@ public sealed class NativeBitfieldTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static async Task InvokeAsync(string sources, string binary, BindingImportMode mode, bool sourceRuntime, string root)
-    {
+    private static async Task InvokeAsync(
+        string sources,
+        string binary,
+        BindingImportMode mode,
+        bool sourceRuntime,
+        string root
+    ) {
         string factory = mode == BindingImportMode.FunctionTable ? "BitsApi.Load(binary)" : "BitsApi.Create()";
         string probe = $$"""
             using System;
@@ -150,7 +158,11 @@ public sealed class NativeBitfieldTests
         try
         {
             Assembly assembly = load.LoadFromStream(image);
-            NativeLibrary.SetDllImportResolver(assembly, (name, _, _) => name == "bitfield_fixture" ? native : 0);
+            NativeLibrary.SetDllImportResolver(assembly, (
+                name,
+                _,
+                _
+            ) => name == "bitfield_fixture" ? native : 0);
             assembly.GetType("Generated.NativeBits.BitfieldProbe", true)!.GetMethod("Run")!.Invoke(null, [binary]);
         }
         finally { load.Unload(); NativeLibrary.Free(native); }

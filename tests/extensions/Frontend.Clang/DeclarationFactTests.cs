@@ -19,8 +19,10 @@ public sealed class DeclarationFactTests : FrontendTestHost
     [InlineData("protected", "Protected")]
     [InlineData("private", "Private")]
     [InlineData("public", "Public")]
-    public async Task InstantiatedNestedSdkTemplatePreservesItsDeclaredProtectedAccess(string access, string expected)
-    {
+    public async Task InstantiatedNestedSdkTemplatePreservesItsDeclaredProtectedAccess(
+        string access,
+        string expected
+    ) {
         using Fixture fixture = new();
         await File.WriteAllTextAsync(fixture.header, $$"""
             namespace sdk_access {
@@ -168,8 +170,10 @@ public sealed class DeclarationFactTests : FrontendTestHost
         Assert.Contains(result.snapshot.files, input => input.path == fixture.header);
         Assert.True(SourceSnapshotVerifier.Matches(result.snapshot, host.paths));
 
-        void Check(string name, string access)
-        {
+        void Check(
+            string name,
+            string access
+        ) {
             NativeDeclaration owner = Assert.Single(result.module.declarations,
                 declaration => declaration.kind == "Class" && declaration.qualifiedName == "aggregate_access::" + name);
             NativeDeclaration field = Assert.Single(owner.children.Select(result.module.GetDeclaration), declaration => declaration.kind == "Field");
@@ -190,7 +194,8 @@ public sealed class DeclarationFactTests : FrontendTestHost
         internal FrontendRequest Request()
             => new(new NativeTargetDescriptor(new("declaration-facts"), "test", "test", "test", "x86_64-pc-linux-gnu", new()), SourceLanguage.Cpp, [entry])
             {
-                pathBase = root, parseSystemIncludes = false,
+                pathBase = root,
+                parseSystemIncludes = false,
                 systemIncludeDirectories = [Path.GetDirectoryName(header)!],
                 preamble = "#include <dependency.hpp>\n"
             };

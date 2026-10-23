@@ -23,8 +23,10 @@ public sealed class CrashIsolationTests : WorkerTestHost
     [InlineData("oversized", typeof(InvalidDataException))]
     [InlineData("invalid-json", typeof(InvalidDataException))]
     [InlineData("wrong-id", typeof(InvalidDataException))]
-    public async Task AbnormalWorkerResponse_FailsWithoutTerminatingHost(string mode, Type error)
-    {
+    public async Task AbnormalWorkerResponse_FailsWithoutTerminatingHost(
+        string mode,
+        Type error
+    ) {
         int hostProcess = Environment.ProcessId;
         await Assert.ThrowsAsync(error, async () => await CreateClient().ParseAsync(Request(mode), CancellationToken.None));
         Assert.Equal(hostProcess, Environment.ProcessId);
@@ -175,7 +177,10 @@ public sealed class CrashIsolationTests : WorkerTestHost
     [InlineData('Z', true)]
     [InlineData('X', true)]
     [InlineData('x', true)]
-    public void LinuxStateProbePreservesEveryLiveStateAndParsesParenthesesInTheProcessName(char state, bool stopped)
+    public void LinuxStateProbePreservesEveryLiveStateAndParsesParenthesesInTheProcessName(
+        char state,
+        bool stopped
+    )
         => Assert.Equal(stopped, IsTerminatedLinuxState("42 (name ) with (brackets)) " + state + " 1 2 3", 42, out _));
 
     private static async Task AssertProcessStoppedAsync(int processId)
@@ -187,8 +192,10 @@ public sealed class CrashIsolationTests : WorkerTestHost
         Assert.True(HasProcessStopped(processId, out observation), $"Worker process {processId} survived cancellation: {observation}");
     }
 
-    private static bool HasProcessStopped(int processId, out string observation)
-    {
+    private static bool HasProcessStopped(
+        int processId,
+        out string observation
+    ) {
         if (OperatingSystem.IsLinux())
         {
             try
@@ -211,8 +218,11 @@ public sealed class CrashIsolationTests : WorkerTestHost
         catch (ArgumentException) { observation = "PID absent from process table"; return true; }
     }
 
-    private static bool IsTerminatedLinuxState(string stat, int processId, out string observation)
-    {
+    private static bool IsTerminatedLinuxState(
+        string stat,
+        int processId,
+        out string observation
+    ) {
         int opening = stat.IndexOf('('), closing = stat.LastIndexOf(')');
         if (opening < 1 || closing <= opening || closing + 3 >= stat.Length || stat[closing + 1] != ' ' || stat[closing + 3] != ' '
             || !int.TryParse(stat.AsSpan(0, opening).Trim(), out int actualId) || actualId != processId)
@@ -222,13 +232,18 @@ public sealed class CrashIsolationTests : WorkerTestHost
         return state is 'Z' or 'X' or 'x';
     }
 
-    private static FrontendRequest Request(string mode, string? pidFile = null)
-    {
+    private static FrontendRequest Request(
+        string mode,
+        string? pidFile = null
+    ) {
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
         return new(target, SourceLanguage.C, pidFile is null ? [mode] : [mode, pidFile]);
     }
 
-    private FrontendWorkerClient CreateClient(TimeSpan? timeout = null, string parserIdentity = ClangParserIdentity.C_IDENTITY)
+    private FrontendWorkerClient CreateClient(
+        TimeSpan? timeout = null,
+        string parserIdentity = ClangParserIdentity.C_IDENTITY
+    )
         => new(WorkerPath(), host, timeout ?? TimeSpan.FromSeconds(15), parserIdentity: parserIdentity);
 
     private static string WorkerPath()

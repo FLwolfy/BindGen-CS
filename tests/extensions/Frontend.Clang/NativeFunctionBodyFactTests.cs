@@ -39,7 +39,7 @@ public sealed class NativeFunctionBodyFactTests : FrontendTestHost
                 """);
             NativeTargetDescriptor target = new(new("body-facts"), "test", "test", "test", "x86_64-pc-windows-msvc", new());
             var module = (await new ClangFrontend(host).ParseAsync(new(target, SourceLanguage.Cpp, [header])
-                { pathBase = root, retainFunctionBodies = retainBodies }, CancellationToken.None)).module;
+            { pathBase = root, retainFunctionBodies = retainBodies }, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             Assert.False(Assert.Single(module.declarations, declaration => declaration.name == "Declared").isDefinition);
             Assert.False(Assert.Single(module.declarations, declaration => declaration.name == "InlineDeclared").isDefinition);

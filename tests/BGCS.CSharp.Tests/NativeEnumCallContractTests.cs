@@ -22,8 +22,10 @@ public sealed class NativeEnumCallContractTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task WideNativeEnumsKeepTheirUnderlyingWidthAndExactPointerChannels(BindingImportMode mode, bool unsigned)
-    {
+    public async Task WideNativeEnumsKeepTheirUnderlyingWidthAndExactPointerChannels(
+        BindingImportMode mode,
+        bool unsigned
+    ) {
         InteropType integral = new(new("integral"), unsigned ? "unsigned long long" : "long long", NativeTypeCategory.Primitive, 8, 8)
         { primitiveKind = unsigned ? "UnsignedLongLong" : "LongLong", isSigned = !unsigned };
         string value = unsigned ? "18446744073709551615" : "-9223372036854775808";

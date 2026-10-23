@@ -11,6 +11,21 @@ namespace BGCS.CSharp.Tests;
 public sealed class SingleFileScopeTests
 {
     [Fact]
+    public void CompositionUsesLfWithFourSpaceIndentationAcrossInputLineEndings()
+    {
+        var sources = new[] { ("input.cs", "#nullable enable\r\nnamespace Example;\r\npublic class Value { public string? text; }\r\n") };
+        SingleFileComposer composer = new();
+        string source = composer.ComposeSources(sources, "Example");
+
+        Assert.DoesNotContain("\r", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("\t", source, StringComparison.Ordinal);
+        Assert.EndsWith("\n", source, StringComparison.Ordinal);
+        Assert.Contains("\n    public class Value\n    {\n        public string? text;\n    }", source, StringComparison.Ordinal);
+        Assert.Equal(source, composer.ComposeSources(sources, "Example"));
+        Assert.NotNull(Compile(source).GetTypeByMetadataName("Example.Value"));
+    }
+
+    [Fact]
     public void NullableAnnotationsKeepTheirEnabledContextAfterComposition()
     {
         string source = new SingleFileComposer().ComposeSources([

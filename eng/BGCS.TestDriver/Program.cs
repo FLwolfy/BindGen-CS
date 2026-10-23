@@ -81,14 +81,25 @@ internal static class Program
                 }
                 var document = new
                 {
-                    schemaVersion = 1, success = runFailure is null, discoveryComplete = true, discoveryTotal = cases.Length,
-                    assemblySha256 = Hash(assembly), sourceAssembly = Path.GetFileName(assembly), executionRequested = execute,
-                    compiledMethods = methods, discoveredCases = cases, selectedCases = selected,
+                    schemaVersion = 1,
+                    success = runFailure is null,
+                    discoveryComplete = true,
+                    discoveryTotal = cases.Length,
+                    assemblySha256 = Hash(assembly),
+                    sourceAssembly = Path.GetFileName(assembly),
+                    executionRequested = execute,
+                    compiledMethods = methods,
+                    discoveredCases = cases,
+                    selectedCases = selected,
                     executedCases = run?.results.Select(item => new
                     {
-                        id = item.TestCase.Id.ToString("D"), fullyQualifiedName = item.TestCase.FullyQualifiedName,
-                        displayName = item.TestCase.DisplayName, outcome = item.Outcome.ToString(), duration = item.Duration.ToString("c", System.Globalization.CultureInfo.InvariantCulture),
-                        errorMessage = Bounded(item.ErrorMessage, 8192), errorStackTrace = Bounded(item.ErrorStackTrace, 16384)
+                        id = item.TestCase.Id.ToString("D"),
+                        fullyQualifiedName = item.TestCase.FullyQualifiedName,
+                        displayName = item.TestCase.DisplayName,
+                        outcome = item.Outcome.ToString(),
+                        duration = item.Duration.ToString("c", System.Globalization.CultureInfo.InvariantCulture),
+                        errorMessage = Bounded(item.ErrorMessage, 8192),
+                        errorStackTrace = Bounded(item.ErrorStackTrace, 16384)
                     }).OrderBy(item => item.id, StringComparer.Ordinal).ToArray(),
                     vstestIdentity = new { consoleSha256 = Hash(console), translationLayerSha256 = Hash(typeof(VsTestConsoleWrapper).Assembly.Location), objectModelSha256 = Hash(typeof(TestCase).Assembly.Location) }
                 };
@@ -102,7 +113,10 @@ internal static class Program
         catch (Exception failure) { Console.Error.WriteLine(failure); return 1; }
     }
 
-    private static string? Bounded(string? value, int maximum) => value is null || value.Length <= maximum ? value : value[..maximum] + " [truncated]";
+    private static string? Bounded(
+        string? value,
+        int maximum
+    ) => value is null || value.Length <= maximum ? value : value[..maximum] + " [truncated]";
 
     private static CompiledMethod[] ReadMethods(string assembly)
     {
@@ -132,8 +146,11 @@ internal static class Program
         return result.OrderBy(item => item.fullyQualifiedName, StringComparer.Ordinal).ToArray();
     }
 
-    private static Case[] ValidateCases(List<TestCase> actual, CompiledMethod[] methods, string assembly)
-    {
+    private static Case[] ValidateCases(
+        List<TestCase> actual,
+        CompiledMethod[] methods,
+        string assembly
+    ) {
         List<Case> result = [];
         foreach (TestCase test in actual)
         {
@@ -155,8 +172,10 @@ internal static class Program
         return result.OrderBy(item => item.id, StringComparer.Ordinal).ToArray();
     }
 
-    private static void ValidateResults(Case[] expected, List<TestResult> actual)
-    {
+    private static void ValidateResults(
+        Case[] expected,
+        List<TestResult> actual
+    ) {
         Dictionary<string, Case> map = expected.ToDictionary(item => item.id, StringComparer.Ordinal);
         HashSet<string> seen = new(StringComparer.Ordinal);
         foreach (TestResult result in actual)
@@ -166,13 +185,32 @@ internal static class Program
     }
 
     private static string Hash(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
-    private static bool SamePath(string first, string second) => string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    private static string Settings(string directory, bool execute) => "<RunSettings><RunConfiguration><TargetFrameworkVersion>.NETCoreApp,Version=v10.0</TargetFrameworkVersion><MaxCpuCount>1</MaxCpuCount><ResultsDirectory>"
+    private static bool SamePath(
+        string first,
+        string second
+    ) => string.Equals(Path.GetFullPath(first), Path.GetFullPath(second), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    private static string Settings(
+        string directory,
+        bool execute
+    ) => "<RunSettings><RunConfiguration><TargetFrameworkVersion>.NETCoreApp,Version=v10.0</TargetFrameworkVersion><MaxCpuCount>1</MaxCpuCount><ResultsDirectory>"
         + SecurityElement.Escape(directory) + "</ResultsDirectory></RunConfiguration><xUnit><PreEnumerateTheories>true</PreEnumerateTheories><ParallelizeTestCollections>false</ParallelizeTestCollections><MaxParallelThreads>1</MaxParallelThreads></xUnit>"
         + (!execute ? "" : "<LoggerRunSettings><Loggers><Logger friendlyName=\"trx\" enabled=\"True\"><Configuration><LogFileName>BGCS.Tests.trx</LogFileName></Configuration></Logger></Loggers></LoggerRunSettings>") + "</RunSettings>";
 
-    private sealed record CompiledMethod(string className, string fullyQualifiedName, bool theory, int parameterCount, bool generic);
-    private sealed record Case(string id, string fullyQualifiedName, string displayName, string className, string compiledMethod, string executorUri);
+    private sealed record CompiledMethod(
+        string className,
+        string fullyQualifiedName,
+        bool theory,
+        int parameterCount,
+        bool generic
+    );
+    private sealed record Case(
+        string id,
+        string fullyQualifiedName,
+        string displayName,
+        string className,
+        string compiledMethod,
+        string executorUri
+    );
 
     private sealed class Discovery : ITestDiscoveryEventsHandler2
     {
@@ -182,14 +220,19 @@ internal static class Program
         internal long total;
         internal bool completed, aborted;
         public void HandleDiscoveredTests(IEnumerable<TestCase>? tests) { if (tests is not null) cases.AddRange(tests); }
-        public void HandleDiscoveryComplete(DiscoveryCompleteEventArgs complete, IEnumerable<TestCase>? last)
-        {
+        public void HandleDiscoveryComplete(
+            DiscoveryCompleteEventArgs complete,
+            IEnumerable<TestCase>? last
+        ) {
             HandleDiscoveredTests(last); total = complete.TotalCount; completed = true; aborted = complete.IsAborted;
             fully.AddRange(complete.FullyDiscoveredSources ?? []); partial.AddRange(complete.PartiallyDiscoveredSources ?? []);
             skipped.AddRange(complete.SkippedDiscoveredSources ?? []); missing.AddRange(complete.NotDiscoveredSources ?? []);
         }
         public void HandleRawMessage(string raw) { }
-        public void HandleLogMessage(TestMessageLevel level, string? message) { if (level == TestMessageLevel.Error) errors.Add(message ?? "VSTest reported an unspecified error."); }
+        public void HandleLogMessage(
+            TestMessageLevel level,
+            string? message
+        ) { if (level == TestMessageLevel.Error) errors.Add(message ?? "VSTest reported an unspecified error."); }
     }
 
     private sealed class Run : ITestRunEventsHandler
@@ -209,13 +252,20 @@ internal static class Program
             }
             if (results.Count / 100 != before / 100) Console.WriteLine("Completed cases: " + results.Count);
         }
-        public void HandleTestRunComplete(TestRunCompleteEventArgs complete, TestRunChangedEventArgs? last, ICollection<AttachmentSet>? attachments, ICollection<string>? executors)
-        {
+        public void HandleTestRunComplete(
+            TestRunCompleteEventArgs complete,
+            TestRunChangedEventArgs? last,
+            ICollection<AttachmentSet>? attachments,
+            ICollection<string>? executors
+        ) {
             HandleTestRunStatsChange(last); completed = true; aborted = complete.IsAborted; cancelled = complete.IsCanceled;
             if (complete.Error is not null) errors.Add(complete.Error.ToString());
         }
         public int LaunchProcessWithDebuggerAttached(TestProcessStartInfo info) => throw new NotSupportedException("CI does not attach a debugger.");
         public void HandleRawMessage(string raw) { }
-        public void HandleLogMessage(TestMessageLevel level, string? message) { if (level == TestMessageLevel.Error) errors.Add(message ?? "VSTest reported an unspecified error."); else Console.WriteLine(message); }
+        public void HandleLogMessage(
+            TestMessageLevel level,
+            string? message
+        ) { if (level == TestMessageLevel.Error) errors.Add(message ?? "VSTest reported an unspecified error."); else Console.WriteLine(message); }
     }
 }

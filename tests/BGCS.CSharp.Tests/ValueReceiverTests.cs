@@ -30,13 +30,17 @@ public sealed class ValueReceiverTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ValueMembersReuseCheckedOriginalStorageAndAnExplicitContext(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ValueMembersReuseCheckedOriginalStorageAndAnExplicitContext(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = Model(sourceRuntime: sourceRuntime);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink)
         {
-            importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            singleFile = sourceRuntime,
             runtimeNamespace = sourceRuntime ? "Generated.Values.Runtime" : "BGCS.Runtime"
         };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
@@ -120,12 +124,14 @@ public sealed class ValueReceiverTests
         ManagedApiModel original = Model();
         ManagedReceiverRequest request = new("add", fault == "pointer-alias" ? "alias" : "NativeValue", "self")
         {
-            kind = ManagedReceiverKind.Value, objectName = fault == "object-name" ? "NewObject" : null,
+            kind = ManagedReceiverKind.Value,
+            objectName = fault == "object-name" ? "NewObject" : null,
             releaseDomain = fault == "release-domain" ? "free" : null
         };
         InteropModule source = original.interop;
         if (fault == "pointer-alias") source = new(source.libraryId, source.targetId, source.pointerSize,
-            source.types.Add(new(new("alias"), "Alias", NativeTypeCategory.Alias, 8, 8) { elementType = new("record-pointer") }), source.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            source.types.Add(new(new("alias"), "Alias", NativeTypeCategory.Alias, 8, 8) { elementType = new("record-pointer") }), source.functions, [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         Assert.Throws<ArgumentException>(() => new DefaultManagedProjection().Project(source,
             new("Generated.Values", "ValueApi") { memberFunctions = [request] }, CancellationToken.None));
     }
@@ -141,8 +147,11 @@ public sealed class ValueReceiverTests
         Assert.Throws<InvalidOperationException>(() => new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())));
     }
 
-    internal static async Task CompileWithSdkAsync(NeutralBackendTests.MemorySink sink, string consumer, bool sourceRuntime)
-    {
+    internal static async Task CompileWithSdkAsync(
+        NeutralBackendTests.MemorySink sink,
+        string consumer,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-value-receiver-compile-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -176,8 +185,11 @@ public sealed class ValueReceiverTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static ManagedApiModel Model(string? fault = null, bool sourceRuntime = false, string? collision = null)
-    {
+    private static ManagedApiModel Model(
+        string? fault = null,
+        bool sourceRuntime = false,
+        string? collision = null
+    ) {
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:original-value-storage");
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType record = new(new("record"), "NativeValue", NativeTypeCategory.Record, 8, 4)
@@ -202,14 +214,20 @@ public sealed class ValueReceiverTests
         ValueParameterContract? value = Value(NativeParameterDirection.InputOutput);
         value = fault switch
         {
-            "missing" => null, "retained" => value with { retainsPointer = true }, "unknown-retention" => value with { retainsPointer = null },
+            "missing" => null,
+            "retained" => value with { retainsPointer = true },
+            "unknown-retention" => value with { retainsPointer = null },
             "output" => value with { direction = NativeParameterDirection.Output },
-            "owner-lifetime" => value with { lifetime = new(NativeLifetimeKind.Owner, null, evidence) }, _ => value
+            "owner-lifetime" => value with { lifetime = new(NativeLifetimeKind.Owner, null, evidence) },
+            _ => value
         };
         InteropFunction add = new(new("add"), "native_add", integer.id,
             [new(new("add-self"), "self", pointer.id) { singleValue = value }, new(new("delta"), "delta", integer.id)], "C");
-        if (fault == "retained-owner") add = add with { parameters = add.parameters.SetItem(0, add.parameters[0] with
-            { ownership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Call, null, evidence), evidence) { retainsPointer = true } }) };
+        if (fault == "retained-owner") add = add with
+        {
+            parameters = add.parameters.SetItem(0, add.parameters[0] with
+            { ownership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Call, null, evidence), evidence) { retainsPointer = true } })
+        };
         InteropFunction read = new(new("read"), "native_read", integer.id,
             [new(new("read-self"), "self", constPointer.id) { singleValue = Value(NativeParameterDirection.Input) }], "C");
         if (collision == "member-overload") read = read with
@@ -218,7 +236,8 @@ public sealed class ValueReceiverTests
         string addName = collision == "size" ? "NativeSize" : collision == "carrier-name" ? "NativeValue" : "Add";
         return new DefaultManagedProjection().Project(module, new("Generated.Values", "ValueApi")
         {
-            style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime,
+            style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
+            nestGeneratedTypesInApi = sourceRuntime,
             names = ImmutableDictionary<string, string>.Empty.Add("native_add", addName).Add("native_read", collision == "member-overload" ? "Add" : "Read"),
             records = [new("NativeValue") { emitSizeConstant = true,
                 fields = [new("value") { name = collision == "field" ? "Add" : "Value" }, new("tag") { name = "Tag" }] }],

@@ -1,6 +1,6 @@
 # Architecture and product assessment
 
-This assessment separates design properties from executed certification. Current 4.0 execution evidence is indexed under records/acceptance and must match the source/package revision. Historical 3.x receipts are regression references, not a 4.0 pass.
+This assessment separates design properties from executed certification. Execution evidence is linked from [release history](releases/README.md) and must match the accepted source/package revision. The [architecture review](architecture-review.md) records source invariants, not test results. Historical 3.x receipts are regression references, not a 4.0 pass.
 
 | Dimension | Design and review basis | Practical limit |
 | --- | --- | --- |

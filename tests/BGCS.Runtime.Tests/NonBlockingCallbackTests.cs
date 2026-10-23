@@ -43,7 +43,10 @@ public sealed class NonBlockingCallbackTests
     private sealed class QueueContext : SynchronizationContext
     {
         private readonly ConcurrentQueue<Action> m_queue = new();
-        public override void Post(SendOrPostCallback callback, object? state) => m_queue.Enqueue(() => callback(state));
+        public override void Post(
+            SendOrPostCallback callback,
+            object? state
+        ) => m_queue.Enqueue(() => callback(state));
         internal void Pump() { while (m_queue.TryDequeue(out Action? action)) action(); }
     }
     [Fact]

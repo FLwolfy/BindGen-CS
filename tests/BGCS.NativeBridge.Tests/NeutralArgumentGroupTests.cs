@@ -79,7 +79,10 @@ public sealed class NeutralArgumentGroupTests
 
     private static TypeLoweringRecipe Recipe() => new()
     {
-        id = "range", typePattern = "Demo::Range", cAbiType = "uint64_t", abiParameters = [new("data", "const int32_t*"), new("length", "uint64_t")],
+        id = "range",
+        typePattern = "Demo::Range",
+        cAbiType = "uint64_t",
+        abiParameters = [new("data", "const int32_t*"), new("length", "uint64_t")],
         parameterExpression = "{nativeType}({data}, {length})"
     };
 
@@ -100,6 +103,9 @@ public sealed class NeutralArgumentGroupTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

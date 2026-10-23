@@ -10,7 +10,7 @@ dotnet run --project examples/CustomAllocator/Consumer -- <absolute-native-libra
 dotnet run --project examples/CustomAllocator/GeneratedConsumer -- <absolute-native-library-path>
 ```
 
-The library is under `Generated/<concrete-target>/native/bin`. Supply the actual `.dll`, `.so` or `.dylib` path. The consumer references only Runtime and uses the raw C function addresses to define the allocator callbacks. Its separate provider owns both allocator state and library loading; no mutable process-wide allocator is installed.
+Supply the absolute path of the `.dll`, `.so` or `.dylib` built by your own native project. BGCS emits source and metadata under `Generated/<concrete-target>/`; it creates no `native/bin` directory or native binary. The consumer references only Runtime and uses the raw C function addresses to define the allocator callbacks. Its separate provider owns both allocator state and library loading; no mutable process-wide allocator is installed.
 
 `GeneratedConsumer` also compiles the generated C# files. Its ordinary `AllocatorApi.FromProvider(provider, temporaryAllocatorFactory)` uses the selected pair for the friendly `ExampleUtf8Length("A😀")` call; native code observes five UTF-8 bytes. A second explicit codec lease remains alive while the API closes, then its actual matching free permits allocator-state destruction and module unload. The provider's final cleanup owns that state, so the native callbacks remain valid independently of ordinary public `api.Raw` admission. Override `BGCSGeneratedRoot` if generated sources were written elsewhere.
 

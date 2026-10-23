@@ -29,8 +29,11 @@ public sealed class AbiSafetyRegressionTests
         { primitiveKind = "UnsignedChar", isSigned = false };
         InteropType nested = Aligned(integer);
         InteropType outer = new(new("outer"), "Outer", NativeTypeCategory.Record, 96, 32)
-        { declarationName = "Outer", fields = [new(new("prefix"), "prefix", octet.id, 0, 0, null),
-            new(new("nested"), "nested", nested.id, 32, 256, null), new(new("suffix"), "suffix", integer.id, 64, 512, null)] };
+        {
+            declarationName = "Outer",
+            fields = [new(new("prefix"), "prefix", octet.id, 0, 0, null),
+            new(new("nested"), "nested", nested.id, 32, 256, null), new(new("suffix"), "suffix", integer.id, 64, 512, null)]
+        };
         InteropModule module = new("regression", "windows-x64-msvc", 8, [integer, octet, nested, outer], [], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         MemorySink sink = new();
         await new CSharpTestBackend().EmitAsync(Project(module), new("native", sink), CancellationToken.None);
@@ -107,6 +110,9 @@ public sealed class AbiSafetyRegressionTests
     private sealed class MemorySink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string path, string content) { sources.Add(path, content); return "memory:" + path; }
+        public string WriteText(
+            string path,
+            string content
+        ) { sources.Add(path, content); return "memory:" + path; }
     }
 }

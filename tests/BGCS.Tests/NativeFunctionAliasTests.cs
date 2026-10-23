@@ -23,8 +23,10 @@ public sealed class NativeFunctionAliasTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NativeAndConfiguredAliasesShareOneRealImportAndTheOriginalLifetimePlan(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NativeAndConfiguredAliasesShareOneRealImportAndTheOriginalLifetimePlan(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-function-alias-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -42,11 +44,14 @@ public sealed class NativeFunctionAliasTests
             await File.WriteAllTextAsync(Path.Combine(root, "alias.c"), "#include \"alias.h\"\nFIXTURE_EXPORT int add(int value) { return value + 1; }\n");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "aliases", nativeName = "alias_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "aliases", nativeName = "alias_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["alias.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Aliases", name = "AliasApi", importMode = mode,
+                    @namespace = "Generated.Aliases",
+                    name = "AliasApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("NATIVE_ALIAS", "NativeAlias"),
                     functionAliases = [new("NATIVE_ALIAS", "ConfiguredAlias")],
@@ -108,7 +113,10 @@ public sealed class NativeFunctionAliasTests
 
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning must not emit sources.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning must not emit sources.");
     }
 
     private static string WorkerRoot()

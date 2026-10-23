@@ -28,12 +28,19 @@ public sealed class RecordArrayConstructorTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task FixedPrimitiveArraysKeepRawConstructorsAndAddIndependentExactSpanCopies(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task FixedPrimitiveArraysKeepRawConstructorsAndAddIndependentExactSpanCopies(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = Project(Module());
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.ArrayConstructors.Runtime" : "BGCS.Runtime", singleFile = sourceRuntime };
+        EmissionRequest request = new("native", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.ArrayConstructors.Runtime" : "BGCS.Runtime",
+            singleFile = sourceRuntime
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStoragePlan record = Assert.Single(plan.storage, carrier => carrier.nativeType == new StableId("record"));
         Assert.Equal(new[] { 1, 3 }, record.presentation!.arrayCopies.Select(copy => copy.length));
@@ -110,8 +117,12 @@ public sealed class RecordArrayConstructorTests
         InteropType element = shape switch
         {
             "pointer" => new(new("element"), "int*", NativeTypeCategory.Pointer, 8, 8) { elementType = integer.id },
-            "enum" => new(new("element"), "Mode", NativeTypeCategory.Enumeration, 4, 4) { declarationName = "Mode", elementType = integer.id,
-                enumValues = [new(new("member"), "Zero", "0", "0")] },
+            "enum" => new(new("element"), "Mode", NativeTypeCategory.Enumeration, 4, 4)
+            {
+                declarationName = "Mode",
+                elementType = integer.id,
+                enumValues = [new(new("member"), "Zero", "0", "0")]
+            },
             "record" => new(new("element"), "Inner", NativeTypeCategory.Record, 4, 4) { declarationName = "Inner", recordKind = "Struct", fields = [new(new("value"), "value", integer.id, 0, 0, null)] },
             _ => new(new("element"), "_Bool", NativeTypeCategory.Primitive, 1, 1) { primitiveKind = "Bool", isSigned = false }
         };
@@ -133,7 +144,10 @@ public sealed class RecordArrayConstructorTests
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), "native");
     }
 
-    private static ManagedApiModel Project(InteropModule module, bool onlyData = false) => new DefaultManagedProjection().Project(module,
+    private static ManagedApiModel Project(
+        InteropModule module,
+        bool onlyData = false
+    ) => new DefaultManagedProjection().Project(module,
         new("Generated.ArrayConstructors", "Api") { records = [new("Packet") { constructorFields = onlyData ? ["data"] : ["data", "values"] }] }, CancellationToken.None);
 
     private static InteropModule Module()
@@ -143,8 +157,12 @@ public sealed class RecordArrayConstructorTests
         InteropType bytes = new(new("bytes"), "ByteArray", NativeTypeCategory.Array, 1, 1) { elementType = octet.id, arrayLength = 1 };
         InteropType alias = new(new("byte-alias"), "NativeBytes", NativeTypeCategory.Alias, 1, 1) { elementType = bytes.id };
         InteropType values = new(new("values"), "IntArray", NativeTypeCategory.Array, 12, 4) { elementType = integer.id, arrayLength = 3 };
-        InteropType record = new(new("record"), "Packet", NativeTypeCategory.Record, 16, 4) { declarationName = "Packet", recordKind = "Struct",
-            fields = [new(new("data"), "data", alias.id, 0, 0, null), new(new("array-values"), "values", values.id, 4, 32, null)] };
+        InteropType record = new(new("record"), "Packet", NativeTypeCategory.Record, 16, 4)
+        {
+            declarationName = "Packet",
+            recordKind = "Struct",
+            fields = [new(new("data"), "data", alias.id, 0, 0, null), new(new("array-values"), "values", values.id, 4, 32, null)]
+        };
         return new("array-constructor", "windows-x64-msvc", 8, [octet, integer, bytes, alias, values, record], [], []) { byteOrder = NativeByteOrder.LittleEndian };
     }
 }

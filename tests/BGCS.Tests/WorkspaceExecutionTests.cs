@@ -162,27 +162,43 @@ public sealed class WorkspaceExecutionTests
         Assert.False(Directory.Exists(Path.Combine(scratch.root, "out", "third")));
     }
 
-    private static WorkspaceProject Project(string root, string id, ImmutableArray<string> prerequisites)
-    {
+    private static WorkspaceProject Project(
+        string root,
+        string id,
+        ImmutableArray<string> prerequisites
+    ) {
         File.WriteAllText(Path.Combine(root, id + ".h"), "int echo(void);");
         return new(id, new(new BindingConfiguration
         {
-            schemaVersion = 2, library = new() { id = id, nativeName = id }, source = new() { headers = [id + ".h"] },
-            targets = [new() { id = "host" }], api = new() { @namespace = "Example." + id, name = "NativeApi" },
-            output = new() { root = "out/" + id }, cache = new() { enabled = false, directory = ".cache/" + id }
+            schemaVersion = 2,
+            library = new() { id = id, nativeName = id },
+            source = new() { headers = [id + ".h"] },
+            targets = [new() { id = "host" }],
+            api = new() { @namespace = "Example." + id, name = "NativeApi" },
+            output = new() { root = "out/" + id },
+            cache = new() { enabled = false, directory = ".cache/" + id }
         }, root), prerequisites);
     }
 
-    private sealed class ProbeFrontend(ConcurrentQueue<string> parsed, string? fail = null, ConcurrencyProbe? probe = null, TaskCompletionSource? started = null) : IFrontend
+    private sealed class ProbeFrontend(
+        ConcurrentQueue<string> parsed,
+        string? fail = null,
+        ConcurrencyProbe? probe = null,
+        TaskCompletionSource? started = null
+    ) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             string id = Path.GetFileNameWithoutExtension(request.headers[0]);
             parsed.Enqueue(id);
             if (id == fail) throw new IOException("Deliberate failed workspace input.");

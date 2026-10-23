@@ -40,6 +40,12 @@ await using BindingHost generator = BindingGenerator.CreateBuilder()
 
 普通应用 build/publish 输出移动到干净位置后仍须具备完整生成资源。特殊发布形式需显式安排资源部署，不能一概宣称支持。
 
+`BGCS.ParserRuntime.osx-x64` 是让解析器在 Intel Mac 上运行的技术资源包。
+当前锁定的上游依赖提供其他五种宿主资源；这个包补齐 Intel macOS 资源，
+并携带实际制作来源和许可证。它不是绑定目标 SDK 或额外生成功能，
+只运行生成绑定的应用不需要它。`distribution/` 定义 BGCS 自身发布包，
+`eng/` 存放仅用于维护本仓库的验证和打包工具。
+
 ## Runtime
 
 应用通常只引用 BGCS.Runtime；它不依赖 Core、Clang、Roslyn、MSBuild 或生成器。`runtime.mode = "source"` 在 API 自己的 namespace 输出所需源码闭包，也可合入单文件。两种形式遵守相同生命周期契约。

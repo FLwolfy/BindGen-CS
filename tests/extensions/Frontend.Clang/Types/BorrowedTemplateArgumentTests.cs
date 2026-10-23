@@ -37,7 +37,8 @@ public sealed class BorrowedTemplateArgumentTests : FrontendTestHost
             NativeTargetDescriptor target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
             var parsed = await new ClangFrontend(host).ParseAsync(new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = root, parseMacros = false,
+                pathBase = root,
+                parseMacros = false,
                 headerSearchPaths = ToolchainResolver.ResolveHeaderSearchPaths(target, SourceLanguage.Cpp).ToImmutableArray()
             }, CancellationToken.None);
             Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);

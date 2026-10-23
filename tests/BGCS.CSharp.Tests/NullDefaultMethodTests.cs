@@ -29,16 +29,23 @@ public sealed class NullDefaultMethodTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NullOnlyCallsPreserveCheckedInputsAndDoNotExposeAnUnprovedPointerOverload(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NullOnlyCallsPreserveCheckedInputsAndDoNotExposeAnUnprovedPointerOverload(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = Model(null, sourceRuntime);
         InteropFunction function = Assert.Single(model.interop.functions);
         InteropParameter optional = function.parameters[1];
         Assert.NotNull(new ValueParameterAnalyzer().GetRestriction(model.interop, function, optional));
         Assert.Null(new ValueParameterAnalyzer().GetNullBindingRestriction(model.interop, function, optional));
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.NullDefaults.Runtime" : "BGCS.Runtime", singleFile = sourceRuntime };
+        EmissionRequest request = new("native", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.NullDefaults.Runtime" : "BGCS.Runtime",
+            singleFile = sourceRuntime
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpNullDefaultMethodPlan operation = Assert.Single(plan.nullDefaultMethods);
         Assert.Equal(new StableId("optional"), Assert.Single(operation.nullInputs).nativeParameter);
@@ -83,7 +90,10 @@ public sealed class NullDefaultMethodTests
                         .SelectMany(method => method.DescendantNodes().OfType<CastExpressionSyntax>()).Where(cast => cast.Type is PointerTypeSyntax
                             && cast.Expression is LiteralExpressionSyntax literal && literal.Token.ValueText == "0").ToArray();
                     edits += casts.Length;
-                    root = root.ReplaceNodes(casts, (original, _) => original.WithExpression(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(1))));
+                    root = root.ReplaceNodes(casts, (
+                        original,
+                        _
+                    ) => original.WithExpression(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(1))));
                 }
                 else if (mutation == "unplanned-overload")
                 {
@@ -133,22 +143,31 @@ public sealed class NullDefaultMethodTests
         Assert.Equal(NativeTypeCategory.Pointer, model.interop.GetType(model.interop.functions[0].parameters[1].type).category);
     }
 
-    private static ManagedApiModel Model(string? fault, bool sourceRuntime)
-    {
+    private static ManagedApiModel Model(
+        string? fault,
+        bool sourceRuntime
+    ) {
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:explicit-optional-value");
         InteropType octet = new(new("byte"), "unsigned char", NativeTypeCategory.Primitive, 1, 1) { primitiveKind = "UnsignedChar", isSigned = false };
         InteropType pointer = new(new("pointer"), "unsigned char*", NativeTypeCategory.Pointer, 8, 8) { elementType = octet.id };
         InteropType integer = new(new("integer"), "unsigned int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "UnsignedInt", isSigned = false };
         InteropType result = new(new("result"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-        InteropParameter label = new(new("label"), "label", pointer.id) { text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits,
-            NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence) { zeroTerminated = true, allowsNull = false, retainsPointer = false } };
+        InteropParameter label = new(new("label"), "label", pointer.id)
+        {
+            text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits,
+            NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
+            { zeroTerminated = true, allowsNull = false, retainsPointer = false }
+        };
         ValueParameterContract value = new(NativeParameterDirection.InputOutput, new(NativeLifetimeKind.Call, null, evidence), evidence) { allowsNull = true, retainsPointer = false };
         value = fault switch
         {
-            "missing-nullability" => value with { allowsNull = false }, "unknown-nullability" => value with { allowsNull = null },
-            "retained" => value with { retainsPointer = true }, "unknown-retention" => value with { retainsPointer = null },
+            "missing-nullability" => value with { allowsNull = false },
+            "unknown-nullability" => value with { allowsNull = null },
+            "retained" => value with { retainsPointer = true },
+            "unknown-retention" => value with { retainsPointer = null },
             "owner-lifetime" => value with { lifetime = value.lifetime with { kind = NativeLifetimeKind.Owner } },
-            "inferred" => value with { evidence = new(EvidenceLevel.Inferred, "guess") }, _ => value
+            "inferred" => value with { evidence = new(EvidenceLevel.Inferred, "guess") },
+            _ => value
         };
         InteropParameter optional = new(new("optional"), "optional", pointer.id) { singleValue = fault == "missing-contract" ? null : value, text = fault == "text-conflict" ? label.text : null };
         ImmutableArray<InteropParameter> parameters = [label, optional, new(new("flags"), "flags", integer.id)];
@@ -166,8 +185,12 @@ public sealed class NullDefaultMethodTests
         ImmutableArray<ManagedDefaultArgumentRequest> defaults = fault == "no-null-default"
             ? [new("flags", new(ManagedDefaultValueKind.Integer, "0"))] : [new("optional", nullable), new("flags", new(ManagedDefaultValueKind.Integer, "0"))];
         return new DefaultManagedProjection().Project(new("null-defaults", "windows-x64-msvc", 8, types, [function], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian },
-            new("Generated.NullDefaults", "Api") { style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
-                functions = [new("begin") { defaults = defaults }], functionAliases = [new("begin", "BeginAlias")],
-                functionContainers = [new("Begins", [new("begin", "Open")])] }, CancellationToken.None);
+            new("Generated.NullDefaults", "Api")
+            {
+                style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
+                functions = [new("begin") { defaults = defaults }],
+                functionAliases = [new("begin", "BeginAlias")],
+                functionContainers = [new("Begins", [new("begin", "Open")])]
+            }, CancellationToken.None);
     }
 }

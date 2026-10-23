@@ -37,9 +37,15 @@ internal static unsafe class Program
             native.Dispose();
             unloads++;
         }));
-        NativeAllocator allocator = new("example.instance", (length, alignment) => allocate(state, length, alignment),
-            (address, length, alignment) =>
-            {
+        NativeAllocator allocator = new("example.instance", (
+            length,
+            alignment
+        ) => allocate(state, length, alignment),
+            (
+                address,
+                length,
+                alignment
+            ) => {
                 Require(release(state, address, length, alignment) == 0, "matching native owner/extent/alignment free");
                 observedReleases = releaseCount(state);
                 frees++;
@@ -47,8 +53,10 @@ internal static unsafe class Program
         using NativeBuffer buffer = allocator.Allocate(13, 64);
         Require(buffer.byteLength == 13 && buffer.allocatedByteLength == 64 && buffer.alignment == 64, "logical and physical allocation extent");
         Require(allocationCount(state) == 1, "native allocator was actually called");
-        ulong actual = buffer.Invoke((address, length) =>
-        {
+        ulong actual = buffer.Invoke((
+            address,
+            length
+        ) => {
             Require((nuint)address % 64 == 0, "native allocation alignment");
             for (nuint index = 0; index < length; ++index) ((byte*)address)[index] = (byte)(index + 1);
             nint other = create();
@@ -69,13 +77,21 @@ internal static unsafe class Program
         buffer.DisposeAsync().AsTask().GetAwaiter().GetResult();
         buffer.Dispose();
         Require(frees == 1 && observedReleases == 1 && unloads == 1, "one matching free precedes state destruction and module unload");
-        Console.WriteLine(JsonSerializer.Serialize(new { checks = 10, nativeChecksum = actual, allocator = allocator.allocatorId,
-            nativeReleases = observedReleases, moduleUnloads = unloads }));
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            checks = 10,
+            nativeChecksum = actual,
+            allocator = allocator.allocatorId,
+            nativeReleases = observedReleases,
+            moduleUnloads = unloads
+        }));
         return 0;
     }
 
-    private static void Require(bool condition, string check)
-    {
+    private static void Require(
+        bool condition,
+        string check
+    ) {
         if (!condition) throw new InvalidOperationException("Custom allocator check failed: " + check);
     }
 }

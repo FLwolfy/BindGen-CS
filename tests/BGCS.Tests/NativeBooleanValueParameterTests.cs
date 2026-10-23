@@ -21,8 +21,10 @@ public sealed class NativeBooleanValueParameterTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExactNativeBooleanPointersPreserveAliasesWritesAndOwnedReceiverComposition(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExactNativeBooleanPointersPreserveAliasesWritesAndOwnedReceiverComposition(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-bool-borrow-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -71,15 +73,19 @@ public sealed class NativeBooleanValueParameterTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "boolean-borrow", nativeName = "boolean_borrow_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "boolean-borrow", nativeName = "boolean_borrow_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["flags.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.NativeBooleanBorrow", name = "FlagApi", importMode = mode,
+                    @namespace = "Generated.NativeBooleanBorrow",
+                    name = "FlagApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("flag_read", "Read").Add("flag_output", "Output").Add("flag_change", "Change")
                         .Add("flag_alias", "Alias").Add("flag_write_then_count", "WriteThenCount").Add("flag_size", "Size").Add("flag_alignment", "Alignment")
                         .Add("switch_create", "Make").Add("switch_set", "Set").Add("switch_live", "Live"),
-                    functionAliases = [new("flag_alias", "AliasForward")], functionContainers = [new("Flags", [new("flag_alias", "Apply")])],
+                    functionAliases = [new("flag_alias", "AliasForward")],
+                    functionContainers = [new("Flags", [new("flag_alias", "Apply")])],
                     memberFunctions = [new("switch_set", "Switch", "self") { objectName = "SwitchObject", releaseDomain = "native-switch" }]
                 },
                 semantics = new()
@@ -93,8 +99,9 @@ public sealed class NativeBooleanValueParameterTests
                     ownedResults = [new() { function = "switch_create", releaseFunction = "switch_release", releaseDomain = "native-switch", releaseThreadDomain = "any" }],
                     borrowedParameters = [new() { function = "switch_set", parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }]
                 },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -144,7 +151,11 @@ public sealed class NativeBooleanValueParameterTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static ValueParameterConfiguration Value(string function, string parameter, NativeParameterDirection direction) => new()
+    private static ValueParameterConfiguration Value(
+        string function,
+        string parameter,
+        NativeParameterDirection direction
+    ) => new()
     { function = function, parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, allowsNull = false, retainsPointer = false };
 
     private static string WorkerRoot()

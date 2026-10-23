@@ -21,8 +21,10 @@ public sealed class NativeModuleBorrowedObjectTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitModuleBorrowedObjectsKeepNativeStorageAndRespectContextLifetime(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExplicitModuleBorrowedObjectsKeepNativeStorageAndRespectContextLifetime(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-module-borrowed-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -49,16 +51,19 @@ public sealed class NativeModuleBorrowedObjectTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "module-borrowed", nativeName = "module_borrowed_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "module-borrowed", nativeName = "module_borrowed_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["widget.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
                 api = new()
                 {
-                    @namespace = "Generated.ModuleBorrowed", name = "ModuleApi", importMode = mode,
+                    @namespace = "Generated.ModuleBorrowed",
+                    name = "ModuleApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("widget_get", "GetStatic").Add("widget_read", "Read")
                         .Add("widget_add", "Add").Add("widget_storage_value", "StorageValue"),
                     memberFunctions = new[] { "widget_read", "widget_add" }.Select(function => new ManagedReceiverRequest(function, "Widget", "self")
-                        { objectName = "WidgetView", kind = ManagedReceiverKind.ModuleBorrowed }).ToImmutableArray(),
+                    { objectName = "WidgetView", kind = ManagedReceiverKind.ModuleBorrowed }).ToImmutableArray(),
                     functionAliases = [new("widget_get", "GetAlias"), new("widget_read", "ReadAlias")],
                     functionContainers = [new("Widgets", [new("widget_get", "Get"), new("widget_read", "Read")])],
                     functions = [new("widget_get") { defaults = [new("missing", new(ManagedDefaultValueKind.Integer, "0"))] }]
@@ -67,11 +72,11 @@ public sealed class NativeModuleBorrowedObjectTests
                 {
                     borrowedResults = [new() { function = "widget_get", lifetime = NativeLifetimeKind.Module }],
                     borrowedParameters = new[] { "widget_read", "widget_add" }.Select(function => new BorrowedParameterConfiguration
-                        { function = function, parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }).ToImmutableArray()
+                    { function = function, parameter = "self", lifetime = NativeLifetimeKind.Call, retainsPointer = false }).ToImmutableArray()
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

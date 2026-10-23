@@ -22,8 +22,10 @@ public sealed class NativeExternalAddressFieldTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ClosedGenericPointersAndNativeSizedAddressFieldsCopyWithoutChangingRawCallingAbi(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ClosedGenericPointersAndNativeSizedAddressFieldsCopyWithoutChangingRawCallingAbi(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-external-address-fields-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -58,16 +60,21 @@ public sealed class NativeExternalAddressFieldTests
             ImmutableDictionary<string, string> fields = ImmutableDictionary<string, string>.Empty.Add("size", "Size").Add("capacity", "Capacity").Add("data", "Data");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "address-copy", nativeName = "address_copy_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "address-copy", nativeName = "address_copy_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["vectors.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
-                { projectionInputs = new() { sources = ["consumer.cs"] },
-                    @namespace = "Generated.AddressCopies", name = "VectorApi", importMode = mode,
+                {
+                    projectionInputs = new() { sources = ["consumer.cs"] },
+                    @namespace = "Generated.AddressCopies",
+                    name = "VectorApi",
+                    importMode = mode,
                     externalTypes = [new() { nativeType = "NativeVector_int", managedType = "Consumer.NativeVector<int>", fields = fields },
                         new() { nativeType = "NativeSigned", managedType = "Consumer.SignedAddress", fields = fields },
                         new() { nativeType = "NativeUnsigned", managedType = "Consumer.UnsignedAddress", fields = fields }]
                 },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
@@ -113,10 +120,13 @@ public sealed class NativeExternalAddressFieldTests
             {
                 var previous = Directory.GetFiles(built.outputRoot, "*", SearchOption.AllDirectories)
                     .ToDictionary(path => Path.GetRelativePath(built.outputRoot, path), path => SHA256.HashData(File.ReadAllBytes(path)), StringComparer.Ordinal);
-                BindingConfiguration invalid = configuration with { api = configuration.api with
+                BindingConfiguration invalid = configuration with
                 {
-                    externalTypes = configuration.api.externalTypes.SetItem(1, configuration.api.externalTypes[1] with { managedType = "Consumer.InvalidAddress" })
-                } };
+                    api = configuration.api with
+                    {
+                        externalTypes = configuration.api.externalTypes.SetItem(1, configuration.api.externalTypes[1] with { managedType = "Consumer.InvalidAddress" })
+                    }
+                };
                 await File.AppendAllTextAsync(Path.Combine(root, "consumer.cs"), "\nnamespace Consumer { public struct InvalidAddress {public int Capacity;public long Data;public int Size;} }\n");
                 GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(invalid, root));
                 Assert.False(rejected.success);

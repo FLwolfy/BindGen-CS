@@ -98,7 +98,10 @@ public sealed class UnresolvedScopedCleanupTests
     private sealed class Provider : INativeModuleProvider
     {
         internal int releases;
-        public bool TryGetExport(string name, out nint address) { address = 0; return false; }
+        public bool TryGetExport(
+            string name,
+            out nint address
+        ) { address = 0; return false; }
         public void Dispose() => Interlocked.Increment(ref releases);
     }
 }

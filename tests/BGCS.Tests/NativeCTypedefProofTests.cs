@@ -36,9 +36,11 @@ public sealed class NativeCTypedefProofTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "typedef_proof", nativeName = "typedef_proof" },
+                schemaVersion = 2,
+                library = new() { id = "typedef_proof", nativeName = "typedef_proof" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                cache = new() { enabled = false }};
+                cache = new() { enabled = false }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
             Assert.True(result.success, result.GetDiagnosticSummary());

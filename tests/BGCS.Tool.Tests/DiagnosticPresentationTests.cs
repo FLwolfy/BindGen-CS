@@ -56,8 +56,10 @@ public sealed class DiagnosticPresentationTests
         Assert.Contains("Unknown diagnostic severity", error.ToString(), StringComparison.Ordinal);
     }
 
-    private static void WithInput(string source, Action<string> action)
-    {
+    private static void WithInput(
+        string source,
+        Action<string> action
+    ) {
         string directory = Path.Combine(Path.GetTempPath(), "bgcs-reporting-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try

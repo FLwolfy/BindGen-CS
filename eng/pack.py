@@ -637,6 +637,10 @@ def verify_packages(output: Path, version: str, full: bool, partial_tool_rid: st
                 raise RuntimeError(f"Corrupt package entry: {name}/{bad}")
             if name.startswith("BGCS.Runtime.") and any("clang" in item.lower() for item in package.namelist()):
                 raise RuntimeError("Runtime-only consumers must not receive parser assets.")
+            if name == f"BGCS.Runtime.{version}.nupkg":
+                notice = "THIRD-PARTY-NOTICES.md"
+                if notice not in entries or package.read(notice) != (ROOT / notice).read_bytes():
+                    raise RuntimeError("The independent Runtime package must retain its exact MIT license notice.")
             for independent in ("BGCS.Core", "BGCS.Runtime"):
                 if name == f"{independent}.{version}.nupkg":
                     libraries = {Path(entry).stem for entry in entries if entry.startswith("lib/") and entry.endswith(".dll")}
@@ -727,8 +731,8 @@ def main() -> None:
     verify_source_ownership(ROOT)
     source = source_identity()
     version = args.version or ET.parse(ROOT / "Directory.Build.props").findtext("./PropertyGroup/Version")
-    if not re.fullmatch(r"4\.0\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
-        parser.error("This source tree may create only 4.0.0 or private 4.0.0-ci candidate packages.")
+    if not re.fullmatch(r"4\.1\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
+        parser.error("This source tree may create only 4.1.0 or private 4.1.0-ci candidate packages.")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     full = args.host_only is None

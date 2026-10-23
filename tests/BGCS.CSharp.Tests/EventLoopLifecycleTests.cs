@@ -24,13 +24,19 @@ public sealed class EventLoopLifecycleTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitEventLoopProtocolsEmitCompilableDeferredShutdownAndKeepFinalGuards(BindingImportMode mode, bool asynchronous)
-    {
+    public async Task ExplicitEventLoopProtocolsEmitCompilableDeferredShutdownAndKeepFinalGuards(
+        BindingImportMode mode,
+        bool asynchronous
+    ) {
         ManagedApiModel model = Model(asynchronous);
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, includeRuntimeSource = asynchronous,
+        EmissionRequest request = new("native", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = asynchronous,
             managedRuntime = new("nonblocking-test", new ManagedRuntimeId("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable,
-                [mode], requiresStaticCallbackThunks: true, allowsBlockingDisposal: false) };
+                [mode], requiresStaticCallbackThunks: true, allowsBlockingDisposal: false)
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Empty(plan.callbackOmissions);
         if (asynchronous) Assert.True(Assert.Single(plan.asyncOperations).nonBlockingShutdown);
@@ -81,10 +87,15 @@ public sealed class EventLoopLifecycleTests
             "no-new-only" => callback with { unregisterQuiescence = NativeQuiescenceKind.NoNewInvocations },
             _ => callback
         };
-        start = start with { parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }), asynchronous = start.asynchronous! with
-        { cancellationIsNonBlocking = fault == "unknown-cancel" ? null : fault != "blocking-cancel" } };
+        start = start with
+        {
+            parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }),
+            asynchronous = start.asynchronous! with
+            { cancellationIsNonBlocking = fault == "unknown-cancel" ? null : fault != "blocking-cancel" }
+        };
         InteropModule module = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            model.interop.functions.SetItem(0, start), []) { byteOrder = model.interop.byteOrder };
+            model.interop.functions.SetItem(0, start), [])
+        { byteOrder = model.interop.byteOrder };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model with { interop = module }, new("native", new NeutralBackendTests.MemorySink())
         { managedRuntime = new("event-loop-test", new ManagedRuntimeId("fixture.runtime"), NativeModuleMechanism.ExternalFunctionTable, [BindingImportMode.FunctionTable], true, false) });
         Assert.Empty(plan.asyncOperations);
@@ -97,11 +108,21 @@ public sealed class EventLoopLifecycleTests
         ManagedApiModel model = asynchronous ? AsyncOperationTests.Model() : RetainedCallbackTests.Model();
         InteropFunction start = model.interop.functions[0];
         CallbackContract callback = start.parameters[0].callback!;
-        callback = callback with { threading = NativeCallbackThreading.EventLoop,
-            registration = callback.registration! with { unregisterIsNonBlocking = true, releaseThreadDomain = "eventLoop" } };
-        start = start with { parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }),
-            asynchronous = start.asynchronous is { } protocol ? protocol with { cancellationIsNonBlocking = true } : null };
-        return model with { interop = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
-            model.interop.functions.SetItem(0, start), []) { byteOrder = model.interop.byteOrder } };
+        callback = callback with
+        {
+            threading = NativeCallbackThreading.EventLoop,
+            registration = callback.registration! with { unregisterIsNonBlocking = true, releaseThreadDomain = "eventLoop" }
+        };
+        start = start with
+        {
+            parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback }),
+            asynchronous = start.asynchronous is { } protocol ? protocol with { cancellationIsNonBlocking = true } : null
+        };
+        return model with
+        {
+            interop = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types,
+            model.interop.functions.SetItem(0, start), [])
+            { byteOrder = model.interop.byteOrder }
+        };
     }
 }

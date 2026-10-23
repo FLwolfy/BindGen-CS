@@ -37,9 +37,15 @@ internal static unsafe class Program
             native.Dispose();
             unloads++;
         }), session => selected = new NativeAllocator("example.generated-instance",
-            (length, alignment) => allocate(state, length, alignment),
-            (address, length, alignment) =>
-            {
+            (
+                length,
+                alignment
+            ) => allocate(state, length, alignment),
+            (
+                address,
+                length,
+                alignment
+            ) => {
                 Require(release(state, address, length, alignment) == 0, "matching generated temporary text free");
                 releases = releaseCount(state);
             }, NativeAllocatorThreadDomain.AnyThread, session));
@@ -55,13 +61,21 @@ internal static unsafe class Program
         Require(allocationCount(state) == 2, "closed context rejected allocation before any native callback");
         pending.DisposeAsync().AsTask().GetAwaiter().GetResult();
         Require(releases == 2 && unloads == 1, "actual matching free precedes final module unload");
-        Console.WriteLine(JsonSerializer.Serialize(new { checks = 8, nativeUtf8ByteLength = length,
-            allocator = selected!.allocatorId, nativeReleases = releases, moduleUnloads = unloads }));
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            checks = 8,
+            nativeUtf8ByteLength = length,
+            allocator = selected!.allocatorId,
+            nativeReleases = releases,
+            moduleUnloads = unloads
+        }));
         return 0;
     }
 
-    private static void Require(bool condition, string check)
-    {
+    private static void Require(
+        bool condition,
+        string check
+    ) {
         if (!condition) throw new InvalidOperationException("Generated allocator check failed: " + check);
     }
 }

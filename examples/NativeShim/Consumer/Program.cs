@@ -1,7 +1,10 @@
 using System;
 using BGCS.Examples.NativeShim;
 
-using WidgetApi api = WidgetApi.Load();
+if (args.Length != 1)
+    throw new ArgumentException("Supply the absolute path of the native module built by your project.");
+
+using WidgetApi api = WidgetApi.Load(args[0]);
 unsafe
 {
     void* widget = api.Raw.CreateWidget();

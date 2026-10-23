@@ -2,6 +2,13 @@
 
 The product stops at generation. Compiling, linking and invoking fixtures below belong to repository consumers, never the SDK, CLI or official extensions.
 
+Run the full Windows repository baseline from an elevated shell: the path-safety
+fixtures create actual NTFS case-sensitive directories, which require
+[administrator permissions](https://learn.microsoft.com/en-us/windows/wsl/case-sensitivity).
+Ordinary BGCS generation only reads existing directory semantics and does not
+require this elevation or change directory flags. A fixture setup failure remains
+a failed local receipt; it is not a skipped or passing test.
+
 ## Four gates
 
 | Check | Scope |
@@ -25,4 +32,4 @@ The 10,000-declaration budgets remain Windows/Linux 60s cold / 10s warm and Inte
 
 ## Evidence
 
-Source implementation, local compilation, local tests, candidate package consumption, remote CI and public publication are separate states. A dirty workspace or historical3.x receipt cannot certify4.0. Current issues/review live under records/acceptance; execution evidence lives under artifacts. This specification itself asserts no passing gate.
+Source implementation, local compilation, local tests, candidate package consumption, remote CI and public publication are separate states. A dirty workspace or historical receipt cannot certify the current release. Maintained invariants are recorded in [architecture review](architecture-review.md); release-specific execution and public-consumption receipts are linked from [release history](releases/README.md). Intermediate attempts belong to [historical development records](history/README.md). This specification itself asserts no passing gate.

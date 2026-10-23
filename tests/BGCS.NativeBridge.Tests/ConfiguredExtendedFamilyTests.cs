@@ -100,9 +100,13 @@ public sealed class ConfiguredExtendedFamilyTests
     {
         (LoweringContext context, ImmutableArray<CppFamilyBinding> bindings) = Context(family);
         NativeModule module = context.module;
-        context = context with { module = new(module.targetId, module.triple, module.pointerSize,
+        context = context with
+        {
+            module = new(module.targetId, module.triple, module.pointerSize,
             module.types.Select(type => type.id == new StableId("element") ? type with { spelling = "void", primitiveKind = "Void", size = null, alignment = null, isSigned = null } : type).ToImmutableArray(),
-            module.declarations, []) { language = module.language } };
+            module.declarations, [])
+            { language = module.language }
+        };
         Assert.Throws<NotSupportedException>(() => new NativeBridgePlanner(familyBindings: bindings).Plan(context));
     }
 
@@ -119,21 +123,29 @@ public sealed class ConfiguredExtendedFamilyTests
         else
         {
             NativeModule module = bridge.source;
-            bridge = bridge with { source = new(module.targetId, module.triple, module.pointerSize, module.types,
+            bridge = bridge with
+            {
+                source = new(module.targetId, module.triple, module.pointerSize, module.types,
                 module.declarations.Select(declaration => mutation == "period" && declaration.id == new StableId("ratio-declaration")
                     ? declaration with { templateArguments = [new("Integral", "0", null), new("Integral", "1", null)] }
                     : mutation == "recursive-time-point" && declaration.id == new StableId("owner")
                         ? declaration with { templateArguments = declaration.templateArguments.SetItem(1, new("Type", "recursive", new("record"))) } : declaration).ToImmutableArray(), [])
-                { language = module.language } };
+                { language = module.language }
+            };
         }
         Sink sink = new();
         Assert.ThrowsAny<Exception>(() => new TypedBridgeEmitter().Emit(bridge, sink, "extended"));
         Assert.Empty(sink.sources);
     }
 
-    private static CppFamilyBinding Binding(StandardValueKind family, string head = "custom::Collection") => new()
+    private static CppFamilyBinding Binding(
+        StandardValueKind family,
+        string head = "custom::Collection"
+    ) => new()
     {
-        nativeTemplate = head, family = family, evidence = new(EvidenceLevel.UserAsserted, "explicit-custom-value-protocol"),
+        nativeTemplate = head,
+        family = family,
+        evidence = new(EvidenceLevel.UserAsserted, "explicit-custom-value-protocol"),
         variantAccess = family == StandardValueKind.Variant ? CppVariantAccess.MemberGet : CppVariantAccess.None,
         pathFormat = family == StandardValueKind.Path ? NativePathFormat.GenericUtf8 : null
     };
@@ -173,8 +185,11 @@ public sealed class ConfiguredExtendedFamilyTests
                 declarations.Add(new(new("clock-declaration"), "Class", "Clock", clock.spelling, clock.id, source) { role = "Struct", isCompleteDefinition = true });
                 declarations.Add(new(new("duration-declaration"), "Class", "Ticks", duration.spelling, duration.id, source)
                 { role = "Struct", isCompleteDefinition = true, templateArguments = [new("Type", "int", new("element")), new("Type", ratio.spelling, ratio.id)] });
-                owner = owner with { qualifiedName = "custom::Collection<custom::Clock, custom::Ticks<int, std::ratio<2, 2000>>>",
-                    templateArguments = [new("Type", clock.spelling, clock.id), new("Type", duration.spelling, duration.id)] };
+                owner = owner with
+                {
+                    qualifiedName = "custom::Collection<custom::Clock, custom::Ticks<int, std::ratio<2, 2000>>>",
+                    templateArguments = [new("Type", clock.spelling, clock.id), new("Type", duration.spelling, duration.id)]
+                };
                 types[types.FindIndex(type => type.id == new StableId("record"))] = types.Single(type => type.id == new StableId("record")) with { spelling = owner.qualifiedName };
             }
         }
@@ -186,6 +201,9 @@ public sealed class ConfiguredExtendedFamilyTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = [];
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 }

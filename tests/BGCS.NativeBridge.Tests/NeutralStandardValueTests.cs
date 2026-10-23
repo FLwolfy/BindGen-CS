@@ -36,8 +36,11 @@ public sealed class NeutralStandardValueTests
     [InlineData("std::chrono::duration<int>", StandardValueKind.Duration, "int")]
     [InlineData("std::unique_ptr<int>", StandardValueKind.UniquePointer, "int")]
     [InlineData("std::shared_ptr<int>", StandardValueKind.SharedPointer, "int")]
-    public void DetachedStandardFamilies_EmitFiniteCheckedAccessProtocols(string spelling, StandardValueKind family, string element)
-    {
+    public void DetachedStandardFamilies_EmitFiniteCheckedAccessProtocols(
+        string spelling,
+        StandardValueKind family,
+        string element
+    ) {
         LoweringContext context = Context(spelling, element);
         NativeBridgePlan plan = new NativeBridgePlanner().Plan(context);
         Assert.Contains(plan.exports, export => export.operation.standardValue?.family == family);
@@ -99,20 +102,26 @@ public sealed class NeutralStandardValueTests
         { returnType = new("integer"), children = [new("value")] };
         NativeDeclaration value = new(new("value"), "Parameter", "value", "value", new("record"), consume.source) { parent = consume.id };
         NativeModule source = new(context.module.targetId, context.module.triple, context.module.pointerSize, context.module.types,
-            [.. context.module.declarations, consume, value], []) { language = SourceLanguage.Cpp };
+            [.. context.module.declarations, consume, value], [])
+        { language = SourceLanguage.Cpp };
         NativeBridgePlan plan = new NativeBridgePlanner().Plan(context with { module = source });
         BridgeExport call = plan.exports.Single(export => export.operation.declaration == consume.id);
         Assert.Equal(BridgeConversionKind.Move, Assert.Single(call.parameters).conversion);
         Sink sink = new();
         new TypedBridgeEmitter().Emit(plan, sink, "fixture");
         Assert.Contains("std::move(*reinterpret_cast<::std::unique_ptr<int>*>(arg0))", sink.files["src/fixture.cpp"]);
-        NativeBridgePlan mismatched = plan with { exports = plan.exports.Select(export => export.id == call.id
-            ? export with { parameters = [export.parameters[0] with { nativeType = new("integer") }] } : export).ToImmutableArray() };
+        NativeBridgePlan mismatched = plan with
+        {
+            exports = plan.exports.Select(export => export.id == call.id
+            ? export with { parameters = [export.parameters[0] with { nativeType = new("integer") }] } : export).ToImmutableArray()
+        };
         Assert.Throws<InvalidOperationException>(() => new CppBridgeOperationVerifier().Verify(mismatched));
     }
 
-    private static LoweringContext Context(string spelling, string element)
-    {
+    private static LoweringContext Context(
+        string spelling,
+        string element
+    ) {
         SourceLocation location = new("fixture.hpp", 1, 1);
         NativeType integer = new(new("integer"), NativeTypeCategory.Primitive, element, element == "char" || element == "bool" ? 1 : 4, element == "char" || element == "bool" ? 1 : 4)
         { primitiveKind = element == "bool" ? "Bool" : element == "char" ? "Char" : "Int", isSigned = element != "bool" };
@@ -130,6 +139,9 @@ public sealed class NeutralStandardValueTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

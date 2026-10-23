@@ -126,7 +126,11 @@ public sealed class ModuleProviderParityTests
         second.Dispose();
         Assert.Equal(1, secondReleases);
 
-        static NativeModuleSession Open(string name, Func<string, string> resolveName, Func<string, INativeModuleProvider> load)
+        static NativeModuleSession Open(
+            string name,
+            Func<string, string> resolveName,
+            Func<string, INativeModuleProvider> load
+        )
             => new(load(resolveName(name)));
     }
 
@@ -164,11 +168,16 @@ public sealed class ModuleProviderParityTests
         public void Dispose() => release();
     }
 
-    private sealed class BlockingProvider(ManualResetEventSlim entered, ManualResetEventSlim resume) : INativeModuleProvider
+    private sealed class BlockingProvider(
+        ManualResetEventSlim entered,
+        ManualResetEventSlim resume
+    ) : INativeModuleProvider
     {
         public int releaseCount;
-        public bool TryGetExport(string name, out nint address)
-        {
+        public bool TryGetExport(
+            string name,
+            out nint address
+        ) {
             if (name == "first")
             {
                 entered.Set();

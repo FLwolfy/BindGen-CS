@@ -21,8 +21,10 @@ public sealed class NeutralImportCompilationTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ActualSdkBuild_ValidatesImportsAndNativeStorageWithWarningsAsErrors(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ActualSdkBuild_ValidatesImportsAndNativeStorageWithWarningsAsErrors(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         NeutralBackendTests.MemorySink sink = new();
         var model = NeutralBackendTests.ModelWithStorage();
         var octet = new BGCS.Core.Interop.InteropType(new("text-octet"), "char", BGCS.Core.Native.NativeTypeCategory.Primitive, 1, 1) { primitiveKind = "Char", isSigned = true };
@@ -34,12 +36,16 @@ public sealed class NeutralImportCompilationTests
         var textFunction = new BGCS.Core.Interop.InteropFunction(new("read_text"), "read_text", model.interop.types[0].id,
             [new(new("text-argument"), "text", pointer.id) { text = contract }], "C");
         var textModule = new BGCS.Core.Interop.InteropModule(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize,
-            model.interop.types.AddRange(System.Collections.Immutable.ImmutableArray.Create(octet, pointer)), model.interop.functions.Add(textFunction), []) { byteOrder = model.interop.byteOrder };
+            model.interop.types.AddRange(System.Collections.Immutable.ImmutableArray.Create(octet, pointer)), model.interop.functions.Add(textFunction), [])
+        { byteOrder = model.interop.byteOrder };
         var integer = textModule.types[0];
         var valuePointer = new BGCS.Core.Interop.InteropType(new("borrowed-integer-pointer"), "int*", BGCS.Core.Native.NativeTypeCategory.Pointer, 8, 8)
-            { elementType = integer.id };
+        { elementType = integer.id };
         var lifetime = new BGCS.Core.Interop.LifetimeContract(BGCS.Core.Interop.NativeLifetimeKind.Call, null, evidence);
-        BGCS.Core.Interop.InteropParameter Value(string name, BGCS.Core.Interop.NativeParameterDirection direction) => new(new("borrowed-" + name), name, valuePointer.id)
+        BGCS.Core.Interop.InteropParameter Value(
+            string name,
+            BGCS.Core.Interop.NativeParameterDirection direction
+        ) => new(new("borrowed-" + name), name, valuePointer.id)
         { singleValue = new(direction, lifetime, evidence) { retainsPointer = false, allowsNull = false } };
         var protocol = new BGCS.Core.Interop.InteropFunction(new("write-protocol"), "write_protocol", integer.id,
             [new(new("protocol-buffer"), "buffer", valuePointer.id)
@@ -51,13 +57,15 @@ public sealed class NeutralImportCompilationTests
             [Value("input", BGCS.Core.Interop.NativeParameterDirection.Input), Value("aliased-state", BGCS.Core.Interop.NativeParameterDirection.InputOutput) with { name = "state" },
                 Value("output", BGCS.Core.Interop.NativeParameterDirection.Output)], "C");
         textModule = new(textModule.libraryId, textModule.targetId, textModule.pointerSize, textModule.types.Add(valuePointer),
-            textModule.functions.AddRange(System.Collections.Immutable.ImmutableArray.Create(protocol, aliases)), []) { byteOrder = textModule.byteOrder };
+            textModule.functions.AddRange(System.Collections.Immutable.ImmutableArray.Create(protocol, aliases)), [])
+        { byteOrder = textModule.byteOrder };
         model = new BGCS.CSharp.Projection.DefaultManagedProjection().Project(textModule, new("Generated.Example", "NativeApi"), CancellationToken.None);
         if (sourceRuntime)
         {
             var shadows = new[] { "System", "TaskCompletionSource", "NativeModuleSession" }.Select(name => new BGCS.Core.Interop.InteropType(new(name), name, BGCS.Core.Native.NativeTypeCategory.Record, 4, 4) { declarationName = name });
             var interop = new BGCS.Core.Interop.InteropModule(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize,
-                model.interop.types.AddRange(shadows), model.interop.functions, []) { byteOrder = model.interop.byteOrder };
+                model.interop.types.AddRange(shadows), model.interop.functions, [])
+            { byteOrder = model.interop.byteOrder };
             model = new BGCS.CSharp.Projection.DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi"), CancellationToken.None);
         }
         await new CSharpTestBackend().EmitAsync(model, new("unused", sink)

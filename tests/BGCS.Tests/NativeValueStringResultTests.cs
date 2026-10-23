@@ -19,66 +19,89 @@ namespace BGCS.Tests;
 public sealed class NativeValueStringResultTests
 {
     [Theory]
-    [InlineData(BindingImportMode.FunctionTable,false)]
-    [InlineData(BindingImportMode.DllImport,false)]
-    [InlineData(BindingImportMode.LibraryImport,false)]
-    [InlineData(BindingImportMode.FunctionTable,true)]
-    [InlineData(BindingImportMode.DllImport,true)]
-    [InlineData(BindingImportMode.LibraryImport,true)]
-    public async Task FreshStandardValuesCopyCountedUnicodeAndDestroyWithinTheirCreatingCall(BindingImportMode mode,bool sourceRuntime)
-    {
-        string root=Path.Combine(Path.GetTempPath(),"bgcs-value-text-"+Guid.NewGuid().ToString("N"));
+    [InlineData(BindingImportMode.FunctionTable, false)]
+    [InlineData(BindingImportMode.DllImport, false)]
+    [InlineData(BindingImportMode.LibraryImport, false)]
+    [InlineData(BindingImportMode.FunctionTable, true)]
+    [InlineData(BindingImportMode.DllImport, true)]
+    [InlineData(BindingImportMode.LibraryImport, true)]
+    public async Task FreshStandardValuesCopyCountedUnicodeAndDestroyWithinTheirCreatingCall(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-value-text-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
-            await File.WriteAllTextAsync(Path.Combine(root,"values.hpp"),Header);
-            string[] names=["Utf8","Utf16","Utf32","Empty","Path","Invalid8","Invalid16","Invalid32","TooLong"];
-            BindingConfiguration configuration=new()
+            await File.WriteAllTextAsync(Path.Combine(root, "values.hpp"), Header);
+            string[] names = ["Utf8", "Utf16", "Utf32", "Empty", "Path", "Invalid8", "Invalid16", "Invalid32", "TooLong"];
+            BindingConfiguration configuration = new()
             {
-                schemaVersion = 2,library=new(){id="textvalues",nativeName="text_value_fixture"},
-                source=new(){language=SourceLanguage.Cpp,headers=["values.hpp"],parseMacros=false,includeTransitivelyReferencedHeaders=false,
-                    selection=new(){includeDeclarations=names.Select(name=>"values::"+name).ToImmutableArray()}},
-                api=new(){@namespace="Generated.ValueText",name="ValueApi",importMode=mode,maximumValueStringCodeUnits=32,
-                    style=sourceRuntime?BGCS.Core.Managed.ManagedApiStyle.Static:BGCS.Core.Managed.ManagedApiStyle.Instance,nestGeneratedTypesInApi=sourceRuntime},
-                bridge = new() { cpp = new() { familyBindings=[Text("std::string",NativeTextEncoding.Utf8),Text("std::u16string",NativeTextEncoding.Utf16),Text("std::u32string",NativeTextEncoding.Utf32),
-                    new(){nativeType="std::filesystem::path",family=StandardValueKind.Path,pathFormat=NativePathFormat.NativeUtf8,evidence=new(EvidenceLevel.UserAsserted,"preserve-native-separators")} ] } },
-                runtime=new(){mode=sourceRuntime?"source":"package"},output=new(){layout=sourceRuntime?"singleFile":"split"},
-                cache=new(){enabled=false}
+                schemaVersion = 2,
+                library = new() { id = "textvalues", nativeName = "text_value_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.Cpp,
+                    headers = ["values.hpp"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false,
+                    selection = new() { includeDeclarations = names.Select(name => "values::" + name).ToImmutableArray() }
+                },
+                api = new()
+                {
+                    @namespace = "Generated.ValueText",
+                    name = "ValueApi",
+                    importMode = mode,
+                    maximumValueStringCodeUnits = 32,
+                    style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance,
+                    nestGeneratedTypesInApi = sourceRuntime
+                },
+                bridge = new()
+                {
+                    cpp = new()
+                    {
+                        familyBindings = [Text("std::string",NativeTextEncoding.Utf8),Text("std::u16string",NativeTextEncoding.Utf16),Text("std::u32string",NativeTextEncoding.Utf32),
+                    new(){nativeType="std::filesystem::path",family=StandardValueKind.Path,pathFormat=NativePathFormat.NativeUtf8,evidence=new(EvidenceLevel.UserAsserted,"preserve-native-separators")} ]
+                    }
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
-            await using BindingHost host=BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
-            GenerationResult built=await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration,root));
-            Assert.True(built.success,built.GetDiagnosticSummary());
-            TargetInspection target=Assert.Single(built.targetModels);
-            CSharpEmissionPlan plan=new HostTestEmissionPlanner().Plan(target.managed!,new(configuration.library.nativeName,new NoWrites())
-                {importMode=mode,runtimeNamespace=sourceRuntime?"Generated.ValueText.Runtime":"BGCS.Runtime",maximumValueStringCodeUnits=32});
-            foreach(var type in target.interop.types.Where(type=>type.valueProtocol is not null))
+            await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
+            GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
+            Assert.True(built.success, built.GetDiagnosticSummary());
+            TargetInspection target = Assert.Single(built.targetModels);
+            CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
+            { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.ValueText.Runtime" : "BGCS.Runtime", maximumValueStringCodeUnits = 32 });
+            foreach (var type in target.interop.types.Where(type => type.valueProtocol is not null))
             {
-                NativeValueProtocol protocol=type.valueProtocol!;
-                Assert.Equal(NativeValueReleaseScope.CreatingCall,protocol.scopedRelease!.scope);
-                Assert.Equal(EvidenceLevel.Declared,protocol.scopedRelease.evidence.level);
-                Assert.Contains(protocol.operations,operation=>operation.kind==NativeValueOperationKind.CopyCodeUnits);
+                NativeValueProtocol protocol = type.valueProtocol!;
+                Assert.Equal(NativeValueReleaseScope.CreatingCall, protocol.scopedRelease!.scope);
+                Assert.Equal(EvidenceLevel.Declared, protocol.scopedRelease.evidence.level);
+                Assert.Contains(protocol.operations, operation => operation.kind == NativeValueOperationKind.CopyCodeUnits);
             }
-            StringBuilder consumer=new();
-            foreach(string name in names)
+            StringBuilder consumer = new();
+            foreach (string name in names)
             {
-                BridgeExport export=Assert.Single(target.bridge!.exports,item=>item.operation.declaration is StableId declaration&&target.bridge.source.GetDeclaration(declaration).qualifiedName=="values::"+name);
-                CSharpValueStringResultPlan friendly=Assert.Single(plan.valueStringResults,item=>plan.methods[item.factory.methodIndex].nativeExport==export.id);
-                Assert.Equal("string",friendly.signature.returnType);
-                InteropFunction factory=target.interop.functions.Single(function=>function.id==export.id);
-                Assert.Null(factory.parameters.Single(parameter=>parameter.id==factory.error!.valueParameter).ownership!.releaseThreadDomain);
-                string call="api."+friendly.signature.name+"()";
-                if(name.StartsWith("Invalid",StringComparison.Ordinal))
+                BridgeExport export = Assert.Single(target.bridge!.exports, item => item.operation.declaration is StableId declaration && target.bridge.source.GetDeclaration(declaration).qualifiedName == "values::" + name);
+                CSharpValueStringResultPlan friendly = Assert.Single(plan.valueStringResults, item => plan.methods[item.factory.methodIndex].nativeExport == export.id);
+                Assert.Equal("string", friendly.signature.returnType);
+                InteropFunction factory = target.interop.functions.Single(function => function.id == export.id);
+                Assert.Null(factory.parameters.Single(parameter => parameter.id == factory.error!.valueParameter).ownership!.releaseThreadDomain);
+                string call = "api." + friendly.signature.name + "()";
+                if (name.StartsWith("Invalid", StringComparison.Ordinal))
                     consumer.Append("try{_=").Append(call).Append(";throw new InvalidOperationException(\"invalid scalar accepted\");}catch(DecoderFallbackException){}\n");
-                else if(name=="TooLong")
+                else if (name == "TooLong")
                     consumer.Append("try{_=").Append(call).Append(";throw new InvalidOperationException(\"copy bound ignored\");}catch(ArgumentOutOfRangeException){}\n");
-                else consumer.Append("if(").Append(call).Append("!=").Append(name=="Empty"?"string.Empty":name=="Path"?"\"dir\\\\😀.txt\"":"\"A\\0😀B\"")
+                else consumer.Append("if(").Append(call).Append("!=").Append(name == "Empty" ? "string.Empty" : name == "Path" ? "\"dir\\\\😀.txt\"" : "\"A\\0😀B\"")
                     .AppendLine(")throw new InvalidOperationException(\"counted native Unicode result\");");
             }
-            string targetRoot=Path.Combine(built.outputRoot,target.targetId);
-            string binary=Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
-            string context=sourceRuntime?"ValueApiContext":"ValueApi";
-            string factoryExpression=mode==BindingImportMode.FunctionTable?"ApiContext.Load(binary)":"ApiContext.Create()";
-            Assert.Equal(42,await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot,"managed"),binary,configuration.library.nativeName,$$"""
+            string targetRoot = Path.Combine(built.outputRoot, target.targetId);
+            string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
+            string context = sourceRuntime ? "ValueApiContext" : "ValueApi";
+            string factoryExpression = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
+            Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, configuration.library.nativeName, $$"""
                 using System;
                 using System.Text;
                 using Generated.ValueText;
@@ -86,20 +109,29 @@ public sealed class NativeValueStringResultTests
                 public static unsafe class ValueConsumer{
                     public static int Run(string binary){using var api={{factoryExpression}};{{consumer}}return 42;}
                 }
-                ""","ValueConsumer",root,sourceRuntime));
+                """, "ValueConsumer", root, sourceRuntime));
         }
-        finally{Directory.Delete(root,recursive:true);}
+        finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static CppFamilyBinding Text(string alias,NativeTextEncoding encoding)=>new(){nativeType=alias,family=StandardValueKind.String,stringEncoding=encoding,evidence=new(EvidenceLevel.UserAsserted,"fixture-declared-Unicode-encoding")};
+    private static CppFamilyBinding Text(
+        string alias,
+        NativeTextEncoding encoding
+    ) => new() { nativeType = alias, family = StandardValueKind.String, stringEncoding = encoding, evidence = new(EvidenceLevel.UserAsserted, "fixture-declared-Unicode-encoding") };
     private static string WorkerRoot()
     {
-        DirectoryInfo? root=new(AppContext.BaseDirectory);while(root is not null&&!File.Exists(Path.Combine(root.FullName,"BindGen-CS.slnx")))root=root.Parent;
-        string configuration=AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar+"Release"+Path.DirectorySeparatorChar,StringComparison.Ordinal)?"Release":"Debug";
-        return Path.Combine(root!.FullName,"extensions","frontends","BGCS.Frontend.Clang.Worker","bin",configuration,"net10.0");
+        DirectoryInfo? root = new(AppContext.BaseDirectory); while (root is not null && !File.Exists(Path.Combine(root.FullName, "BindGen-CS.slnx"))) root = root.Parent;
+        string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
+        return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
-    private sealed class NoWrites:IArtifactSink{public string WriteText(string relativePath,string content)=>throw new InvalidOperationException("Planning cannot emit artifacts.");}
-    private const string Header="""
+    private sealed class NoWrites : IArtifactSink
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit artifacts.");
+    }
+    private const string Header = """
         #include <string>
         #include <filesystem>
         namespace values {

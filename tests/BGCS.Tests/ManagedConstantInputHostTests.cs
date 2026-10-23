@@ -196,8 +196,11 @@ public sealed class ManagedConstantInputHostTests
         SamePublication(valid.outputRoot, before);
     }
 
-    private static void Success(GenerationResult result, string expression, string cache)
-    {
+    private static void Success(
+        GenerationResult result,
+        string expression,
+        string cache
+    ) {
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.Equal(cache, Assert.Single(result.cacheStages, stage => stage.stage == "csharpEmission").status);
         string generated = string.Join("\n", result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp")
@@ -208,13 +211,18 @@ public sealed class ManagedConstantInputHostTests
     private static string Source(int value) => "namespace Vendor { public static class Values { public const long Answer = " + value + "L; } }";
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "external_constants", nativeName = "external_constants" },
+        schemaVersion = 2,
+        library = new() { id = "external_constants", nativeName = "external_constants" },
         source = new() { headers = ["native.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.External", name = "ExternalApi", constants = [new("SELECTED") { name = "Presented", managedType = "long", expression = "global::Vendor.Values.Answer" }] }
     };
 
-    private static void WriteAssembly(string path, string name, string source, params string[] additional)
-    {
+    private static void WriteAssembly(
+        string path,
+        string name,
+        string source,
+        params string[] additional
+    ) {
         string framework = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
             .Where(path => Path.GetDirectoryName(path) == framework).Concat(additional).Distinct(StringComparer.Ordinal)
@@ -229,8 +237,10 @@ public sealed class ManagedConstantInputHostTests
 
     private static Dictionary<string, byte[]> Published(string output) => Directory.GetFiles(output, "*", SearchOption.AllDirectories)
         .ToDictionary(path => Path.GetRelativePath(output, path), File.ReadAllBytes, StringComparer.Ordinal);
-    private static void SamePublication(string output, Dictionary<string, byte[]> before)
-    {
+    private static void SamePublication(
+        string output,
+        Dictionary<string, byte[]> before
+    ) {
         Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Published(output).Keys.Order(StringComparer.Ordinal));
         foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(output, path)));
     }
@@ -239,8 +249,10 @@ public sealed class ManagedConstantInputHostTests
     {
         public string id => "fixture.mutate-managed-input";
         public int priority => 0;
-        public ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        { mutate(); return ValueTask.CompletedTask; }
+        public ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) { mutate(); return ValueTask.CompletedTask; }
     }
 
     private static BindingHostBuilder Builder(string? verifiedWorker = null)

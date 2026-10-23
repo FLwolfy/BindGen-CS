@@ -22,8 +22,10 @@ public sealed class StaticAdapterEmissionTests
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task StaticProfile_EmitsCheckedAdapterAndCompilesWithoutDynamicLoading(bool sourceRuntime, bool singleFile)
-    {
+    public async Task StaticProfile_EmitsCheckedAdapterAndCompilesWithoutDynamicLoading(
+        bool sourceRuntime,
+        bool singleFile
+    ) {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(sink) with
         { includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime", singleFile = singleFile };
@@ -73,13 +75,16 @@ public sealed class StaticAdapterEmissionTests
     {
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(sink);
-        request = request with { staticExportTable = fault switch
+        request = request with
         {
-            "missing" => null,
-            "order" => request.staticExportTable! with { exportNames = request.staticExportTable.exportNames.Reverse().ToImmutableArray() },
-            "revision" => request.staticExportTable! with { revision = 2 },
-            _ => throw new ArgumentException(nameof(fault))
-        } };
+            staticExportTable = fault switch
+            {
+                "missing" => null,
+                "order" => request.staticExportTable! with { exportNames = request.staticExportTable.exportNames.Reverse().ToImmutableArray() },
+                "revision" => request.staticExportTable! with { revision = 2 },
+                _ => throw new ArgumentException(nameof(fault))
+            }
+        };
         Assert.ThrowsAny<Exception>(() => new CSharpTestPlanner().Plan(NeutralBackendTests.Model(), request));
         Assert.Empty(sink.sources);
     }

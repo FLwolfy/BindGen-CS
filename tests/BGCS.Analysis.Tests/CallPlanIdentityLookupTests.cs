@@ -69,7 +69,8 @@ public sealed class CallPlanIdentityLookupTests
         original.Verify(plan);
         InteropFunction function = module.GetFunction(plan.signature.id);
         InteropModule changedModule = new(module.libraryId, module.targetId, module.pointerSize, module.types,
-            [function with { parameters = [] }], []) { byteOrder = module.byteOrder };
+            [function with { parameters = [] }], [])
+        { byteOrder = module.byteOrder };
         Assert.Throws<InvalidOperationException>(() => new CallPlanValidator(changedModule, runtime).Verify(plan));
         original.Verify(plan);
     }
@@ -88,7 +89,8 @@ public sealed class CallPlanIdentityLookupTests
         { byteOrder = source.byteOrder };
         NativeCallPlan plan = originalPlan with
         {
-            signature = NativeCallSignature.FromFunction(function), returnValue = originalPlan.returnValue! with { nativeType = qualified.id },
+            signature = NativeCallSignature.FromFunction(function),
+            returnValue = originalPlan.returnValue! with { nativeType = qualified.id },
             parameters = [originalPlan.parameters[0] with { nativeType = alias.id }]
         };
         CallPlanValidator validation = new(module, runtime);

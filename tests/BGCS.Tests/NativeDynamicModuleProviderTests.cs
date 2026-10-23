@@ -34,11 +34,17 @@ public sealed class NativeDynamicModuleProviderTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "module-ownership", nativeName = "module_ownership_fixture" },
-                source = new() { language = SourceLanguage.C, headers = ["module.h"], parseMacros = false,
-                    includeTransitivelyReferencedHeaders = false },
+                schemaVersion = 2,
+                library = new() { id = "module-ownership", nativeName = "module_ownership_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.C,
+                    headers = ["module.h"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false
+                },
                 api = new() { @namespace = "Generated.ModuleOwnership", name = "ModuleApi" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = Host();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

@@ -32,9 +32,17 @@ internal static class TestHostPaths
 
 internal static class TestInputs
 {
-    internal static GenerationRequest LoadRequest(string path, string? profile = null, CancellationToken cancellationToken = default)
+    internal static GenerationRequest LoadRequest(
+        string path,
+        string? profile = null,
+        CancellationToken cancellationToken = default
+    )
         => LoadRequestAsync(path, profile, cancellationToken).GetAwaiter().GetResult();
-    internal static Task<GenerationRequest> LoadRequestAsync(string path, string? profile = null, CancellationToken cancellationToken = default)
+    internal static Task<GenerationRequest> LoadRequestAsync(
+        string path,
+        string? profile = null,
+        CancellationToken cancellationToken = default
+    )
         => GenerationRequest.FromFile(path, profile).MaterializeAsync(TestHostPaths.Create(), cancellationToken).AsTask();
 }
 
@@ -47,7 +55,10 @@ internal static class TestComposition
             : throw new NotSupportedException("The fixture target has no established desktop execution profile.");
     internal static int PointerSize(NativeTargetDescriptor target) => target.architectureId switch
     { "x64" or "arm64" => 8, "x86" => 4, _ => throw new NotSupportedException("This scalar fixture has no pointer model for " + target.architectureId) };
-    internal static BindingHostBuilder UseWorkerDirectory(this BindingHostBuilder builder, string root)
+    internal static BindingHostBuilder UseWorkerDirectory(
+        this BindingHostBuilder builder,
+        string root
+    )
         => builder.ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), context =>
         {
             HostServices host = context.RequireHostServices();
@@ -55,25 +66,43 @@ internal static class TestComposition
         });
     private const string newId = "bgcs.frontend.clang.worker";
 
-    internal static BindingHostBuilder UseDetachedFrontend(this BindingHostBuilder builder, Func<IFrontend> factory)
+    internal static BindingHostBuilder UseDetachedFrontend(
+        this BindingHostBuilder builder,
+        Func<IFrontend> factory
+    )
         => builder.ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), _ => factory());
 
-    internal static BindingHostBuilder ObserveWorkerParses(this BindingHostBuilder builder, string root, ConcurrentQueue<SourceLanguage> parses)
+    internal static BindingHostBuilder ObserveWorkerParses(
+        this BindingHostBuilder builder,
+        string root,
+        ConcurrentQueue<SourceLanguage> parses
+    )
         => builder.ReplaceFactory<IFrontend>(newId, new(newId, ExtensionPort.Frontend), context =>
         {
             HostServices host = context.RequireHostServices();
             return new RecordingWorker(new FrontendWorkerClient(WorkerAssetLocator.Locate(host, root), host, TimeSpan.FromSeconds(300)), parses);
         });
 
-    private sealed class RecordingWorker(IIsolatedFrontend worker, ConcurrentQueue<SourceLanguage> parses) : IIsolatedFrontend
+    private sealed class RecordingWorker(
+        IIsolatedFrontend worker,
+        ConcurrentQueue<SourceLanguage> parses
+    ) : IIsolatedFrontend
     {
         public string parserIdentity => worker.parserIdentity;
         public FrontendExecutionIdentity CaptureExecutionIdentity(CancellationToken cancellationToken) => worker.CaptureExecutionIdentity(cancellationToken);
-        public ValueTask<WorkerPluginCapture> CapturePluginInputsAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ValueTask<WorkerPluginCapture> CapturePluginInputsAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => worker.CapturePluginInputsAsync(request, cancellationToken);
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken) => worker.PrepareAsync(request, cancellationToken);
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) => worker.PrepareAsync(request, cancellationToken);
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             parses.Enqueue(request.language);
             return worker.ParseAsync(request, cancellationToken);
         }

@@ -16,7 +16,8 @@ public sealed class FrontendLanguageBoundaryTests : FrontendTestHost
     public void UnsupportedLanguagesFailBeforeParserActivation(int language)
     {
         FrontendRequest request = new(new NativeTargetDescriptor(new("language-boundary"), "test", "test", "test", "x86_64-pc-linux-gnu", new()),
-            (SourceLanguage)language, ["unused.hpp"]) { pathBase = AppContext.BaseDirectory };
+            (SourceLanguage)language, ["unused.hpp"])
+        { pathBase = AppContext.BaseDirectory };
         NotSupportedException failure = Assert.Throws<NotSupportedException>(() => new ClangFrontend(host).ParseAsync(request, CancellationToken.None).GetAwaiter().GetResult());
         Assert.Contains("Only C and C++", failure.Message);
     }

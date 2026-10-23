@@ -59,12 +59,15 @@ public sealed class WorkerAssetDeploymentTests : WorkerTestHost
               }
             }}}}
             """;
-        manifest = manifest with { artifacts = manifest.artifacts.Where(artifact => artifact.relativePath != "BGCS.Frontend.Clang.Worker.deps.json").ToImmutableArray()
+        manifest = manifest with
+        {
+            artifacts = manifest.artifacts.Where(artifact => artifact.relativePath != "BGCS.Frontend.Clang.Worker.deps.json").ToImmutableArray()
             .Add(scratch.Add("BGCS.Frontend.Clang.Worker.deps.json", dependencyJson))
             .Add(scratch.Add("Execution.dll", "portable"))
             .Add(scratch.Add("fr/Execution.resources.dll", "localized"))
             .Add(scratch.Add("runtimes/win/lib/net10.0/Execution.Win.dll", "rid-specific-managed"))
-            .Add(scratch.Add("runtimes/win-x64/native/auxiliary.dll", "native-dependency")) };
+            .Add(scratch.Add("runtimes/win-x64/native/auxiliary.dll", "native-dependency"))
+        };
         WorkerAssetDeployer deployer = new(host.paths);
         deployer.Deploy(scratch.source, scratch.output, manifest, "win-x64");
         deployer.VerifyDeployment(scratch.output, manifest, "win-x64");
@@ -81,13 +84,19 @@ public sealed class WorkerAssetDeploymentTests : WorkerTestHost
     [InlineData("runtimeTargets", "runtimes/win/lib/net10.0/X.dll", "{\"rid\":\"win-arm64\",\"assetType\":\"runtime\"}")]
     [InlineData("resources", "lib/net10.0/X.resources.dll", "{\"locale\":\"../outside\"}")]
     [InlineData("runtime", "../outside/X.dll", "{}")]
-    public void Deployment_RejectsEscapingOrInconsistentDependencyMetadata(string category, string path, string metadata)
-    {
+    public void Deployment_RejectsEscapingOrInconsistentDependencyMetadata(
+        string category,
+        string path,
+        string metadata
+    ) {
         using Scratch scratch = new();
         WorkerAssetManifest manifest = scratch.CreateManifest();
         string json = "{\"runtimeTarget\":{\"name\":\"net10\"},\"targets\":{\"net10\":{\"X/1.0\":{\"" + category + "\":{\"" + path + "\":" + metadata + "}}}}}";
-        manifest = manifest with { artifacts = manifest.artifacts.Where(artifact => artifact.relativePath != "BGCS.Frontend.Clang.Worker.deps.json").ToImmutableArray()
-            .Add(scratch.Add("BGCS.Frontend.Clang.Worker.deps.json", json)) };
+        manifest = manifest with
+        {
+            artifacts = manifest.artifacts.Where(artifact => artifact.relativePath != "BGCS.Frontend.Clang.Worker.deps.json").ToImmutableArray()
+            .Add(scratch.Add("BGCS.Frontend.Clang.Worker.deps.json", json))
+        };
         Assert.Throws<IOException>(() => new WorkerAssetDeployer(host.paths).Deploy(scratch.source, scratch.output, manifest, "win-x64"));
         Assert.False(Directory.Exists(scratch.output));
     }
@@ -98,8 +107,10 @@ public sealed class WorkerAssetDeploymentTests : WorkerTestHost
         internal string source => Path.Combine(m_root, "source");
         internal string output => Path.Combine(m_root, "worker");
         internal Scratch() => Directory.CreateDirectory(source);
-        internal ArtifactDescriptor Add(string relative, string content)
-        {
+        internal ArtifactDescriptor Add(
+            string relative,
+            string content
+        ) {
             string path = Path.Combine(source, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, content, new UTF8Encoding(false));

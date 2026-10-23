@@ -39,6 +39,7 @@ bash "${ROOT_DIR}/scripts/test-snapshot-manifest.sh"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/generate-diagnostic-docs.py" --check
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-package-evidence.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-package-closures.py"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-documentation-contracts.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-source-ownership.py"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-tool-worker-publish.py" --dotnet "${DOTNET_CMD}"
 "${PYTHON_CMD}" "${ROOT_DIR}/scripts/test-parser-resource-provenance.py"

@@ -96,11 +96,16 @@ public sealed class StaticExternalProjectionBinderTests
         { externalTypeProjections = [new(record.id, "Consumer.Value<int>", [new(new("count"), "Count"), new(new("address"), "Address")])] };
     }
 
-    private static ManagedProjectionInputs Inputs(string source, bool metadata)
-    {
+    private static ManagedProjectionInputs Inputs(
+        string source,
+        bool metadata
+    ) {
         byte[] bytes = Encoding.UTF8.GetBytes(source);
-        if (!metadata) return new() { sources = [new(Path.Combine(Path.GetTempPath(), "bgcs-static-copy.cs"),
-            new(Convert.ToHexStringLower(SHA256.HashData(bytes))), bytes.ToImmutableArray(), source)] };
+        if (!metadata) return new()
+        {
+            sources = [new(Path.Combine(Path.GetTempPath(), "bgcs-static-copy.cs"),
+            new(Convert.ToHexStringLower(SHA256.HashData(bytes))), bytes.ToImmutableArray(), source)]
+        };
         string framework = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
             .Where(path => Path.GetDirectoryName(path) == framework).Select(path => MetadataReference.CreateFromFile(path));
@@ -110,7 +115,10 @@ public sealed class StaticExternalProjectionBinderTests
         var emitted = compilation.Emit(output);
         Assert.True(emitted.Success, string.Join(Environment.NewLine, emitted.Diagnostics));
         bytes = output.ToArray();
-        return new() { assemblies = [new(Path.Combine(Path.GetTempPath(), "StaticCopyFixture.dll"), compilation.Assembly.Identity.ToString(),
-            new(Convert.ToHexStringLower(SHA256.HashData(bytes))), bytes.ToImmutableArray(), false)] };
+        return new()
+        {
+            assemblies = [new(Path.Combine(Path.GetTempPath(), "StaticCopyFixture.dll"), compilation.Assembly.Identity.ToString(),
+            new(Convert.ToHexStringLower(SHA256.HashData(bytes))), bytes.ToImmutableArray(), false)]
+        };
     }
 }

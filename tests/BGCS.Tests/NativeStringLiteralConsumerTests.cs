@@ -19,8 +19,10 @@ public sealed class NativeStringLiteralConsumerTests
     [InlineData(SourceLanguage.Cpp, BindingImportMode.FunctionTable)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.DllImport)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.LibraryImport)]
-    public async Task GeneratedLiteralValuesMatchEveryActualNativeUnitIncludingEmbeddedAndFinalZero(SourceLanguage language, BindingImportMode importMode)
-    {
+    public async Task GeneratedLiteralValuesMatchEveryActualNativeUnitIncludingEmbeddedAndFinalZero(
+        SourceLanguage language,
+        BindingImportMode importMode
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-literal-consumer-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -45,18 +47,21 @@ public sealed class NativeStringLiteralConsumerTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "literal", nativeName = "literal_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "literal", nativeName = "literal_fixture" },
                 source = new() { language = language, headers = ["literal.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Literals", name = "LiteralApi", importMode = importMode,
+                    @namespace = "Generated.Literals",
+                    name = "LiteralApi",
+                    importMode = importMode,
                     names = ImmutableDictionary<string, string>.Empty.Add("PLAIN", "Plain").Add("OPAQUE", "Opaque")
                         .Add("UTF8_TEXT", "Utf8").Add("UTF16_TEXT", "Utf16").Add("UTF32_TEXT", "Utf32")
                         .Add("WIDE_TEXT", "Wide").Add("NAMED_ARRAY", "Named").Add("RAW_TEXT", "RawText")
                 },
                 runtime = new() { mode = language == SourceLanguage.Cpp ? "source" : "package" },
                 output = new() { layout = language == SourceLanguage.Cpp ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

@@ -21,15 +21,20 @@ public sealed class NativeAllocatorTests
         Assert.Equal((nuint)9, buffer.byteLength);
         Assert.Equal((nuint)alignment, buffer.alignment);
         Assert.Equal((nuint)0, buffer.allocatedByteLength % (nuint)alignment);
-        Assert.Equal(45, buffer.Invoke((address, length) =>
-        {
+        Assert.Equal(45, buffer.Invoke((
+            address,
+            length
+        ) => {
             Assert.Equal((nuint)0, (nuint)address % (nuint)alignment);
             int sum = 0;
             for (nuint index = 0; index < length; ++index) { ((byte*)address)[index] = (byte)(index + 1); sum += ((byte*)address)[index]; }
             return sum;
         }));
         buffer.Dispose();
-        Assert.Throws<ObjectDisposedException>(() => buffer.Invoke((address, _) => address));
+        Assert.Throws<ObjectDisposedException>(() => buffer.Invoke((
+            address,
+            _
+        ) => address));
     }
 
     [Theory]
@@ -39,7 +44,14 @@ public sealed class NativeAllocatorTests
     public void InvalidAlignment_IsRejectedBeforeNativeAllocation(int alignment)
     {
         int allocations = 0;
-        NativeAllocator allocator = new("invalid", (_, _) => { allocations++; return 64; }, (_, _, _) => { }, NativeAllocatorThreadDomain.AnyThread);
+        NativeAllocator allocator = new("invalid", (
+            _,
+            _
+        ) => { allocations++; return 64; }, (
+            _,
+            _,
+            _
+        ) => { }, NativeAllocatorThreadDomain.AnyThread);
         Assert.Throws<ArgumentOutOfRangeException>(() => allocator.Allocate(1, (nuint)alignment));
         Assert.Equal(0, allocations);
     }
@@ -49,9 +61,23 @@ public sealed class NativeAllocatorTests
     {
         int firstFrees = 0;
         int secondFrees = 0;
-        NativeAllocator first = new("first", (length, alignment) => { Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); return 64; },
-            (address, length, alignment) => { Assert.Equal((nint)64, address); Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); firstFrees++; }, NativeAllocatorThreadDomain.AnyThread);
-        NativeAllocator second = new("second", (_, _) => 128, (_, _, _) => secondFrees++, NativeAllocatorThreadDomain.AnyThread);
+        NativeAllocator first = new("first", (
+            length,
+            alignment
+        ) => { Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); return 64; },
+            (
+                address,
+                length,
+                alignment
+            ) => { Assert.Equal((nint)64, address); Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); firstFrees++; }, NativeAllocatorThreadDomain.AnyThread);
+        NativeAllocator second = new("second", (
+            _,
+            _
+        ) => 128, (
+            _,
+            _,
+            _
+        ) => secondFrees++, NativeAllocatorThreadDomain.AnyThread);
         using NativeBuffer a = first.Allocate(0, 64);
         using NativeBuffer b = second.Allocate(1, 64);
         Assert.Equal((nuint)0, a.byteLength);
@@ -65,7 +91,14 @@ public sealed class NativeAllocatorTests
     public void Overflow_IsRejectedBeforeNativeAllocation()
     {
         int allocations = 0;
-        NativeAllocator allocator = new("overflow", (_, _) => { allocations++; return 64; }, (_, _, _) => { }, NativeAllocatorThreadDomain.AnyThread);
+        NativeAllocator allocator = new("overflow", (
+            _,
+            _
+        ) => { allocations++; return 64; }, (
+            _,
+            _,
+            _
+        ) => { }, NativeAllocatorThreadDomain.AnyThread);
         Assert.Throws<OverflowException>(() => allocator.Allocate(nuint.MaxValue, 64));
         Assert.Equal(0, allocations);
     }
@@ -76,8 +109,14 @@ public sealed class NativeAllocatorTests
         int frees = 0;
         int unloads = 0;
         using NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeAllocator allocator = new("misaligned", (_, _) => 65, (address, length, alignment) =>
-        { Assert.Equal((nint)65, address); Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); frees++; }, NativeAllocatorThreadDomain.AnyThread, session);
+        NativeAllocator allocator = new("misaligned", (
+            _,
+            _
+        ) => 65, (
+            address,
+            length,
+            alignment
+        ) => { Assert.Equal((nint)65, address); Assert.Equal((nuint)64, length); Assert.Equal((nuint)64, alignment); frees++; }, NativeAllocatorThreadDomain.AnyThread, session);
         Assert.Throws<InvalidOperationException>(() => allocator.Allocate(9, 64));
         session.Dispose();
         Assert.Equal(1, frees);
@@ -92,8 +131,15 @@ public sealed class NativeAllocatorTests
         int frees = 0;
         int unloads = 0;
         using NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeAllocator allocator = new("failed", (_, _) => throwing ? throw new InvalidOperationException("allocate failed") : 0,
-            (_, _, _) => frees++, NativeAllocatorThreadDomain.AnyThread, session);
+        NativeAllocator allocator = new("failed", (
+            _,
+            _
+        ) => throwing ? throw new InvalidOperationException("allocate failed") : 0,
+            (
+                _,
+                _,
+                _
+            ) => frees++, NativeAllocatorThreadDomain.AnyThread, session);
         if (throwing) Assert.Throws<InvalidOperationException>(() => allocator.Allocate(1, 8));
         else Assert.Throws<OutOfMemoryException>(() => allocator.Allocate(1, 8));
         session.Dispose();
@@ -107,12 +153,22 @@ public sealed class NativeAllocatorTests
         int frees = 0;
         int unloads = 0;
         NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeAllocator allocator = new("module-owned", (_, _) => 64, (_, _, _) => frees++, NativeAllocatorThreadDomain.AnyThread, session);
+        NativeAllocator allocator = new("module-owned", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => frees++, NativeAllocatorThreadDomain.AnyThread, session);
         NativeBuffer buffer = allocator.Allocate(8, 8);
         Task closing = session.DisposeAsync().AsTask();
         Assert.False(closing.IsCompleted);
         Assert.Throws<ObjectDisposedException>(() => allocator.Allocate(8, 8));
-        Assert.Throws<ObjectDisposedException>(() => buffer.Invoke((address, _) => address));
+        Assert.Throws<ObjectDisposedException>(() => buffer.Invoke((
+            address,
+            _
+        ) => address));
         await buffer.DisposeAsync();
         await closing;
         Assert.Equal(1, frees);
@@ -125,11 +181,20 @@ public sealed class NativeAllocatorTests
         int frees = 0;
         int unloads = 0;
         NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeBuffer buffer = new NativeAllocator("active", (_, _) => 64, (_, _, _) => Interlocked.Increment(ref frees), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
+        NativeBuffer buffer = new NativeAllocator("active", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => Interlocked.Increment(ref frees), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
         using ManualResetEventSlim started = new();
         using ManualResetEventSlim finish = new();
-        Task<nint> call = Task.Run(() => buffer.Invoke((address, _) =>
-        { started.Set(); Assert.True(finish.Wait(TimeSpan.FromSeconds(5))); Assert.Equal(0, Volatile.Read(ref frees)); return address; }));
+        Task<nint> call = Task.Run(() => buffer.Invoke((
+            address,
+            _
+        ) => { started.Set(); Assert.True(finish.Wait(TimeSpan.FromSeconds(5))); Assert.Equal(0, Volatile.Read(ref frees)); return address; }));
         Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
         Task cleanup = buffer.DisposeAsync().AsTask();
         session.Dispose();
@@ -147,8 +212,14 @@ public sealed class NativeAllocatorTests
     {
         Pump dispatcher = new();
         int frees = 0;
-        NativeAllocator allocator = new("affine", (_, _) => 64, (_, _, _) =>
-        { Assert.True(dispatcher.CheckAccess()); frees++; }, NativeAllocatorThreadDomain.Dispatcher, dispatcher: dispatcher);
+        NativeAllocator allocator = new("affine", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => { Assert.True(dispatcher.CheckAccess()); frees++; }, NativeAllocatorThreadDomain.Dispatcher, dispatcher: dispatcher);
         NativeBuffer buffer = allocator.Allocate(8, 8);
         Exception? allocationFailure = null;
         Task? cleanup = null;
@@ -173,8 +244,15 @@ public sealed class NativeAllocatorTests
         int frees = 0;
         int unloads = 0;
         using NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeBuffer buffer = new NativeAllocator("failed-release", (_, _) => 64,
-            (_, _, _) => { frees++; throw new InvalidOperationException("Unknown whether native free completed."); }, NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
+        NativeBuffer buffer = new NativeAllocator("failed-release", (
+            _,
+            _
+        ) => 64,
+            (
+                _,
+                _,
+                _
+            ) => { frees++; throw new InvalidOperationException("Unknown whether native free completed."); }, NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
         session.Dispose();
         buffer.Dispose();
         Assert.IsType<InvalidOperationException>(buffer.releaseFailure);
@@ -193,7 +271,14 @@ public sealed class NativeAllocatorTests
         int unloads = 0;
         Pump dispatcher = new(executeInline: !rejectsPost, rejectPosts: rejectsPost);
         using NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => unloads++));
-        NativeBuffer buffer = new NativeAllocator("broken-dispatch", (_, _) => 64, (_, _, _) => frees++,
+        NativeBuffer buffer = new NativeAllocator("broken-dispatch", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => frees++,
             NativeAllocatorThreadDomain.Dispatcher, session, dispatcher).Allocate(8, 8);
         session.Dispose();
         Thread worker = new(buffer.Dispose);
@@ -209,8 +294,14 @@ public sealed class NativeAllocatorTests
     {
         Counters counters = new();
         using NativeModuleSession session = new(new StaticModuleProvider(new Dictionary<string, nint>(), () => Interlocked.Increment(ref counters.unloads)));
-        NativeAllocator allocator = new("finalized", (_, _) => 64, (_, _, _) =>
-        { Assert.Equal(0, Volatile.Read(ref counters.unloads)); Interlocked.Increment(ref counters.frees); }, NativeAllocatorThreadDomain.AnyThread, session);
+        NativeAllocator allocator = new("finalized", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => { Assert.Equal(0, Volatile.Read(ref counters.unloads)); Interlocked.Increment(ref counters.frees); }, NativeAllocatorThreadDomain.AnyThread, session);
         WeakReference abandoned = Abandon(allocator);
         session.Dispose();
         for (int attempt = 0; attempt < 3 && abandoned.IsAlive; ++attempt)
@@ -232,9 +323,18 @@ public sealed class NativeAllocatorTests
     [InlineData(NativeAllocatorThreadDomain.Unknown, false)]
     [InlineData(NativeAllocatorThreadDomain.Dispatcher, false)]
     [InlineData(NativeAllocatorThreadDomain.AnyThread, true)]
-    public void ThreadContract_MustExplicitlyMatchItsDispatcher(NativeAllocatorThreadDomain domain, bool dispatcher)
-    {
-        Assert.Throws<ArgumentException>(() => new NativeAllocator("invalid-domain", (_, _) => 64, (_, _, _) => { }, domain,
+    public void ThreadContract_MustExplicitlyMatchItsDispatcher(
+        NativeAllocatorThreadDomain domain,
+        bool dispatcher
+    ) {
+        Assert.Throws<ArgumentException>(() => new NativeAllocator("invalid-domain", (
+            _,
+            _
+        ) => 64, (
+            _,
+            _,
+            _
+        ) => { }, domain,
             dispatcher: dispatcher ? new Pump() : null));
     }
 
@@ -245,8 +345,10 @@ public sealed class NativeAllocatorTests
         private readonly bool m_executeInline;
         private readonly bool m_rejectPosts;
 
-        internal Pump(bool executeInline = false, bool rejectPosts = false)
-        {
+        internal Pump(
+            bool executeInline = false,
+            bool rejectPosts = false
+        ) {
             m_executeInline = executeInline;
             m_rejectPosts = rejectPosts;
         }

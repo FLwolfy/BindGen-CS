@@ -79,18 +79,23 @@ public sealed class NativeRecordArrayConstructorTests
             string[] members = ["NativeThing_Reset", "NativeThing_Resize", "NativeThing_SetEnabled", "NativeThing_Value"];
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "array-presentation", nativeName = "array_presentation_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "array-presentation", nativeName = "array_presentation_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["thing.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.ArrayPresentation", name = "ThingApi", importMode = mode, emitCallbackDelegates = false,
+                    @namespace = "Generated.ArrayPresentation",
+                    name = "ThingApi",
+                    importMode = mode,
+                    emitCallbackDelegates = false,
                     style = mode == BindingImportMode.LibraryImport ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("NativeThing_NativeThing", "Make").Add("NativeThing_Reset", "Reset")
                         .Add("NativeThing_Resize", "Resize").Add("NativeThing_SetEnabled", "SetEnabled").Add("NativeThing_Value", "Value")
                         .Add("NativeFormat", "Format").Add("NativeFlags", "Flags").Add("NativeBegin", "Begin"),
                     memberFunctions = members.Select(function => new ManagedReceiverRequest(function, "NativeThing", "self") { objectName = "ThingObject" }).ToImmutableArray(),
                     records = [new("NativeThing") { constructorFields = ["data"] }],
-                    functionAliases = [new("NativeBegin", "BeginAlias")], functionContainers = [new("Begins", [new("NativeBegin", "Open")])],
+                    functionAliases = [new("NativeBegin", "BeginAlias")],
+                    functionContainers = [new("Begins", [new("NativeBegin", "Open")])],
                     functions = [new("NativeFormat") { defaults = [new("format", new(ManagedDefaultValueKind.String, "%.3f"))] },
                         new("NativeFlags") { defaults = [new("flags", new(ManagedDefaultValueKind.Integer, "0"))] },
                         new("NativeBegin") { defaults = [new("p_open", new(ManagedDefaultValueKind.Null)), new("flags", new(ManagedDefaultValueKind.Integer, "0"))] }]
@@ -103,15 +108,35 @@ public sealed class NativeRecordArrayConstructorTests
                         lifetime = NativeLifetimeKind.Call, allowsNull = false, retainsPointer = false },
                         new() { function = "NativeBegin", parameter = "p_open", direction = NativeParameterDirection.InputOutput,
                             lifetime = NativeLifetimeKind.Call, allowsNull = true, retainsPointer = false }],
-                    stringParameters = new[] { "label", "format" }.Select(parameter => new StringParameterConfiguration { function = "NativeFormat", parameter = parameter,
-                        encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1, byteOrder = NativeTextByteOrder.Native,
-                        direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits, lifetime = NativeLifetimeKind.Call,
-                        zeroTerminated = true, retainsPointer = false, allowsNull = false }).Append(new StringParameterConfiguration
-                        { function = "NativeBegin", parameter = "label", encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1, byteOrder = NativeTextByteOrder.Native,
-                            direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits, lifetime = NativeLifetimeKind.Call,
-                            zeroTerminated = true, retainsPointer = false, allowsNull = false }).ToImmutableArray()
+                    stringParameters = new[] { "label", "format" }.Select(parameter => new StringParameterConfiguration
+                    {
+                        function = "NativeFormat",
+                        parameter = parameter,
+                        encoding = NativeTextEncoding.Utf8,
+                        codeUnitWidth = 1,
+                        byteOrder = NativeTextByteOrder.Native,
+                        direction = NativeParameterDirection.Input,
+                        lengthUnit = NativeLengthUnit.CodeUnits,
+                        lifetime = NativeLifetimeKind.Call,
+                        zeroTerminated = true,
+                        retainsPointer = false,
+                        allowsNull = false
+                    }).Append(new StringParameterConfiguration
+                    {
+                        function = "NativeBegin",
+                        parameter = "label",
+                        encoding = NativeTextEncoding.Utf8,
+                        codeUnitWidth = 1,
+                        byteOrder = NativeTextByteOrder.Native,
+                        direction = NativeParameterDirection.Input,
+                        lengthUnit = NativeLengthUnit.CodeUnits,
+                        lifetime = NativeLifetimeKind.Call,
+                        zeroTerminated = true,
+                        retainsPointer = false,
+                        allowsNull = false
+                    }).ToImmutableArray()
                 },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -182,8 +207,11 @@ public sealed class NativeRecordArrayConstructorTests
             if (mode == BindingImportMode.FunctionTable)
             {
                 var before = Snapshot(built.outputRoot);
-                BindingConfiguration refusedConfiguration = configuration with { semantics = configuration.semantics with
-                { valueParameters = configuration.semantics.valueParameters.Select(rule => rule.function == "NativeBegin" ? rule with { allowsNull = false } : rule).ToImmutableArray() } };
+                BindingConfiguration refusedConfiguration = configuration with
+                {
+                    semantics = configuration.semantics with
+                    { valueParameters = configuration.semantics.valueParameters.Select(rule => rule.function == "NativeBegin" ? rule with { allowsNull = false } : rule).ToImmutableArray() }
+                };
                 GenerationResult refused = await host.GenerateAsync(new(refusedConfiguration, root));
                 Assert.False(refused.success);
                 Assert.False(refused.published);
@@ -198,7 +226,10 @@ public sealed class NativeRecordArrayConstructorTests
 
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot write a candidate.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot write a candidate.");
     }
 
     private static string WorkerRoot()

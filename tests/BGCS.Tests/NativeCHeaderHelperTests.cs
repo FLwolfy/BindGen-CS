@@ -22,8 +22,10 @@ public sealed class NativeCHeaderHelperTests
     [InlineData(BindingImportMode.DllImport, "source")]
     [InlineData(BindingImportMode.LibraryImport, "package")]
     [InlineData(BindingImportMode.LibraryImport, "source")]
-    public async Task HeaderHelpersBecomeRealExportsAlongsideExternalCFunctions(BindingImportMode importMode, string runtimeMode)
-    {
+    public async Task HeaderHelpersBecomeRealExportsAlongsideExternalCFunctions(
+        BindingImportMode importMode,
+        string runtimeMode
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-c-header-helpers 验收 & " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -81,12 +83,17 @@ public sealed class NativeCHeaderHelperTests
 
 
 
-    private static BindingConfiguration Configuration(BindingImportMode importMode, string runtimeMode) => new()
+    private static BindingConfiguration Configuration(
+        BindingImportMode importMode,
+        string runtimeMode
+    ) => new()
     {
-        schemaVersion = 2, library = new() { id = "helpers", nativeName = "helper_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "helpers", nativeName = "helper_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["helpers.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false, includeHeaderHelpers = true },
         api = new() { @namespace = "Generated.Helpers", name = "HelperApi", importMode = importMode },
-        runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
+        runtime = new() { mode = runtimeMode },
+        cache = new() { enabled = false }
     };
 
     private const string Header = """

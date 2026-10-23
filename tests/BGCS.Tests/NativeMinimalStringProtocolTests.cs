@@ -28,8 +28,10 @@ public sealed class NativeMinimalStringProtocolTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CStrOnlyStringAndNativePathPreserveTheirActualProtocols(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CStrOnlyStringAndNativePathPreserveTheirActualProtocols(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = NewRoot();
         try
         {
@@ -57,7 +59,7 @@ public sealed class NativeMinimalStringProtocolTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
-                { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
+            { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExactApiContext" : "ExactApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, configuration.library.nativeName, $$"""
@@ -116,14 +118,21 @@ public sealed class NativeMinimalStringProtocolTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
-    {
+    private static string ConsumerBody(
+        NativeBridgePlan bridge,
+        CSharpEmissionPlan plan
+    ) {
         StringBuilder source = new();
-        string Call(BridgeExport export, params string[] arguments)
-        {
+        string Call(
+            BridgeExport export,
+            params string[] arguments
+        ) {
             CSharpMethodPlan method = plan.methods.Single(method => method.nativeExport == export.id);
             Assert.Equal(method.parameterTypes.Length, arguments.Length);
-            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((argument, index) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
+            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((
+                argument,
+                index
+            ) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
         }
         CSharpMethodPlan errorRelease = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
         string releaseError = "api.Raw." + errorRelease.name + "((" + errorRelease.parameterTypes[0] + ")error);error=0;";
@@ -137,12 +146,18 @@ public sealed class NativeMinimalStringProtocolTests
             BridgeExport destroy = Assert.Single(bridge.exports, export => export.operation.kind == BridgeOperationKind.Destroy && export.operation.ownerType == owner);
             byte[] expected = Encoding.UTF8.GetBytes(text ? "A😀" : "dir\\😀.txt");
             source.AppendLine("{nint holder=0,error=0;ulong count=0;sbyte unit=0;byte pathByte=0;");
-            void Success(string invocation, string condition = "") => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
+            void Success(
+                string invocation,
+                string condition = ""
+            ) => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
                 .Append(condition.Length == 0 ? "" : " || " + condition).AppendLine(")throw new InvalidOperationException(\"exact native operation\");");
             Success(Call(make, "&holder", "&error"), "holder==0");
             source.AppendLine("try {");
             Success(Call(Access(text ? StandardValueAction.Count : StandardValueAction.PathUtf8Count), "holder", "&count", "&error"), "count!=" + expected.Length);
-            foreach ((byte value, int index) in expected.Select((value, index) => (value, index)))
+            foreach ((byte value, int index) in expected.Select((
+                value,
+                index
+            ) => (value, index)))
                 Success(Call(Access(text ? StandardValueAction.GetAt : StandardValueAction.PathUtf8Byte), "holder", index + "UL", text ? "&unit" : "&pathByte", "&error"),
                     text ? "unchecked((byte)unit)!=" + value : "pathByte!=" + value);
             source.Append("if(").Append(Call(Access(text ? StandardValueAction.GetAt : StandardValueAction.PathUtf8Byte), "holder", "999UL", text ? "&unit" : "&pathByte", "&error"))
@@ -158,38 +173,63 @@ public sealed class NativeMinimalStringProtocolTests
         Assert.Single(friendlyInput.stringInputs);
         source.Append("if(api.").Append(friendlyInput.name).AppendLine("(\"copied😀\")!=42)throw new InvalidOperationException(\"managed counted c_str input\");");
         source.AppendLine("{byte[] units=Encoding.UTF8.GetBytes(\"copied😀\");int result=0;nint error=0;fixed(byte* data=units){");
-        source.Append("if(").Append(Call(input,"data","(ulong)units.Length","&result","&error")).AppendLine("!=0 || result!=42 || error!=0)throw new InvalidOperationException(\"copying c_str constructor\");}");
+        source.Append("if(").Append(Call(input, "data", "(ulong)units.Length", "&result", "&error")).AppendLine("!=0 || result!=42 || error!=0)throw new InvalidOperationException(\"copying c_str constructor\");}");
         source.AppendLine("byte[] zero=new byte[]{65,0,66};fixed(byte* data=zero){result=99;");
-        source.Append("if(").Append(Call(input,"data","3UL","&result","&error")).AppendLine("==0 || result!=0 || error==0)throw new InvalidOperationException(\"embedded zero must be rejected\");}").AppendLine(releaseError);
+        source.Append("if(").Append(Call(input, "data", "3UL", "&result", "&error")).AppendLine("==0 || result!=0 || error==0)throw new InvalidOperationException(\"embedded zero must be rejected\");}").AppendLine(releaseError);
         source.AppendLine("byte[] oversized=new byte[64];Array.Fill(oversized,(byte)65);fixed(byte* data=oversized){");
-        source.Append("if(").Append(Call(input,"data","64UL","&result","&error")).AppendLine("==0 || error==0)throw new InvalidOperationException(\"terminated bound\");}").AppendLine(releaseError).AppendLine("}");
-        foreach(string factory in new[]{"MakeNull","MakeUnterminated"}) {
-            BridgeExport make=Assert.Single(bridge.exports, export=>export.operation.declaration is StableId declaration && bridge.source.GetDeclaration(declaration).qualifiedName=="exact::"+factory);
-            StableId owner=StandardLibraryFactReader.Resolve(bridge.source,make.nativeResultType!.Value).id;
-            BridgeExport count=Assert.Single(bridge.exports, export=>export.operation.ownerType==owner && export.operation.standardValue?.action==StandardValueAction.Count);
-            BridgeExport destroy=Assert.Single(bridge.exports, export=>export.operation.ownerType==owner && export.operation.kind==BridgeOperationKind.Destroy);
+        source.Append("if(").Append(Call(input, "data", "64UL", "&result", "&error")).AppendLine("==0 || error==0)throw new InvalidOperationException(\"terminated bound\");}").AppendLine(releaseError).AppendLine("}");
+        foreach (string factory in new[] { "MakeNull", "MakeUnterminated" })
+        {
+            BridgeExport make = Assert.Single(bridge.exports, export => export.operation.declaration is StableId declaration && bridge.source.GetDeclaration(declaration).qualifiedName == "exact::" + factory);
+            StableId owner = StandardLibraryFactReader.Resolve(bridge.source, make.nativeResultType!.Value).id;
+            BridgeExport count = Assert.Single(bridge.exports, export => export.operation.ownerType == owner && export.operation.standardValue?.action == StandardValueAction.Count);
+            BridgeExport destroy = Assert.Single(bridge.exports, export => export.operation.ownerType == owner && export.operation.kind == BridgeOperationKind.Destroy);
             source.AppendLine("{nint holder=0,error=0;ulong count=99;");
-            source.Append("if(").Append(Call(make,"&holder","&error")).AppendLine("!=0 || holder==0)throw new InvalidOperationException(\"invalid read fixture factory\");try{");
-            source.Append("if(").Append(Call(count,"holder","&count","&error")).AppendLine("==0 || count!=0 || error==0)throw new InvalidOperationException(\"invalid c_str read\");").AppendLine(releaseError).AppendLine("}finally{");
+            source.Append("if(").Append(Call(make, "&holder", "&error")).AppendLine("!=0 || holder==0)throw new InvalidOperationException(\"invalid read fixture factory\");try{");
+            source.Append("if(").Append(Call(count, "holder", "&count", "&error")).AppendLine("==0 || count!=0 || error==0)throw new InvalidOperationException(\"invalid c_str read\");").AppendLine(releaseError).AppendLine("}finally{");
             source.Append("if(error!=0){").Append(releaseError).AppendLine("}");
-            source.Append("if(").Append(Call(destroy,"holder","&error")).AppendLine("!=0)throw new InvalidOperationException(\"invalid read cleanup\");}}");
+            source.Append("if(").Append(Call(destroy, "holder", "&error")).AppendLine("!=0)throw new InvalidOperationException(\"invalid read cleanup\");}}");
         }
         return source.ToString();
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime) => new()
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) => new()
     {
-        schemaVersion = 2, library = new() { id = "exact", nativeName = "exact_fixture" },
-        source = new() { language = SourceLanguage.Cpp, headers = ["exact.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-            selection = new() { includeDeclarations = ["exact::MakeText", "exact::MakePath", "exact::MakeNull", "exact::MakeUnterminated", "exact::CheckCopy"] } },
-        api = new() { @namespace = "Generated.Exact", name = "ExactApi", importMode = mode,
-            style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
-        bridge = new() { cpp = new() { familyBindings = [
+        schemaVersion = 2,
+        library = new() { id = "exact", nativeName = "exact_fixture" },
+        source = new()
+        {
+            language = SourceLanguage.Cpp,
+            headers = ["exact.hpp"],
+            parseMacros = false,
+            includeTransitivelyReferencedHeaders = false,
+            selection = new() { includeDeclarations = ["exact::MakeText", "exact::MakePath", "exact::MakeNull", "exact::MakeUnterminated", "exact::CheckCopy"] }
+        },
+        api = new()
+        {
+            @namespace = "Generated.Exact",
+            name = "ExactApi",
+            importMode = mode,
+            style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance,
+            nestGeneratedTypesInApi = sourceRuntime
+        },
+        bridge = new()
+        {
+            cpp = new()
+            {
+                familyBindings = [
             new() { nativeType = "exact::Text", family = StandardValueKind.String, stringEncoding = NativeTextEncoding.Utf8, stringAccess = CppStringAccess.CStrNullTerminated, evidence = new(EvidenceLevel.UserAsserted, "minimal-UTF8-string-protocol"),
                 cStr = new() { maximumCodeUnits = 64, readableLifetime = new(NativeLifetimeKind.Call, null, new(EvidenceLevel.UserAsserted,"native-cstr-readable-during-call")), nullTerminated = new(EvidenceLevel.UserAsserted,"native-cstr-termination"), constructorCopiesInput = new(EvidenceLevel.UserAsserted,"native-Text-constructor-copies-before-return") } },
-            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.NativeUtf8, evidence = new(EvidenceLevel.UserAsserted, "minimal-native-UTF8-path-protocol") }], sequenceInputAdapters = [new("exact::CheckCopy", [new("value")])] } },
-        runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-         cache = new() { enabled = false }
+            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.NativeUtf8, evidence = new(EvidenceLevel.UserAsserted, "minimal-native-UTF8-path-protocol") }],
+                sequenceInputAdapters = [new("exact::CheckCopy", [new("value")])]
+            }
+        },
+        runtime = new() { mode = sourceRuntime ? "source" : "package" },
+        output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+        cache = new() { enabled = false }
     };
 
     private static string NewRoot() { string root = Path.Combine(Path.GetTempPath(), "bgcs-minimal-cstr-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root); return root; }
@@ -202,7 +242,13 @@ public sealed class NativeMinimalStringProtocolTests
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
         return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
-    private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
+    private sealed class NoWrites : IArtifactSink
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit artifacts.");
+    }
 
     private const string Header = """
         #include <string>

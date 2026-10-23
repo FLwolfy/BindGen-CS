@@ -23,8 +23,11 @@ public sealed class ManagedNamesTransform(string prefix) : IManagedApiTransform,
     /// <summary>Gets whether the session has released this service.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
-    {
+    public ManagedApiModel Transform(
+        ManagedApiModel model,
+        AnalysisContext context,
+        CancellationToken cancellationToken
+    ) {
         cancellationToken.ThrowIfCancellationRequested();
         ObjectDisposedException.ThrowIf(disposed, this);
         return model with
@@ -35,7 +38,10 @@ public sealed class ManagedNamesTransform(string prefix) : IManagedApiTransform,
         };
     }
     /// <inheritdoc/>
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(prefix)))), []);
     /// <inheritdoc/>
     public void Dispose() => disposed = true;

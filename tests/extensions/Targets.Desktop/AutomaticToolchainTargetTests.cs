@@ -21,8 +21,10 @@ public sealed class AutomaticToolchainTargetTests
     [InlineData("android-x86", "i686-linux-android")]
     [InlineData("android-arm", "arm-linux-androideabi")]
     [InlineData("android-arm64", "aarch64-linux-android")]
-    public void SelectedUnixSysrootResolvesOnlyItsExistingCSearchRoots(string targetId, string multiarch)
-    {
+    public void SelectedUnixSysrootResolvesOnlyItsExistingCSearchRoots(
+        string targetId,
+        string multiarch
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-selected-sysroot-" + Guid.NewGuid().ToString("N"));
         string local = Path.Combine(root, "usr", "local", "include"), common = Path.Combine(root, "usr", "include");
         string architecture = Path.Combine(common, multiarch), selected = Path.Combine(root, "selected");
@@ -102,8 +104,10 @@ public sealed class AutomaticToolchainTargetTests
     [Theory]
     [InlineData("gnu", "x86_64-unknown-linux-gnu")]
     [InlineData("musl", "x86_64-unknown-linux-musl")]
-    public void LinuxLibcIdentitiesRemainDistinctForExplicitTargets(string abi, string triple)
-    {
+    public void LinuxLibcIdentitiesRemainDistinctForExplicitTargets(
+        string abi,
+        string triple
+    ) {
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new("linux-x64-" + abi), new(systemIncludeFolders: ["explicit/sdk"])));
         Assert.Equal(abi, target.abiId);
         Assert.Equal(triple, target.triple);
@@ -151,8 +155,10 @@ public sealed class AutomaticToolchainTargetTests
 
     private sealed class PrivateProvider(NativeTargetDescriptor target) : INativeTargetProvider
     {
-        public bool TryResolve(NativeTargetRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? result)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? result
+        ) {
             result = request.targetId == target.targetId ? target : null;
             return result is not null;
         }

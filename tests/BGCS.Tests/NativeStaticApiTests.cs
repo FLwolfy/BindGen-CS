@@ -21,8 +21,10 @@ public sealed class NativeStaticApiTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task StaticFacadeUsesTheSameNativeOwnershipTextAndBufferPlans(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task StaticFacadeUsesTheSameNativeOwnershipTextAndBufferPlans(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-shared-api-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -44,10 +46,17 @@ public sealed class NativeStaticApiTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "shared", nativeName = "shared_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "shared", nativeName = "shared_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false },
-                api = new() { @namespace = "Generated.Shared", name = "WidgetApi", style = ManagedApiStyle.Static, importMode = mode,
-                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget") },
+                api = new()
+                {
+                    @namespace = "Generated.Shared",
+                    name = "WidgetApi",
+                    style = ManagedApiStyle.Static,
+                    importMode = mode,
+                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget")
+                },
                 semantics = new()
                 {
                     ownedResults = [new() { function = "Widget::Widget", releaseThreadDomain = "any" }],
@@ -59,7 +68,7 @@ public sealed class NativeStaticApiTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

@@ -39,14 +39,18 @@ internal sealed class WorkerPluginFixture : IDisposable
         foreach (string name in names) File.Copy(Path.Combine(fixture, name), Path.Combine(plugin, name));
         PluginManifest entry = new()
         {
-            schemaVersion = 1, assembly = names[0],
+            schemaVersion = 1,
+            assembly = names[0],
             entryType = fingerprinted ? "ClangFactFixture.FingerprintedFactPlugin" : "ClangFactFixture.FactPlugin",
-            workerOnly = true, workerParserIdentity = ClangParserIdentity.C_IDENTITY,
+            workerOnly = true,
+            workerParserIdentity = ClangParserIdentity.C_IDENTITY,
             plugin = new("clang.fixture", "1.0.0", [new("clang.fixture.facts", ExtensionPort.FrontendFactContributor)])
             {
                 configurationSchema = JsonSerializer.SerializeToElement(new
                 {
-                    type = "object", additionalProperties = false, required = new[] { "externalFile" },
+                    type = "object",
+                    additionalProperties = false,
+                    required = new[] { "externalFile" },
                     properties = new { externalFile = new { type = "string", minLength = 1 }, mode = new { type = "string" } }
                 })
             },
@@ -71,10 +75,12 @@ internal sealed class WorkerPluginFixture : IDisposable
         .AddPluginManifest(manifest, TestHostPaths.Create(), Values(mode), settings);
     internal GenerationRequest Request() => new(new BindingConfiguration
     {
-        schemaVersion = 2, library = new() { id = "worker_host", nativeName = "worker_host" },
+        schemaVersion = 2,
+        library = new() { id = "worker_host", nativeName = "worker_host" },
         source = new() { headers = ["native.h"], parseMacros = false },
         api = new() { @namespace = "Generated.WorkerHost", name = "WorkerApi" },
-        output = new() { root = output }, cache = new() { enabled = true, directory = Path.Combine(root, "cache") }
+        output = new() { root = output },
+        cache = new() { enabled = true, directory = Path.Combine(root, "cache") }
     }, source);
     private static ContentDigest Digest(string path)
     {

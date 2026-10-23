@@ -16,8 +16,10 @@ public sealed class ClangResourceHeaderTests : FrontendTestHost
     [InlineData("windows-x64-msvc", 24)]
     [InlineData("linux-arm64-gnu", 24)]
     [InlineData("emscripten-wasm32-emscripten", 12)]
-    public async Task BuiltinHeadersRemainAvailableWithoutAHostCompilerOrSdk(string id, int expectedSize)
-    {
+    public async Task BuiltinHeadersRemainAvailableWithoutAHostCompilerOrSdk(
+        string id,
+        int expectedSize
+    ) {
         INativeTargetProvider provider = id.StartsWith("emscripten", StringComparison.Ordinal) ? new BrowserWasmTargetProvider() : new DesktopTargetProvider();
         // Declaring an unavailable driver explicitly prevents any native SDK discovery; builtin headers remain bundled.
         Assert.True(provider.TryResolve(new(new(id), new(compilerPath: "uninstalled-parser-location")), out NativeTargetDescriptor? target));

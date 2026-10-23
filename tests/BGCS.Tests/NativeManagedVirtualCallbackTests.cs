@@ -31,8 +31,10 @@ public sealed class NativeManagedVirtualCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedStaticThunksRetainIndependentTargetsAndCloseOnlyAfterNativeQuiescence(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedStaticThunksRetainIndependentTargetsAndCloseOnlyAfterNativeQuiescence(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-managed-virtual-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -65,13 +67,18 @@ public sealed class NativeManagedVirtualCallbackTests
                 library = new() { id = "managed_callbacks", nativeName = "managed_callbacks", bridgeExportPrefix = "managed_callbacks" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["calculator.hpp"], preamble = "#define BGCS_VIRTUAL_USER_PREAMBLE 1\n", parseMacros = false },
                 bridge = new() { cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator") { releaseThreadDomain = "any" }] } },
-                api = new() { @namespace = "Generated.Virtual", name = "VirtualApi", importMode = mode,
+                api = new()
+                {
+                    @namespace = "Generated.Virtual",
+                    name = "VirtualApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("managed_callbacks_error", "CallbackError")
-                        .Add("managed_callbacks_error_release", "ReleaseError") },
+                        .Add("managed_callbacks_error_release", "ReleaseError")
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -102,7 +109,8 @@ public sealed class NativeManagedVirtualCallbackTests
             { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Virtual.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime });
             CSharpEmissionPlan nonblocking = new HostTestEmissionPlanner().Plan(managed, new(configuration.library.nativeName, new NoWrites())
             {
-                importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Virtual.Runtime" : "BGCS.Runtime",
+                importMode = mode,
+                runtimeNamespace = sourceRuntime ? "Generated.Virtual.Runtime" : "BGCS.Runtime",
                 managedRuntime = new("fixture-explicit-no-block", new BGCS.Core.Targets.ManagedRuntimeId("dotnet.coreclr"),
                     BGCS.Core.Targets.NativeModuleMechanism.DynamicLibrary, [mode], true, false)
             });
@@ -207,6 +215,9 @@ public sealed class NativeManagedVirtualCallbackTests
 
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Reconstructing a frozen plan must not emit or publish files.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Reconstructing a frozen plan must not emit or publish files.");
     }
 }

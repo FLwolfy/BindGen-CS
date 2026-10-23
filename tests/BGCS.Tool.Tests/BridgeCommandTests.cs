@@ -47,8 +47,10 @@ public sealed class BridgeCommandTests : IDisposable
     [Theory]
     [InlineData("windows-x64-msvc", "ulong")]
     [InlineData("windows-x86-msvc", "uint")]
-    public void ManagedProjectionUsesTheParsedTargetAbi(string target, string expectedCarrier)
-    {
+    public void ManagedProjectionUsesTheParsedTargetAbi(
+        string target,
+        string expectedCarrier
+    ) {
         Write(CreateConfig(target, "size_t"));
 
         var result = Invoke("generate");
@@ -84,7 +86,10 @@ public sealed class BridgeCommandTests : IDisposable
         int code = CliInvocation.Run([command, "bindgen.json"], m_root, output, error);
         return (code, output.ToString(), error.ToString());
     }
-    private static BindingConfiguration CreateConfig(string target, string carrier) => new()
+    private static BindingConfiguration CreateConfig(
+        string target,
+        string carrier
+    ) => new()
     {
         schemaVersion = 2,
         library = new() { id = "fixture", nativeName = "fixture" },
@@ -92,7 +97,10 @@ public sealed class BridgeCommandTests : IDisposable
         api = new() { name = "Bridge", @namespace = "Fixture.Generated" },
         targets = [new() { id = target }],
         output = new() { root = "Generated" },
-        bridge = new() { typeLowerings = [new TypeLoweringRecipe
-        { id = "count", typePattern = "Unused::Count", cAbiType = carrier, managedProjection = new("uint", "{value}", "checked((uint){value})") }] }
+        bridge = new()
+        {
+            typeLowerings = [new TypeLoweringRecipe
+        { id = "count", typePattern = "Unused::Count", cAbiType = carrier, managedProjection = new("uint", "{value}", "checked((uint){value})") }]
+        }
     };
 }

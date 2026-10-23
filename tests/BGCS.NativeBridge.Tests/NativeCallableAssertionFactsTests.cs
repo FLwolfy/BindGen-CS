@@ -15,8 +15,11 @@ public sealed class NativeCallableAssertionFactsTests
     [Theory]
     [InlineData("Win64", "ms_abi", "sysv_abi")]
     [InlineData("X86_64SysV", "sysv_abi", "ms_abi")]
-    public void ExplicitConventionFactsDetermineAssertionsWithoutInterpretingTargetNames(string convention, string expected, string unexpected)
-    {
+    public void ExplicitConventionFactsDetermineAssertionsWithoutInterpretingTargetNames(
+        string convention,
+        string expected,
+        string unexpected
+    ) {
         NativeModule first = Module("private-target", "opaque-private-triple");
         NativeModule renamed = Module("different-target", "not-a-desktop-triple");
         NativeSourceConventions facts = new("", "", new(convention, false));
@@ -61,14 +64,20 @@ public sealed class NativeCallableAssertionFactsTests
         Assert.Throws<NotSupportedException>(() => new NativeStorageAssertionEmitter().Emit(Copy(source, [function with { children = [parameter.id] }, parameter]), [], permitted));
     }
 
-    private static NativeModule Copy(NativeModule source, ImmutableArray<NativeDeclaration> declarations)
+    private static NativeModule Copy(
+        NativeModule source,
+        ImmutableArray<NativeDeclaration> declarations
+    )
         => new(source.targetId, source.triple, source.pointerSize, source.types, declarations, []) { language = SourceLanguage.C };
 
-    private static NativeModule Module(string targetId, string triple)
+    private static NativeModule Module(
+        string targetId,
+        string triple
+    )
         => new(targetId, triple, 8,
             [new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true },
              new(new("void"), NativeTypeCategory.Primitive, "void", 0, null) { primitiveKind = "Void" }],
             [new(new("function"), "Function", "NativeAction", "NativeAction", null, default)
             { role = "Function", returnType = new("int"), callingConvention = "C", hasPrototype = true }], [])
-            { language = SourceLanguage.C };
+        { language = SourceLanguage.C };
 }

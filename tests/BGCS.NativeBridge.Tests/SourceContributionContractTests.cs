@@ -137,7 +137,10 @@ public sealed class SourceContributionContractTests
     private sealed class ContributionPlugin : IBindingPlugin
     {
         public PluginDescriptor descriptor { get; } = new("fixture.source-plugin", "3.0.0", [new("fixture.sources", ExtensionPort.SourceContributor, 12)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) =>
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) =>
             registry.RegisterFactory<ISourceContributor>("fixture.sources", static _ => new Contributor());
     }
 
@@ -145,8 +148,10 @@ public sealed class SourceContributionContractTests
     {
 
 
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new SourceContribution([
                 SourceContributionArtifact.FromUtf8("lookup.txt", SourceContributionRole.Resource, "text/plain", "fixture\0\U0001F642")
@@ -161,7 +166,10 @@ public sealed class SourceContributionContractTests
         public Type? serviceType { get; private set; }
         public bool wasCreated { get; private set; }
 
-        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
+        public void RegisterFactory<TService>(
+            string id,
+            Func<ExtensionActivationContext, TService> factory
+        ) where TService : class
         {
             Assert.Null(m_factory);
             this.id = id;

@@ -29,12 +29,19 @@ public sealed class NestedGeneratedTypeTests
     [InlineData(false, true, ManagedApiStyle.Static)]
     [InlineData(true, false, ManagedApiStyle.Static)]
     [InlineData(true, true, ManagedApiStyle.Static)]
-    public async Task ScopeChangesTypeIdentityWhilePreservingStorageAndExactDelegatePrototype(bool nested, bool sourceRuntime, ManagedApiStyle style)
-    {
+    public async Task ScopeChangesTypeIdentityWhilePreservingStorageAndExactDelegatePrototype(
+        bool nested,
+        bool sourceRuntime,
+        ManagedApiStyle style
+    ) {
         ManagedApiModel model = Model(nested, style);
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { singleFile = sourceRuntime, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" };
+        EmissionRequest request = new("native", sink)
+        {
+            singleFile = sourceRuntime,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime"
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         CSharpCompilation compilation = Compile(sink);
@@ -99,8 +106,10 @@ public sealed class NestedGeneratedTypeTests
     [InlineData(ManagedApiStyle.Static, "Raw")]
     [InlineData(ManagedApiStyle.Static, "Load")]
     [InlineData(ManagedApiStyle.Static, "NativeLibraryName")]
-    public async Task NestedTypeAndApiMemberConflictsFailBeforeCandidateWrites(ManagedApiStyle style, string name)
-    {
+    public async Task NestedTypeAndApiMemberConflictsFailBeforeCandidateWrites(
+        ManagedApiStyle style,
+        string name
+    ) {
         ManagedApiModel model = Model(true, style);
         var index = model.types.IndexOf(model.types.Single(type => model.interop.GetType(type.nativeType).category == NativeTypeCategory.Record && type.name == "Outer"));
         model = model with { types = model.types.SetItem(index, model.types[index] with { name = name }) };
@@ -110,17 +119,20 @@ public sealed class NestedGeneratedTypeTests
         Assert.Empty(sink.sources);
     }
 
-    private static ManagedApiModel Model(bool nested, ManagedApiStyle style)
-    {
+    private static ManagedApiModel Model(
+        bool nested,
+        ManagedApiStyle style
+    ) {
         InteropModule original = NeutralBackendTests.ModelWithStorage().interop;
         InteropType outer = original.types.Single(type => type.declarationName == "Outer");
         InteropType pointer = new(new("outer-pointer"), "Outer*", NativeTypeCategory.Pointer, 8, 8) { elementType = outer.id };
         InteropType callable = new(new("callback"), "int(Outer*)", NativeTypeCategory.Function, null, null)
-            { returnType = original.types[0].id, parameterTypes = [pointer.id], callingConvention = "C" };
+        { returnType = original.types[0].id, parameterTypes = [pointer.id], callingConvention = "C" };
         InteropType functionPointer = new(new("callback-pointer"), "int(*)(Outer*)", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         InteropType alias = new(new("callback-alias"), "NativeCallback", NativeTypeCategory.Alias, 8, 8) { declarationName = "NativeCallback", elementType = functionPointer.id };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize,
-            original.types.AddRange(ImmutableArray.Create(pointer, callable, functionPointer, alias)), original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            original.types.AddRange(ImmutableArray.Create(pointer, callable, functionPointer, alias)), original.functions, [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi")
         { nestGeneratedTypesInApi = nested, style = style, enums = [new("WideFlags", ManagedIntegralKind.UInt64, [new("High", "9223372036854775808")])] }, CancellationToken.None);
     }

@@ -101,8 +101,12 @@ public sealed class PluginSessionTests
             await using BindingHost host = PluginFrontendBuilder().AddPlugin<TargetPlugin>().Build();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "custom-wasm32" }], api = new() { runtime = new("fixture.empty-model") }, cache = new() { enabled = false }
+                schemaVersion = 2,
+                library = new() { id = "custom", nativeName = "custom" },
+                source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "custom-wasm32" }],
+                api = new() { runtime = new("fixture.empty-model") },
+                cache = new() { enabled = false }
             };
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -127,8 +131,12 @@ public sealed class PluginSessionTests
                 .RegisterFactory<INativeTargetProvider>(new("probe.unknown-wasm", ExtensionPort.NativeTargetProvider), _ => new CustomTarget(() => { }, NativeByteOrder.Unknown)).Build();
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "custom", nativeName = "custom" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "custom-wasm32" }], api = new() { runtime = new("fixture.empty-model") }, cache = new() { enabled = false }
+                schemaVersion = 2,
+                library = new() { id = "custom", nativeName = "custom" },
+                source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "custom-wasm32" }],
+                api = new() { runtime = new("fixture.empty-model") },
+                cache = new() { enabled = false }
             };
             GenerationResult result = await host.GenerateAsync(new(configuration, root));
             Assert.False(result.success);
@@ -152,8 +160,11 @@ public sealed class PluginSessionTests
                 .AddPluginFactory(() => new ProbePlugin(throwOnDispose: ++instances > 1)).Build();
             GenerationResult result = await host.GenerateAsync(new(new()
             {
-                schemaVersion = 2, library = new() { id = "release", nativeName = "release" }, source = new() { headers = ["custom.h"] },
-                targets = [new() { id = "host" }], cache = new() { enabled = false }
+                schemaVersion = 2,
+                library = new() { id = "release", nativeName = "release" },
+                source = new() { headers = ["custom.h"] },
+                targets = [new() { id = "host" }],
+                cache = new() { enabled = false }
             }, root));
             Assert.False(result.success);
             Assert.Contains("plugin cleanup", result.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
@@ -206,7 +217,9 @@ public sealed class PluginSessionTests
             await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => { frontendCreated = true; return new EmptyFrontend(); }).Build();
             GenerationResult result = await host.GenerateAsync(new(new()
             {
-                schemaVersion = 2, library = new() { id = "settings", nativeName = "settings" }, source = new() { headers = ["unused.h"] },
+                schemaVersion = 2,
+                library = new() { id = "settings", nativeName = "settings" },
+                source = new() { headers = ["unused.h"] },
                 extensions = new() { options = ImmutableDictionary<string, PluginSettingsConfiguration>.Empty.Add("missing-plugin", new()) }
             }, root));
             Assert.False(result.success);
@@ -226,8 +239,11 @@ public sealed class PluginSessionTests
         File.WriteAllText(Path.Combine(root, "unused.h"), "/* Explicit empty neutral frontend fixture input. */");
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 2, library = new() { id = "gate", nativeName = "gate" }, source = new() { headers = ["unused.h"] },
-            targets = [new() { id = "host" }], cache = new() { enabled = false }
+            schemaVersion = 2,
+            library = new() { id = "gate", nativeName = "gate" },
+            source = new() { headers = ["unused.h"] },
+            targets = [new() { id = "host" }],
+            cache = new() { enabled = false }
         };
         List<string> trace = [];
         try
@@ -268,12 +284,21 @@ public sealed class PluginSessionTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private sealed class ProbeValidator(string identity, int order, List<string> trace, bool reject = false, bool releaseFailure = false, Action? action = null) : IGenerationValidator, IDisposable
+    private sealed class ProbeValidator(
+        string identity,
+        int order,
+        List<string> trace,
+        bool reject = false,
+        bool releaseFailure = false,
+        Action? action = null
+    ) : IGenerationValidator, IDisposable
     {
         public string id => identity;
         public int priority => order;
-        public async ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             trace.Add(identity);
             Assert.Equal(request.target.targetId.value, request.interop.targetId);
             string abi = await request.content.ReadTextAsync(request.artifacts.Single(artifact => artifact.relativePath.EndsWith("abi.manifest.json", StringComparison.Ordinal)).relativePath, cancellationToken);
@@ -296,8 +321,10 @@ public sealed class PluginSessionTests
 
     private sealed class EmptyModelRuntime : IManagedRuntimeProvider
     {
-        public bool TryResolve(ManagedRuntimeRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ManagedRuntimeProfile? profile)
-        {
+        public bool TryResolve(
+            ManagedRuntimeRequest request,
+            [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ManagedRuntimeProfile? profile
+        ) {
             profile = null;
             if (request.runtimeId.value != "fixture.empty-model") return false;
             if (request.target.byteOrder == NativeByteOrder.Unknown) throw new NotSupportedException("The fixture requires an explicit byte order.");
@@ -314,7 +341,11 @@ public sealed class PluginSessionTests
         }
     }
 
-    private sealed class ProbePlugin(string? failure = null, int major = BGCS.Core.Versioning.ContractVersion.C_MAJOR, bool throwOnDispose = false) : IBindingPlugin
+    private sealed class ProbePlugin(
+        string? failure = null,
+        int major = BGCS.Core.Versioning.ContractVersion.C_MAJOR,
+        bool throwOnDispose = false
+    ) : IBindingPlugin
     {
         public ProbePlugin() : this(null) { }
         public List<string> trace { get; } = [];
@@ -322,8 +353,10 @@ public sealed class PluginSessionTests
         public IExtensionRegistryBuilder? retainedRegistry { get; private set; }
         private bool m_changed;
         public PluginDescriptor descriptor => new("probe", m_changed ? "2.0.0" : "1.0.0", [new("probe.transform", ExtensionPort.NativeModuleTransform, 4)]) { contractsMajor = major };
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        {
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) {
             trace.Add("configure");
             retainedRegistry = registry;
             if (failure == "missing") return;
@@ -339,22 +372,31 @@ public sealed class PluginSessionTests
     {
         public string id => "probe.transform";
         public int priority => 4;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) { trace.Add("transform"); return module; }
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) { trace.Add("transform"); return module; }
         public void Dispose() => trace.Add("service.dispose");
     }
 
     private sealed class EmptyFrontend : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(new FrontendResult(new(request.target.targetId.value, request.target.triple,
                 request.target.architectureId == "wasm32" ? 4 : TestComposition.PointerSize(request.target), [], [], [])
-                { language = request.language, byteOrder = request.target.byteOrder }, new([], [])));
+            { language = request.language, byteOrder = request.target.byteOrder }, new([], [])));
     }
 
     private sealed class SettingsPlugin : IBindingPlugin
@@ -365,13 +407,16 @@ public sealed class PluginSessionTests
         {
             configurationSchema = JsonSerializer.SerializeToElement(new
             {
-                type = "object", additionalProperties = false,
+                type = "object",
+                additionalProperties = false,
                 properties = new { enabled = new { type = "boolean" }, count = new { type = "integer", minimum = 0, maximum = 10 } },
                 required = new[] { "enabled", "count" }
             })
         };
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        {
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) {
             this.configuration = configuration;
             registry.RegisterFactory<INativeModuleTransform>("probe.transform", _ => new ProbeTransform([]));
         }
@@ -381,20 +426,31 @@ public sealed class PluginSessionTests
     {
         public FrontendPlugin() { }
         public PluginDescriptor descriptor => new("probe.frontend-plugin", "1.0.0", [new("probe.frontend", ExtensionPort.Frontend)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<IFrontend>("probe.frontend", _ => new EmptyFrontend());
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) => registry.RegisterFactory<IFrontend>("probe.frontend", _ => new EmptyFrontend());
     }
 
     private sealed class TargetPlugin : IBindingPlugin
     {
         public TargetPlugin() { }
         public PluginDescriptor descriptor => new("probe.target-plugin", "1.0.0", [new("probe.target", ExtensionPort.NativeTargetProvider)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration) => registry.RegisterFactory<INativeTargetProvider>("probe.target", _ => new CustomTarget(() => { }));
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) => registry.RegisterFactory<INativeTargetProvider>("probe.target", _ => new CustomTarget(() => { }));
     }
 
-    private sealed class CustomTarget(Action dispose, NativeByteOrder byteOrder = NativeByteOrder.LittleEndian) : INativeTargetProvider, IDisposable
+    private sealed class CustomTarget(
+        Action dispose,
+        NativeByteOrder byteOrder = NativeByteOrder.LittleEndian
+    ) : INativeTargetProvider, IDisposable
     {
-        public bool TryResolve(NativeTargetRequest request, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             target = request.targetId.value == "custom-wasm32" ? new(request.targetId, "emscripten", "wasm32", "emscripten", "wasm32-unknown-emscripten", request.toolchain, byteOrder: byteOrder) : null;
             return target is not null;
         }

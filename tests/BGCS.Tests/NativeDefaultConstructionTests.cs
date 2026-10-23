@@ -54,15 +54,20 @@ public sealed class NativeDefaultConstructionTests
 
     private static BindingConfiguration Configuration(string runtimeMode) => new()
     {
-        schemaVersion = 2, library = new() { id = "default", nativeName = "default_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "default", nativeName = "default_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["default.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.DefaultConstruction", name = "DefaultApi" },
         semantics = new() { ownedResults = [new() { function = "Demo::DefaultBox::DefaultBox()", releaseThreadDomain = "any" }] },
-        runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
+        runtime = new() { mode = runtimeMode },
+        cache = new() { enabled = false }
     };
 
-    private static void Invoke(string sources, string binary, string runtimeMode)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        string runtimeMode
+    ) {
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         string consumer = """
             using Generated.DefaultConstruction;

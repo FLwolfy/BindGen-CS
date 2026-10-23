@@ -25,8 +25,12 @@ public sealed class SupplyChainCommandTests
         string packagePath = Path.Combine(artifacts, "BGCS.1.0.0.nupkg");
         File.WriteAllText(Path.Combine(artifacts, "package-verification.json"), JsonSerializer.Serialize(new
         {
-            schemaVersion = 1, completeProductSet = true, sourceRevision = revision,
-            checkedOutSourceSha256 = new string('b', 64), sourceRevisionStable = true, sourceBytesStable = true,
+            schemaVersion = 1,
+            completeProductSet = true,
+            sourceRevision = revision,
+            checkedOutSourceSha256 = new string('b', 64),
+            sourceRevisionStable = true,
+            sourceBytesStable = true,
             sourceWorktreeDirty = false,
             sourceAtCompletion = new { sourceRevision = revision, checkedOutSourceSha256 = new string('b', 64), sourceWorktreeDirty = false },
             packages = new[] { new { file = "BGCS.1.0.0.nupkg", bytes = new FileInfo(packagePath).Length,

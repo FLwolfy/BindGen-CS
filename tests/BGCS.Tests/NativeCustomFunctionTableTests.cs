@@ -27,14 +27,18 @@ public sealed class NativeCustomFunctionTableTests
             string example = Path.Combine(Repository(), "examples", "CustomFunctionTable");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "custom-table", nativeName = "custom_table" },
+                schemaVersion = 2,
+                library = new() { id = "custom-table", nativeName = "custom_table" },
                 source = new() { headers = [Path.Combine(example, "native.h")], includeDirectories = [example], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.CustomFunctionTable", name = "CustomTableApi", importMode = BindingImportMode.FunctionTable,
+                    @namespace = "Generated.CustomFunctionTable",
+                    name = "CustomTableApi",
+                    importMode = BindingImportMode.FunctionTable,
                     names = ImmutableDictionary<string, string>.Empty.Add("table_add", "Add").Add("table_multiply", "Multiply").Add("table_hold", "Hold")
                 },
-                runtime = new() { mode = "package" }, cache = new() { enabled = false }
+                runtime = new() { mode = "package" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));

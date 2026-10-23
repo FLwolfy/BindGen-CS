@@ -57,8 +57,11 @@ public sealed class NativeCppSequenceTests
     [InlineData("Demo::SumRef", false, "nonretention")]
     [InlineData("Demo::Escape", true, "escape")]
     [InlineData("Demo::SumUtf8Span", true, "identical native C element types")]
-    public async Task UnsafeSequenceAdapters_FailBeforeCandidatePublication(string function, bool assertCall, string reason)
-    {
+    public async Task UnsafeSequenceAdapters_FailBeforeCandidatePublication(
+        string function,
+        bool assertCall,
+        string reason
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-cpp-sequence-refusal-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -78,21 +81,35 @@ public sealed class NativeCppSequenceTests
 
     private static BindingConfiguration Configuration(string runtimeMode) => new()
     {
-        schemaVersion = 2, library = new() { id = "sequences", nativeName = "sequence_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "sequences", nativeName = "sequence_fixture" },
         source = new() { language = SourceLanguage.Cpp, headers = ["sequences.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.NativeSequences", name = "SequenceApi" },
         semantics = new() { ownedResults = [new() { function = "Demo::Receiver::Receiver(int)", releaseThreadDomain = "any" }] },
-        bridge = new() { cpp = new() { sequenceInputAdapters = [Request("Demo::SumVector"), Request("Demo::SumArray"), Request("Demo::SumString"), Request("Demo::SumUtf8"),
+        bridge = new()
+        {
+            cpp = new()
+            {
+                sequenceInputAdapters = [Request("Demo::SumVector"), Request("Demo::SumArray"), Request("Demo::SumString"), Request("Demo::SumUtf8"),
             Request("Demo::SumBool"), Request("Demo::SumSpan", true), Request("Demo::SumConstSpan", true), Request("Demo::SumFixedSpan", true),
-            Request("Demo::SumRef", true), Request("Demo::Receiver::Sum")] } },
-        runtime = new() { mode = runtimeMode },  cache = new() { enabled = false }
+            Request("Demo::SumRef", true), Request("Demo::Receiver::Sum")]
+            }
+        },
+        runtime = new() { mode = runtimeMode },
+        cache = new() { enabled = false }
     };
 
-    private static SequenceInputAdapterRequest Request(string function, bool call = false) => new(function,
+    private static SequenceInputAdapterRequest Request(
+        string function,
+        bool call = false
+    ) => new(function,
         [new("values") { retainsArgument = call ? false : null, lifetime = call ? NativeLifetimeKind.Call : NativeLifetimeKind.Unknown }]);
 
-    private static void Invoke(string sources, string binary, string runtimeMode)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        string runtimeMode
+    ) {
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         string runtime = runtimeMode == "package" ? "BGCS.Runtime" : "Generated.NativeSequences.Runtime";
         string consumer = """

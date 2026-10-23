@@ -11,7 +11,7 @@ namespace BGCS.Extension.FreeBsd;
 public sealed class FreeBsdPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc/>
-    public PluginDescriptor descriptor => new("bgcs.extension.freebsd", "4.0.0", [new("bgcs.target.freebsd", ExtensionPort.NativeTargetProvider)]);
+    public PluginDescriptor descriptor => new("bgcs.extension.freebsd", "4.1.0", [new("bgcs.target.freebsd", ExtensionPort.NativeTargetProvider)]);
     /// <inheritdoc/>
     public void Configure(
         IExtensionRegistryBuilder registry,

@@ -99,18 +99,33 @@ public sealed class NativeRegistrationSafetyPolicyTests
                 """);
             CallbackParameterConfiguration callback = new()
             {
-                function = "Start", parameter = "callback", retained = true,
+                function = "Start",
+                parameter = "callback",
+                retained = true,
                 lifetime = asynchronous ? NativeLifetimeKind.Operation : NativeLifetimeKind.Registration,
-                threading = NativeCallbackThreading.AnyThread, userDataParameter = "state", callableUserDataIndex = 2,
-                unregisterFunction = "StopAndJoin", unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
-                registration = new() { unregisterHandleParameter = "handle", releaseThreadDomain = "any",
-                    nullResultQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations }
+                threading = NativeCallbackThreading.AnyThread,
+                userDataParameter = "state",
+                callableUserDataIndex = 2,
+                unregisterFunction = "StopAndJoin",
+                unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
+                registration = new()
+                {
+                    unregisterHandleParameter = "handle",
+                    releaseThreadDomain = "any",
+                    nullResultQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations
+                }
             };
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "registration-safety", nativeName = "registration_safety_fixture" },
-                source = new() { language = SourceLanguage.C, headers = ["registration.h"], parseMacros = false,
-                    includeTransitivelyReferencedHeaders = false },
+                schemaVersion = 2,
+                library = new() { id = "registration-safety", nativeName = "registration_safety_fixture" },
+                source = new()
+                {
+                    language = SourceLanguage.C,
+                    headers = ["registration.h"],
+                    parseMacros = false,
+                    includeTransitivelyReferencedHeaders = false
+                },
                 api = new() { @namespace = "Generated.RegistrationSafety", name = "RegistrationApi" },
                 semantics = new()
                 {
@@ -178,12 +193,15 @@ public sealed class NativeRegistrationSafetyPolicyTests
                     "missing-unregister" => callback with { registration = null, unregisterFunction = null },
                     _ => callback
                 };
-                BindingConfiguration request = configuration with { semantics = configuration.semantics with
+                BindingConfiguration request = configuration with
                 {
-                    callbackParameters = [incomplete],
-                    asyncOperations = fault == "unknown-completion" ? [configuration.semantics.asyncOperations[0] with
+                    semantics = configuration.semantics with
+                    {
+                        callbackParameters = [incomplete],
+                        asyncOperations = fault == "unknown-completion" ? [configuration.semantics.asyncOperations[0] with
                         { completionQuiescence = NativeQuiescenceKind.Unknown }] : configuration.semantics.asyncOperations
-                } };
+                    }
+                };
                 GenerationResult rejected = await host.GenerateAsync(new(request, root));
                 Assert.False(rejected.success);
                 Assert.False(rejected.published);

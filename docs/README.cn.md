@@ -1,4 +1,4 @@
-# BGCS 4.0 文档
+# BGCS 文档
 
 [English](README.md) | [仓库 README](../README.cn.md)
 

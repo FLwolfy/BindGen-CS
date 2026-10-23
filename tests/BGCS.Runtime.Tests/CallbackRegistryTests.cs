@@ -34,8 +34,10 @@ public sealed class CallbackRegistryTests
     public async Task ConcurrentRegistrationsAndRepeatedRetirementKeepIdentitiesIndependent()
     {
         ConcurrentBag<CallbackRegistry<State>.Registration> registrations = [];
-        await Parallel.ForEachAsync(Enumerable.Range(0, 512), (value, _) =>
-        {
+        await Parallel.ForEachAsync(Enumerable.Range(0, 512), (
+            value,
+            _
+        ) => {
             var registration = CallbackRegistry<State>.Register(new(value));
             Assert.True(CallbackRegistry<State>.TryGet(registration.token, out State? state));
             Assert.Equal(value, state!.offset);
@@ -43,14 +45,18 @@ public sealed class CallbackRegistryTests
             return ValueTask.CompletedTask;
         });
         Assert.Equal(512, registrations.Select(registration => registration.token).Distinct().Count());
-        await Parallel.ForEachAsync(registrations.Concat(registrations), (registration, _) =>
-        { registration.Dispose(); return ValueTask.CompletedTask; });
+        await Parallel.ForEachAsync(registrations.Concat(registrations), (
+            registration,
+            _
+        ) => { registration.Dispose(); return ValueTask.CompletedTask; });
         foreach (var registration in registrations) Assert.False(CallbackRegistry<State>.TryGet(registration.token, out _));
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static int Invoke(nint token, int value)
-    {
+    private static int Invoke(
+        nint token,
+        int value
+    ) {
         if (!CallbackRegistry<State>.TryGet(token, out State? state)) return -1;
         Interlocked.Increment(ref state.calls);
         return state.offset + value;

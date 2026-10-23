@@ -27,7 +27,8 @@ public sealed class ExactIrRetirementPlanningTests
         InteropType unsigned = new(new("unsigned"), "unsigned int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "UnsignedInt", isSigned = false };
         InteropType flags = new(new("flags"), "Flags", NativeTypeCategory.Record, 4, 4)
         {
-            declarationName = "Flags", recordKind = "Struct",
+            declarationName = "Flags",
+            recordKind = "Struct",
             fields = [new(new("mode"), "Mode", signed.id, 0, 0, 3), new(new("enabled"), "Enabled", unsigned.id, 0, 3, 1)]
         };
         InteropModule module = new("bits", "windows-x64-msvc", 8, [signed, unsigned, flags], [], []) { byteOrder = NativeByteOrder.LittleEndian };

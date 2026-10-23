@@ -78,12 +78,18 @@ public sealed class CNativeBridgeClosureTests
         LoweringContext input = CallbackInput(false);
         InteropModule semantics = input.semantics!;
         InteropFunction registration = semantics.functions.Single(function => function.id.value == "register");
-        registration = registration with { parameters = registration.parameters.Select(parameter => parameter.callback is null ? parameter : parameter with
-        { callback = fault switch {
-            "no-native-frame-drain" => parameter.callback! with { unregisterQuiescence = NativeQuiescenceKind.NoNewInvocations },
-            "null-result-active" => parameter.callback! with { registration = parameter.callback!.registration! with { nullResultQuiescence = NativeQuiescenceKind.NoNewInvocations } },
-            _ => parameter.callback! with { unregisterFunction = new("not-selected") }
-        } }).ToImmutableArray() };
+        registration = registration with
+        {
+            parameters = registration.parameters.Select(parameter => parameter.callback is null ? parameter : parameter with
+            {
+                callback = fault switch
+                {
+                    "no-native-frame-drain" => parameter.callback! with { unregisterQuiescence = NativeQuiescenceKind.NoNewInvocations },
+                    "null-result-active" => parameter.callback! with { registration = parameter.callback!.registration! with { nullResultQuiescence = NativeQuiescenceKind.NoNewInvocations } },
+                    _ => parameter.callback! with { unregisterFunction = new("not-selected") }
+                }
+            }).ToImmutableArray()
+        };
         Assert.Throws<NotSupportedException>(() => new NativeBridgePlanner().Plan(input with
         { semantics = WithFunctions(semantics, semantics.functions.Replace(semantics.functions.Single(function => function.id.value == "register"), registration)) }));
     }
@@ -119,9 +125,10 @@ public sealed class CNativeBridgeClosureTests
         NativeDeclaration function = Function("sum", "Sum", new("int"), new StableId("count")) with { isVariadic = true };
         NativeDeclaration prefix = Parameter("count", "count", function.id, new("int"));
         NativeModule module = new("fixture-x64", "x86_64-fixture", 8, basic.Types.Add(small).Add(single), basic.Declarations.Add(function).Add(prefix), [])
-            { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
+        { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
         NativeVariadicAdapter adapter = new(function.id, new BGCS.Analysis.Types.NativeTypeFormatter().CallableSignature(module, function), "SumShortFloat", 1,
-            [new("first", "short"), new("second", "float")]) { argumentTypes = [small.id, single.id] };
+            [new("first", "short"), new("second", "float")])
+        { argumentTypes = [small.id, single.id] };
         NativeBridgePlan plan = new NativeBridgePlanner().Plan(Context(module), variadicAdapters: [adapter]) with
         { postamble = "static inline int SumShortFloat(int count, short first, float second) { return Sum(count, first, second); }" };
         BridgeExport export = Assert.Single(plan.exports);
@@ -150,8 +157,11 @@ public sealed class CNativeBridgeClosureTests
         NativeBridgePlan plan = new NativeBridgePlanner(new(types: [(new("fixture.type", ExtensionPort.NativeTypeLowering), new ValueLowering())])).Plan(ValueInput());
         BridgeExport export = Assert.Single(plan.exports);
         BridgeArgumentGroup group = Assert.Single(export.operation.argumentGroups);
-        plan = plan with { exports = [export with { operation = export.operation with { argumentGroups = [group with
-        { expression = group.expression! with { text = group.expression!.text + " + 1" } }] } }] };
+        plan = plan with
+        {
+            exports = [export with { operation = export.operation with { argumentGroups = [group with
+        { expression = group.expression! with { text = group.expression!.text + " + 1" } }] } }]
+        };
         Sink sink = new();
         Assert.Throws<InvalidOperationException>(() => new TypedBridgeEmitter().Emit(plan, sink, "fixture"));
         Assert.Empty(sink.files);
@@ -188,22 +198,34 @@ public sealed class CNativeBridgeClosureTests
                 register, stop, cancel, Parameter("transform-input", "transform", register.id, transformPointer.id),
                 Parameter("notice-input", "notice", register.id, noticePointer.id), Parameter("data-input", "data", register.id, state.id),
                 Parameter("stop-handle", "handle", stop.id, nativeHandle.id), Parameter("cancel-handle", "handle", cancel.id, nativeHandle.id)]), [])
-            { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
+        { language = SourceLanguage.C, byteOrder = NativeByteOrder.LittleEndian };
         InteropModule semantics = new CDeclarationAnalyzer().Analyze(module, "fixture", purpose: CDeclarationAnalysisPurpose.NativeBridgePlanning);
         Assert.DoesNotContain(semantics.diagnostics, diagnostic => diagnostic.isFailure);
         InteropFunction original = semantics.functions.Single(function => function.id == register.id);
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture.native-frame-stop-and-join");
         CallbackContract Callback(StableId callable) => new(callable, new(NativeLifetimeKind.Registration, null, evidence), evidence)
-        { retained = true, userDataParameter = new("data-input"), callableUserDataIndex = 1, unregisterFunction = stop.id,
-            unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations, threading = NativeCallbackThreading.AnyThread,
-            registration = new(new("stop-handle"), NativeQuiescenceKind.NoActiveNativeInvocations, "any", evidence) { kind = NativeCallbackRegistrationKind.ReturnedHandle } };
-        InteropFunction configured = original with { parameters = original.parameters.Select(parameter => parameter.id.value switch
+        {
+            retained = true,
+            userDataParameter = new("data-input"),
+            callableUserDataIndex = 1,
+            unregisterFunction = stop.id,
+            unregisterQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations,
+            threading = NativeCallbackThreading.AnyThread,
+            registration = new(new("stop-handle"), NativeQuiescenceKind.NoActiveNativeInvocations, "any", evidence) { kind = NativeCallbackRegistrationKind.ReturnedHandle }
+        };
+        InteropFunction configured = original with
+        {
+            parameters = original.parameters.Select(parameter => parameter.id.value switch
         { "transform-input" => parameter with { callback = Callback(transform.id) }, "notice-input" => parameter with { callback = Callback(notice.id) }, _ => parameter }).ToImmutableArray(),
             asynchronous = asynchronous ? new(new("notice-input"), NativeQuiescenceKind.NoActiveNativeInvocations, evidence)
-            { cancelFunction = cancel.id, cancellationHandleParameter = new("cancel-handle"), cancellationQuiescence = NativeQuiescenceKind.NoNewInvocations } : null };
+            { cancelFunction = cancel.id, cancellationHandleParameter = new("cancel-handle"), cancellationQuiescence = NativeQuiescenceKind.NoNewInvocations } : null
+        };
         return Context(module) with { semantics = WithFunctions(semantics, semantics.functions.Replace(original, configured)) };
     }
-    private static InteropModule WithFunctions(InteropModule module, ImmutableArray<InteropFunction> functions)
+    private static InteropModule WithFunctions(
+        InteropModule module,
+        ImmutableArray<InteropFunction> functions
+    )
         => new(module.libraryId, module.targetId, module.pointerSize, module.types, functions, module.diagnostics) { byteOrder = module.byteOrder };
     private static LoweringContext Context(NativeModule module) => new(module,
         new(new(module.targetId), "fixture", "x64", "fixture", module.triple, new(), new(false, false), NativeByteOrder.LittleEndian)
@@ -219,44 +241,81 @@ public sealed class CNativeBridgeClosureTests
         return ([nothing, integer, sample], [record, field]);
     }
     private static SourceLocation Location() => new("native.h", 1, 1);
-    private static NativeDeclaration Function(string id, string name, StableId result, params StableId[] parameters)
+    private static NativeDeclaration Function(
+        string id,
+        string name,
+        StableId result,
+        params StableId[] parameters
+    )
         => new(new(id), "Function", name, name, null, Location())
         { returnType = result, children = parameters.ToImmutableArray(), callingConvention = "C", linkage = "C", nativeLinkage = NativeLinkageKind.External };
-    private static NativeDeclaration Parameter(string id, string name, StableId owner, StableId type)
+    private static NativeDeclaration Parameter(
+        string id,
+        string name,
+        StableId owner,
+        StableId type
+    )
         => new(new(id), "Parameter", name, name, type, Location()) { parent = owner };
     private sealed class ValueLowering : INativeTypeLowering
     {
-        public bool CanLower(NativeTypeView type, LoweringContext context) => type.id.value == "sample";
-        public NativeTypeLoweringPlan Lower(NativeTypeView type, LoweringContext context, CancellationToken cancellationToken)
-        {
+        public bool CanLower(
+            NativeTypeView type,
+            LoweringContext context
+        ) => type.id.value == "sample";
+        public NativeTypeLoweringPlan Lower(
+            NativeTypeView type,
+            LoweringContext context,
+            CancellationToken cancellationToken
+        ) {
             BridgeType integer = new(new("custom-int"), BridgeTypeKind.Scalar, "int32_t");
             return new(integer.id, [integer], BridgeConversionKind.SourceExpression, BridgeConversionKind.SourceExpression)
-            { parameterBindings = [new("left", integer.id), new("right", integer.id)],
+            {
+                parameterBindings = [new("left", integer.id), new("right", integer.id)],
                 parameterExpression = LoweringRecipeCompiler.Expression("fixture.type", "({nativeType}){ {left} + {right} }"),
-                resultExpression = LoweringRecipeCompiler.Expression("fixture.type", "{value}.value + 1") };
+                resultExpression = LoweringRecipeCompiler.Expression("fixture.type", "{value}.value + 1")
+            };
         }
     }
     private sealed class CallableLowering : INativeCallableLowering
     {
-        public bool CanLower(NativeDeclaration callable, LoweringContext context) => callable.id.value == "echo";
-        public NativeCallableLoweringPlan Lower(NativeDeclaration callable, LoweringContext context, CancellationToken cancellationToken)
-        {
+        public bool CanLower(
+            NativeDeclaration callable,
+            LoweringContext context
+        ) => callable.id.value == "echo";
+        public NativeCallableLoweringPlan Lower(
+            NativeDeclaration callable,
+            LoweringContext context,
+            CancellationToken cancellationToken
+        ) {
             BridgeType integer = new(new("custom-int"), BridgeTypeKind.Scalar, "int32_t");
             BridgeParameter parameter = new(new("custom-input"), "value", integer.id, new("sample"), BridgeConversionKind.SourceExpression)
             { conversionExpression = LoweringRecipeCompiler.Expression("fixture.callable", "({nativeType}){ {value} + 5 }") };
             BridgeExport export = new(new("custom-echo"), "custom_echo", [parameter], new(BridgeOperationKind.FreeCall, callable.id, null, null))
-            { resultType = integer.id, nativeResultType = new("sample"), resultInOutputParameter = false, usesErrorChannel = false,
-                resultConversion = BridgeConversionKind.SourceExpression, resultExpression = LoweringRecipeCompiler.Expression("fixture.callable", "{value}.value") };
+            {
+                resultType = integer.id,
+                nativeResultType = new("sample"),
+                resultInOutputParameter = false,
+                usesErrorChannel = false,
+                resultConversion = BridgeConversionKind.SourceExpression,
+                resultExpression = LoweringRecipeCompiler.Expression("fixture.callable", "{value}.value")
+            };
             return new(export, [integer], []);
         }
     }
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
-    private static async Task CompileAndRun(Sink sink, string header, string native, string consumer)
-    {
+    private static async Task CompileAndRun(
+        Sink sink,
+        string header,
+        string native,
+        string consumer
+    ) {
         string directory = Path.Combine(Path.GetTempPath(), "BGCS.NativeBridge.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
@@ -279,8 +338,11 @@ public sealed class CNativeBridgeClosureTests
             if (!Path.GetFullPath(directory).StartsWith(expected, StringComparison.Ordinal)) throw new InvalidOperationException("A fixture cleanup path escaped its owned parent.");
             Directory.Delete(directory, true);
         }
-        static async Task Run(string file, string[] arguments, string directory)
-        {
+        static async Task Run(
+            string file,
+            string[] arguments,
+            string directory
+        ) {
             ProcessStartInfo start = new(file) { WorkingDirectory = directory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
             foreach (string argument in arguments) start.ArgumentList.Add(argument);
             using Process process = Process.Start(start) ?? throw new InvalidOperationException("The C fixture process did not start.");

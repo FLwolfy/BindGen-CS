@@ -21,8 +21,10 @@ public sealed class ProjectSourceIdentityTests : FrontendTestHost
     [InlineData(SourceLanguage.C, true)]
     [InlineData(SourceLanguage.Cpp, false)]
     [InlineData(SourceLanguage.Cpp, true)]
-    public async Task SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(SourceLanguage language, bool presumed)
-    {
+    public async Task SiblingHeadersKeepPortableIdentitiesWithoutMergingSameBasenameFiles(
+        SourceLanguage language,
+        bool presumed
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-sibling-identities-" + Guid.NewGuid().ToString("N"));
         string first = Path.Combine(root, "first checkout"), second = Path.Combine(root, "longer relocated checkout");
         string literal = "(unnamed at " + Path.Combine(first, "headers", "native.h").Replace('\\', '/') + ":8:9)";
@@ -158,7 +160,8 @@ public sealed class ProjectSourceIdentityTests : FrontendTestHost
                 """ + "\nusing LiteralTagged = Tagged<\"" + payload + "\">;\nLiteralTagged* get_tagged();\n");
             FrontendRequest request = new(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp, [header])
             {
-                pathBase = root, parseMacros = false,
+                pathBase = root,
+                parseMacros = false,
                 sourcePathMappings = generated ? ImmutableDictionary<string, string>.Empty.Add(header, "contributions/native.h")
                     : ImmutableDictionary<string, string>.Empty
             };
@@ -172,10 +175,14 @@ public sealed class ProjectSourceIdentityTests : FrontendTestHost
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private async Task<NativeModule> Parse(string root, SourceLanguage language, bool parseMacros = false)
-    {
+    private async Task<NativeModule> Parse(
+        string root,
+        SourceLanguage language,
+        bool parseMacros = false
+    ) {
         FrontendResult result = await new ClangFrontend(host).ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), language,
-            [Path.Combine(root, "native.h")]) { pathBase = root, parseMacros = parseMacros }, CancellationToken.None);
+            [Path.Combine(root, "native.h")])
+        { pathBase = root, parseMacros = parseMacros }, CancellationToken.None);
         Assert.DoesNotContain(result.module.diagnostics, diagnostic => diagnostic.isFailure);
         return result.module;
     }

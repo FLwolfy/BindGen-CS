@@ -25,14 +25,18 @@ public sealed class DocumentationPlaceholderTests
     [InlineData(false, true, ManagedApiStyle.Static)]
     [InlineData(true, false, ManagedApiStyle.Static)]
     [InlineData(true, true, ManagedApiStyle.Static)]
-    public async Task PlaceholderChoicePreservesNativeProseAndCompilesAllForwarders(bool enabled, bool singleFile, ManagedApiStyle style)
-    {
+    public async Task PlaceholderChoicePreservesNativeProseAndCompilesAllForwarders(
+        bool enabled,
+        bool singleFile,
+        ManagedApiStyle style
+    ) {
         InteropModule original = NeutralBackendTests.ModelWithStorage().interop;
         SourceDocumentation documentedParameters = new(string.Empty, [new("left", 0, "left <native> input")], "native sum");
         InteropModule interop = new(original.libraryId, original.targetId, original.pointerSize, original.types,
             original.functions.Select(function => function.exportName == "add"
                 ? function with { documentationContent = documentedParameters }
-                : function with { documentation = "Native documented method." }).ToImmutableArray(), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+                : function with { documentation = "Native documented method." }).ToImmutableArray(), [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop,
             new("Generated.Example", "NativeApi") { emitPlaceholderComments = enabled, style = style }, CancellationToken.None);
         var add = Assert.Single(interop.functions, function => function.exportName == "add");

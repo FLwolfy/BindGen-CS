@@ -80,9 +80,12 @@ public sealed class SourceContributionAliasTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "temp-alias", nativeName = "temp-alias" },
-        source = new() { headers = ["original.h"], parseMacros = false }, targets = [new() { id = "host" }],
-        api = new() { @namespace = "Generated.TemporaryAlias", name = "NativeApi" }, cache = new() { enabled = false }
+        schemaVersion = 2,
+        library = new() { id = "temp-alias", nativeName = "temp-alias" },
+        source = new() { headers = ["original.h"], parseMacros = false },
+        targets = [new() { id = "host" }],
+        api = new() { @namespace = "Generated.TemporaryAlias", name = "NativeApi" },
+        cache = new() { enabled = false }
     };
 
     private sealed class Contributor : ISourceContributor
@@ -90,21 +93,28 @@ public sealed class SourceContributionAliasTests
         internal const string C_HEADER = "#pragma once\nint contributed(void);\n";
         public string id => "alias.source";
         public int priority => 0;
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("generated.h", SourceContributionRole.PublicHeader,
                 "text/x-c-header", C_HEADER, SourceLanguage.C, exposeToBindings: true)], new(EvidenceLevel.Declared, "temporary-alias fixture")));
     }
 
     private sealed class ObservingFrontend(Func<string, Task> observe) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             string generated = Assert.Single(request.sourcePathMappings, pair => pair.Value == "contributions/alias.source/generated.h").Key;
             Assert.Equal(Contributor.C_HEADER, File.ReadAllText(generated));
             await observe(generated);
@@ -155,8 +165,10 @@ public sealed class SourceContributionAliasTests
             await LinkAsync(alias, second);
         }
 
-        internal async Task LinkAsync(string path, string target)
-        {
+        internal async Task LinkAsync(
+            string path,
+            string target
+        ) {
             Assert.StartsWith(m_root + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
             Assert.StartsWith(m_root + Path.DirectorySeparatorChar, Path.GetFullPath(target), StringComparison.Ordinal);
             if (OperatingSystem.IsWindows())

@@ -77,8 +77,13 @@ public sealed class ConfiguredCStrFamilyTests
         LoweringContext context = Context(true);
         NativeModule source = context.module;
         ImmutableArray<NativeDeclaration> declarations = source.declarations.Select(declaration => declaration.id == new StableId("getter")
-            ? mutation switch { "pointer" => declaration with { returnType = new("char") }, "private" => declaration with { visibility = "Private" },
-                "variadic" => declaration with { isVariadic = true }, _ => declaration }
+            ? mutation switch
+            {
+                "pointer" => declaration with { returnType = new("char") },
+                "private" => declaration with { visibility = "Private" },
+                "variadic" => declaration with { isVariadic = true },
+                _ => declaration
+            }
             : mutation == "ambiguous" && declaration.id == new StableId("owner") ? declaration with { children = [new("getter"), new("getter2")] } : declaration).ToImmutableArray();
         if (mutation == "ambiguous") declarations = declarations.Add(source.GetDeclaration(new("getter")) with { id = new("getter2") });
         NativeModule changed = new(source.targetId, source.triple, source.pointerSize, source.types, declarations, []);
@@ -110,9 +115,15 @@ public sealed class ConfiguredCStrFamilyTests
     }
 
     private static readonly Evidence User = new(EvidenceLevel.UserAsserted, "minimal-explicit-protocol");
-    private static CppFamilyBinding Binding() => new() { nativeType = "custom::Text", family = StandardValueKind.String,
-        stringEncoding = NativeTextEncoding.Utf8, stringAccess = CppStringAccess.CStrNullTerminated, evidence = User,
-        cStr = new() { maximumCodeUnits = 64, readableLifetime = new(NativeLifetimeKind.Call, null, User), nullTerminated = User } };
+    private static CppFamilyBinding Binding() => new()
+    {
+        nativeType = "custom::Text",
+        family = StandardValueKind.String,
+        stringEncoding = NativeTextEncoding.Utf8,
+        stringAccess = CppStringAccess.CStrNullTerminated,
+        evidence = User,
+        cStr = new() { maximumCodeUnits = 64, readableLifetime = new(NativeLifetimeKind.Call, null, User), nullTerminated = User }
+    };
 
     private static LoweringContext Context(bool isConst)
     {
@@ -133,6 +144,9 @@ public sealed class ConfiguredCStrFamilyTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> files { get; } = [];
-        public string WriteText(string relativePath, string content) { files.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { files.Add(relativePath, content); return relativePath; }
     }
 }

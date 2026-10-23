@@ -50,9 +50,14 @@ public sealed class BindingHostTests
 
     private sealed class DeclaredProvider(string input) : INativeTargetProvider, IExternalInputProvider
     {
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken) => [new(input, ExternalInputKind.File)];
-        public bool TryResolve(NativeTargetRequest request, [NotNullWhen(true)] out NativeTargetDescriptor? target)
-        {
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        ) => [new(input, ExternalInputKind.File)];
+        public bool TryResolve(
+            NativeTargetRequest request,
+            [NotNullWhen(true)] out NativeTargetDescriptor? target
+        ) {
             File.WriteAllText(input, "after!");
             target = null;
             return false;
@@ -61,14 +66,22 @@ public sealed class BindingHostTests
 
     private sealed class DeclaredFrontend(string input) : IFrontend, IExternalInputProvider, IDisposable
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken) => [new(input, ExternalInputKind.File)];
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        ) => [new(input, ExternalInputKind.File)];
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => new ProbeFrontend(() => { }).ParseAsync(request, cancellationToken);
         public void Dispose() => File.WriteAllText(input, "after!");
     }
@@ -156,30 +169,41 @@ public sealed class BindingHostTests
 
     private sealed class ProbeFrontend(Action dispose) : IFrontend, IDisposable
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             NativeModule module = new(request.target.targetId.value, request.target.triple, TestComposition.PointerSize(request.target), [], [], []) { language = request.language };
             return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot([], [])));
         }
         public void Dispose() => dispose();
     }
 
-    private sealed class HangingFrontend(TaskCompletionSource entered, Action dispose) : IFrontend, IDisposable
+    private sealed class HangingFrontend(
+        TaskCompletionSource entered,
+        Action dispose
+    ) : IFrontend, IDisposable
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             entered.TrySetResult();
             await Task.Delay(Timeout.Infinite, cancellationToken);
             throw new InvalidOperationException("An uncanceled hanging frontend unexpectedly completed.");
@@ -217,12 +241,20 @@ public sealed class BindingHostTests
         Assert.Contains("cleanup failure", result.GetDiagnosticSummary());
     }
 
-    private sealed class ProbeTransform(string identity, int ordering, List<string> trace, Action release) : INativeModuleTransform, IDisposable
+    private sealed class ProbeTransform(
+        string identity,
+        int ordering,
+        List<string> trace,
+        Action release
+    ) : INativeModuleTransform, IDisposable
     {
         public string id => identity;
         public int priority => ordering;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken)
-        {
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) {
             Assert.Equal(module.targetId, context.target.targetId.value);
             trace.Add(id);
             return module;

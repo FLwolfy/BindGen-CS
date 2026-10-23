@@ -36,7 +36,8 @@ public sealed class NativeCompilerIntrinsicTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "intrinsics", nativeName = "intrinsic_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "intrinsics", nativeName = "intrinsic_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["intrinsics.h"], parseMacros = false, includeHeaderHelpers = true },
                 api = new() { @namespace = "Generated.Intrinsics", name = "IntrinsicApi" },
 

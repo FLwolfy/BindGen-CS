@@ -63,8 +63,10 @@ public sealed class CacheExtensionRegressionTests
     {
         public string id => "new-processor";
         public int priority => 0;
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             called();
             await request.content.AddTextAsync(request.api.interop.targetId + "/managed/contribution.marker", "text/plain", "executed", cancellationToken);
         }
@@ -72,8 +74,11 @@ public sealed class CacheExtensionRegressionTests
 
     private sealed class MarkerBackend(Action called) : IBindingBackend
     {
-        public async ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(
+            ManagedApiModel model,
+            EmissionRequest request,
+            CancellationToken cancellationToken
+        ) {
             called();
             ImmutableArray<ArtifactDescriptor> artifacts = await new CSharpBackend().EmitAsync(model, request, cancellationToken);
             request.sink.WriteText("contribution.marker", "executed");

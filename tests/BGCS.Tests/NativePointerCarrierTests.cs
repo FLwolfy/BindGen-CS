@@ -21,8 +21,10 @@ public sealed class NativePointerCarrierTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExplicitAddressesPreserveOpaqueAliasesNestedArraysConstAndNativeIndirection(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-pointer-carrier-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -75,11 +77,15 @@ public sealed class NativePointerCarrierTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "addresses", nativeName = "addresses_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "addresses", nativeName = "addresses_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["addresses.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Addresses", name = "AddressApi", importMode = mode, style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
+                    @namespace = "Generated.Addresses",
+                    name = "AddressApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     nestGeneratedTypesInApi = sourceRuntime,
                     names = ImmutableDictionary<string, string>.Empty.Add("address_node", "Node").Add("address_const_node", "ConstNode").Add("address_nodes", "Nodes")
                         .Add("address_window", "Window").Add("address_windows", "Windows").Add("address_read", "Read").Add("address_read_const", "ReadConst")
@@ -95,16 +101,20 @@ public sealed class NativePointerCarrierTests
                         new("address_context") { name = "GetContextAddress", returns = "ContextAddress" }, new("address_context_value") { name = "ContextValue", parameters = [new("context", "ContextAddress")] }],
                     functionAliases = [new("address_read", "ReadAlias")]
                 },
-                semantics = new() { stringParameters = [new() { function = "address_read", parameter = "text", encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1,
+                semantics = new()
+                {
+                    stringParameters = [new() { function = "address_read", parameter = "text", encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1,
                     direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits, lifetime = NativeLifetimeKind.Call,
                     zeroTerminated = true, retainsPointer = false, allowsNull = false },
                     new() { function = "address_read_after", parameter = "text", encoding = NativeTextEncoding.Utf8, codeUnitWidth = 1,
                     direction = NativeParameterDirection.Input, lengthUnit = NativeLengthUnit.CodeUnits, lifetime = NativeLifetimeKind.Call,
                     zeroTerminated = true, retainsPointer = false, allowsNull = false }],
                     valueParameters = [new() { function = "address_read_after", parameter = "result", direction = NativeParameterDirection.Output,
-                        lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }] },
-                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = false }
+                        lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }]
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

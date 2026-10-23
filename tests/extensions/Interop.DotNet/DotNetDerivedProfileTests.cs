@@ -93,8 +93,10 @@ public sealed class DotNetDerivedProfileTests
         Direct(provider.Assess(second), second);
     }
 
-    private static NativeCallPlan Direct(CallAbiAssessment assessment, CallAbiRequest request)
-    {
+    private static NativeCallPlan Direct(
+        CallAbiAssessment assessment,
+        CallAbiRequest request
+    ) {
         Assert.Equal(NativeCallDisposition.Direct, assessment.disposition);
         NativeCallPlan plan = Assert.IsType<NativeCallPlan>(assessment.plan);
         new CallPlanValidator(request.module, request.runtime).Verify(plan);
@@ -103,12 +105,17 @@ public sealed class DotNetDerivedProfileTests
         return plan;
     }
 
-    private static CallAbiRequest ReplaceModule(CallAbiRequest request, int? width = null, NativeByteOrder? order = null,
-        InteropType? type = null, InteropFunction? function = null)
-    {
+    private static CallAbiRequest ReplaceModule(
+        CallAbiRequest request,
+        int? width = null,
+        NativeByteOrder? order = null,
+        InteropType? type = null,
+        InteropFunction? function = null
+    ) {
         InteropFunction selected = function ?? request.module.functions[0];
         InteropModule module = new(request.module.libraryId, request.module.targetId, width ?? request.module.pointerSize,
-            [type ?? request.module.types[0]], [selected], []) { byteOrder = order ?? request.module.byteOrder };
+            [type ?? request.module.types[0]], [selected], [])
+        { byteOrder = order ?? request.module.byteOrder };
         return request with { module = module, signature = NativeCallSignature.FromFunction(selected) };
     }
 

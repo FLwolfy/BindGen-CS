@@ -71,8 +71,11 @@ public sealed class PlannerModelIsolationTests
         })));
     }
 
-    private static void AssertPlan(CSharpEmissionPlan plan, ManagedApiModel model, bool replacement)
-    {
+    private static void AssertPlan(
+        CSharpEmissionPlan plan,
+        ManagedApiModel model,
+        bool replacement
+    ) {
         Assert.Same(model, plan.api);
         Assert.Equal(model.methods.Select(member => member.nativeExport), plan.methods.Select(method => method.nativeExport));
         CSharpMethodPlan read = Assert.Single(plan.methods, method => method.nativeExport == new StableId("read"));
@@ -104,10 +107,13 @@ public sealed class PlannerModelIsolationTests
         { byteOrder = NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.PlannerIsolation", "Api")
         { style = ManagedApiStyle.Static }, CancellationToken.None);
-        return model with { methods = model.methods.Select(member => member.nativeExport == read.id ? member with
+        return model with
         {
-            name = replacement ? "ReadReplacement" : "ReadOriginal",
-            defaults = [new(new("read-argument"), new(ManagedDefaultValueKind.Integer, replacement ? "17" : "7"))]
-        } : member with { name = "Other" }).ToImmutableArray() };
+            methods = model.methods.Select(member => member.nativeExport == read.id ? member with
+            {
+                name = replacement ? "ReadReplacement" : "ReadOriginal",
+                defaults = [new(new("read-argument"), new(ManagedDefaultValueKind.Integer, replacement ? "17" : "7"))]
+            } : member with { name = "Other" }).ToImmutableArray()
+        };
     }
 }

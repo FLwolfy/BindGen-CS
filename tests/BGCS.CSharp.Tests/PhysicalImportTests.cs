@@ -29,9 +29,13 @@ public sealed class PhysicalImportTests
     {
         ManagedApiModel model = Model();
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("__Internal", sink) { importMode = mode, managedRuntime = Profile(),
+        EmissionRequest request = new("__Internal", sink)
+        {
+            importMode = mode,
+            managedRuntime = Profile(),
             staticExportTable = mode == BindingImportMode.FunctionTable ? new("transport", "transport_get", "transport_revision", "transport_count",
-                "transport_identity", "transport_pointer_size", new string('a', 64), ["exchange"]) : null };
+                "transport_identity", "transport_pointer_size", new string('a', 64), ["exchange"]) : null
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpPhysicalImportPlan physical = Assert.Single(plan.physicalImports);
         Assert.Equal("nint", physical.returnType);
@@ -70,8 +74,10 @@ public sealed class PhysicalImportTests
             }
             """, sourceRuntime: false);
 
-        void Reject(string path, string changedSource)
-        {
+        void Reject(
+            string path,
+            string changedSource
+        ) {
             Assert.NotEqual(sink.sources[path], changedSource);
             Assert.Throws<InvalidOperationException>(() => new EmittedInteropContractReader().Verify(plan,
                 sink.sources.Select(item => (item.Key, item.Key == path ? changedSource : item.Value)), request.libraryName));
@@ -115,8 +121,12 @@ public sealed class PhysicalImportTests
             _ => profile
         };
         if (fault is "width" or "endian")
-            model = model with { interop = new(model.interop.libraryId, model.interop.targetId, fault == "width" ? 8 : 4,
-                model.interop.types, model.interop.functions, []) { byteOrder = fault == "endian" ? NativeByteOrder.BigEndian : NativeByteOrder.LittleEndian } };
+            model = model with
+            {
+                interop = new(model.interop.libraryId, model.interop.targetId, fault == "width" ? 8 : 4,
+                model.interop.types, model.interop.functions, [])
+                { byteOrder = fault == "endian" ? NativeByteOrder.BigEndian : NativeByteOrder.LittleEndian }
+            };
         if (fault is "width" or "endian" or "enum")
             Assert.Throws<NotSupportedException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
         else Assert.Throws<InvalidOperationException>(() => new CSharpEmissionPlanner().Plan(model, request with { managedRuntime = profile }));
@@ -141,8 +151,11 @@ public sealed class PhysicalImportTests
 
     private static ManagedRuntimeProfile Profile() => new("browser-static-table-index", new ManagedRuntimeId("fixture.nonblocking-runtime"),
         NativeModuleMechanism.StaticAdapter, [BindingImportMode.FunctionTable, BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
-    { functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger,
-        libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault, defaultCallingConvention = "Cdecl" };
+    {
+        functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger,
+        libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault,
+        defaultCallingConvention = "Cdecl"
+    };
 
     private static ManagedApiModel Model()
     {

@@ -22,8 +22,13 @@ public sealed class NativeConstantTests
     [InlineData(8, true, "-9223372036854775808", "long", "-9223372036854775808L")]
     [InlineData(4, false, "4294967295", "uint", "4294967295U")]
     [InlineData(1, true, "-128", "sbyte", "-128")]
-    public void NativeWidthAndFullIntegralRangeArePreserved(int width, bool signed, string value, string type, string expression)
-    {
+    public void NativeWidthAndFullIntegralRangeArePreserved(
+        int width,
+        bool signed,
+        string value,
+        string type,
+        string expression
+    ) {
         CSharpConstantPlan planned = Assert.Single(new CSharpConstantPlanner().Plan(Model(new(NativeScalarConstantKind.Integer, value, width, signed, Evidence))));
         Assert.Equal(type, planned.type);
         Assert.Equal(expression, planned.expression);
@@ -37,7 +42,12 @@ public sealed class NativeConstantTests
     [InlineData(NativeScalarConstantKind.Integer, "01", 1, false)]
     [InlineData(NativeScalarConstantKind.Binary32, "80000000", 8, false)]
     [InlineData(NativeScalarConstantKind.Binary64, "800000000000000", 8, false)]
-    public void UnsupportedOrOutOfRangeRepresentationsAreRejected(NativeScalarConstantKind kind, string value, int width, bool signed)
+    public void UnsupportedOrOutOfRangeRepresentationsAreRejected(
+        NativeScalarConstantKind kind,
+        string value,
+        int width,
+        bool signed
+    )
         => Assert.Throws<ArgumentException>(() => new CSharpConstantPlanner().Plan(Model(new(kind, value, width, kind == NativeScalarConstantKind.Integer ? signed : null, Evidence))));
 
     [Fact]

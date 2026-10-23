@@ -105,8 +105,11 @@ internal static class ArchitectureValidator
         return failures.Count == 0 ? 0 : 1;
     }
 
-    private static void ValidatePlatformNeutrality(string directory, string owner, ICollection<string> failures)
-    {
+    private static void ValidatePlatformNeutrality(
+        string directory,
+        string owner,
+        ICollection<string> failures
+    ) {
         foreach (string file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories).Where(path => !IsOutput(path)))
         {
             SyntaxNode syntax = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).GetRoot();

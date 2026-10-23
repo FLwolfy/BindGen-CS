@@ -29,8 +29,10 @@ public sealed class NativeManagedEnumTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedEnumsPreserveFullWidthNativeRoundTripsAndSeparateRawCarriers(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedEnumsPreserveFullWidthNativeRoundTripsAndSeparateRawCarriers(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs managed enum " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -53,11 +55,14 @@ public sealed class NativeManagedEnumTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "enum_fixture", nativeName = "enum_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "enum_fixture", nativeName = "enum_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["enums.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.EnumFixture", name = "EnumApi", importMode = mode,
+                    @namespace = "Generated.EnumFixture",
+                    name = "EnumApi",
+                    importMode = mode,
                     enums = [new("WideFlags", ManagedIntegralKind.UInt64,
                         [new("Low", "1"), new("High", "9223372036854775808"), new("All", "18446744073709551615")]) { isFlags = true },
                         new("SignedValues", ManagedIntegralKind.Int64, [new("Minimum", "-9223372036854775808"), new("Maximum", "9223372036854775807")])],
@@ -65,7 +70,7 @@ public sealed class NativeManagedEnumTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime && mode == BindingImportMode.LibraryImport ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             // Exercise the strict public JSON entry instead of bypassing grouped configuration loading.
             string path = Path.Combine(root, "bindgen.json");
@@ -80,8 +85,13 @@ public sealed class NativeManagedEnumTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static async Task InvokeAsync(string sources, string binary, BindingImportMode mode, bool sourceRuntime, string root)
-    {
+    private static async Task InvokeAsync(
+        string sources,
+        string binary,
+        BindingImportMode mode,
+        bool sourceRuntime,
+        string root
+    ) {
         string factory = mode == BindingImportMode.FunctionTable ? "EnumApi.Load(binary)" : "EnumApi.Create()";
         string consumer = Path.Combine(root, "Consumer");
         Directory.CreateDirectory(consumer);
@@ -123,7 +133,11 @@ public sealed class NativeManagedEnumTests
         try
         {
             Assembly assembly = load.LoadFromStream(image);
-            NativeLibrary.SetDllImportResolver(assembly, (name, _, _) => name == "enum_fixture" ? native : 0);
+            NativeLibrary.SetDllImportResolver(assembly, (
+                name,
+                _,
+                _
+            ) => name == "enum_fixture" ? native : 0);
             Type flags = assembly.GetType("Generated.EnumFixture.WideFlags", true)!;
             Assert.Equal(typeof(ulong), Enum.GetUnderlyingType(flags));
             Assert.True(flags.IsDefined(typeof(FlagsAttribute), false));

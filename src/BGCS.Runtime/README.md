@@ -1,10 +1,10 @@
 # BGCS.Runtime
 
-`BGCS.Runtime` is the .NET 10 runtime consumed by BGCS 3.0 bindings. It has no
-generator, Contracts, Clang, Roslyn or MSBuild dependency.
+`BGCS.Runtime` is the .NET 10 runtime consumed by BGCS 4.0 bindings. It has no
+generator, Core, Clang, Roslyn or MSBuild dependency.
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="3.0.0" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.0" />
 ```
 
 Generated instance contexts use independent module sessions. Active calls,
@@ -46,8 +46,9 @@ consumers are independently compiled and invoked during acceptance.
 Native libraries remain separate application dependencies. BGCS generates binding
 and bridge source; the consumer owns compilation, linking, packaging and deployment.
 Runtime does not install SDKs or compile native sources. A successful Runtime call
-does not certify every platform/ABI. AOT/Wasm application runs are optional private
-checks, separate from mandatory generator feature baselines.
+does not certify every platform/ABI. The Linux generator baseline includes one
+targeted Browser Mono Wasm/AOT aggregate-and-callback regression. Broader
+application certification remains separate, explicitly scoped repository work.
 
 - [Getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md)
 - [Runtime lifetimes](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/runtime-lifetime.md)

@@ -252,16 +252,23 @@ public sealed class PrimaryFrontendCacheTests
     {
         public string id => "count";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BGCS.Core.BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        { validate(); return ValueTask.FromResult(ImmutableArray<BGCS.Core.BindingDiagnostic>.Empty); }
+        public ValueTask<ImmutableArray<BGCS.Core.BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) { validate(); return ValueTask.FromResult(ImmutableArray<BGCS.Core.BindingDiagnostic>.Empty); }
     }
 
     private sealed class MutatingProcessor(Action process) : IArtifactProcessor, ICacheFingerprintProvider
     {
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(new string('d', 64)), []);
-        public ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             // Deliberately violate the processor's declared-input contract to
             // prove the independent native-input publication fence still holds.
             process();
@@ -300,8 +307,10 @@ public sealed class PrimaryFrontendCacheTests
         internal BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseWorkerDirectory(worker);
         internal GenerationRequest Request() => new(new BindingConfiguration
         {
-            schemaVersion = 2, library = new() { id = "primary_cache", nativeName = "primary_cache" },
-            source = new() { headers = ["native.h"], parseMacros = false }, api = new() { @namespace = "Generated.PrimaryCache", name = "CacheApi" }
+            schemaVersion = 2,
+            library = new() { id = "primary_cache", nativeName = "primary_cache" },
+            source = new() { headers = ["native.h"], parseMacros = false },
+            api = new() { @namespace = "Generated.PrimaryCache", name = "CacheApi" }
         }, source);
         internal string FrontendEntry() => Directory.GetFiles(Path.Combine(source, ".bgcs", "cache"), "*.stage.json")
             .Single(path => File.ReadAllText(path).Contains("frontend-result.json", StringComparison.Ordinal));

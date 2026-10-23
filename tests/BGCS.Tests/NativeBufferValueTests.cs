@@ -29,8 +29,10 @@ public sealed class NativeBufferValueTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExplicitValueAndCapacityProtocolsInvokeAndForwardWithoutLeakingNativeAddresses(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExplicitValueAndCapacityProtocolsInvokeAndForwardWithoutLeakingNativeAddresses(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-buffer-value-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -79,11 +81,14 @@ public sealed class NativeBufferValueTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "protocol", nativeName = "protocol_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "protocol", nativeName = "protocol_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["protocol.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Protocol", name = "ProtocolApi", importMode = mode,
+                    @namespace = "Generated.Protocol",
+                    name = "ProtocolApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     names = ImmutableDictionary<string, string>.Empty.Add("FILL_ALIAS", "FillAlias"),
                     functionContainers = [new("Buffers", [new("fill", "Fill"), new("transform", "Transform")])]
@@ -105,7 +110,7 @@ public sealed class NativeBufferValueTests
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -115,7 +120,9 @@ public sealed class NativeBufferValueTests
             string native = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
             {
-                importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Protocol.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
+                importMode = mode,
+                runtimeNamespace = sourceRuntime ? "Generated.Protocol.Runtime" : "BGCS.Runtime",
+                includeRuntimeSource = sourceRuntime,
                 managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
             });
             Assert.Equal(4, plan.methods.Single(method => method.name == "Transform").valueParameters.Length);
@@ -139,7 +146,10 @@ public sealed class NativeBufferValueTests
                     SyntaxNode syntax = CSharpSyntaxTree.ParseText(source.Text, new(LanguageVersion.CSharp14)).GetRoot();
                     SyntaxNode[] matching = syntax.DescendantNodes().Where(checks[check]).ToArray();
                     found |= matching.Length != 0;
-                    SyntaxNode mutation = syntax.ReplaceNodes(matching, (original, rewritten) => original is IfStatementSyntax
+                    SyntaxNode mutation = syntax.ReplaceNodes(matching, (
+                        original,
+                        rewritten
+                    ) => original is IfStatementSyntax
                         ? ((IfStatementSyntax)rewritten).WithCondition(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression))
                         : ((VariableDeclaratorSyntax)rewritten).WithInitializer(((VariableDeclaratorSyntax)rewritten).Initializer!.WithValue(SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression))));
                     return (source.Path, mutation.ToFullString());
@@ -219,17 +229,39 @@ public sealed class NativeBufferValueTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static ValueParameterConfiguration Value(string parameter, NativeParameterDirection direction) => new()
+    private static ValueParameterConfiguration Value(
+        string parameter,
+        NativeParameterDirection direction
+    ) => new()
     { function = "transform", parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false };
-    private static ValueParameterConfiguration Value(string function, string parameter, NativeParameterDirection direction) => new()
+    private static ValueParameterConfiguration Value(
+        string function,
+        string parameter,
+        NativeParameterDirection direction
+    ) => new()
     { function = function, parameter = parameter, direction = direction, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false };
-    private static BufferParameterConfiguration Buffer(string function, NativeLengthUnit unit) => new()
-    { function = function, parameter = "buffer", capacityParameter = "capacity", writtenCountParameter = "written", lengthUnit = unit,
-        direction = NativeParameterDirection.Output, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = true };
+    private static BufferParameterConfiguration Buffer(
+        string function,
+        NativeLengthUnit unit
+    ) => new()
+    {
+        function = function,
+        parameter = "buffer",
+        capacityParameter = "capacity",
+        writtenCountParameter = "written",
+        lengthUnit = unit,
+        direction = NativeParameterDirection.Output,
+        lifetime = NativeLifetimeKind.Call,
+        retainsPointer = false,
+        allowsNull = true
+    };
     private static string Compact(SyntaxNode node) => string.Concat(node.DescendantTokens().Select(token => token.Text));
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning must not write artifacts.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning must not write artifacts.");
     }
     private static string WorkerRoot()
     {

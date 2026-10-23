@@ -212,7 +212,7 @@
 
 原因：选中的主类模板或函数模板没有显式具体特化。
 
-处理：在 cpp.templateInstantiations 中声明所需类或函数实例，并提供完整类型、值参数。
+处理：在 bridge.cpp.templateInstantiations 中声明所需类或函数实例，并提供完整类型、值参数。
 
 ## BGCSCPP001 — C++ 声明缺少安全 lowering
 

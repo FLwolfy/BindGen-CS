@@ -20,8 +20,10 @@ public sealed class NativeMetadataTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedAttributesRetainCompilerFactsAndRealCallsAcrossImportAndRuntimeModes(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedAttributesRetainCompilerFactsAndRealCallsAcrossImportAndRuntimeModes(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-name-metadata-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -40,17 +42,21 @@ public sealed class NativeMetadataTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "metadata", nativeName = "metadata_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "metadata", nativeName = "metadata_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Metadata", name = "MetadataApi", importMode = mode,
+                    @namespace = "Generated.Metadata",
+                    name = "MetadataApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
-                    emitNativeMetadata = true, names = ImmutableDictionary<string, string>.Empty.Add("sample_add", "ManagedAdd")
+                    emitNativeMetadata = true,
+                    names = ImmutableDictionary<string, string>.Empty.Add("sample_add", "ManagedAdd")
                 },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

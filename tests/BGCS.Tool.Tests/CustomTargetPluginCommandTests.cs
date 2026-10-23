@@ -38,17 +38,30 @@ public sealed class CustomTargetPluginCommandTests
             Assert.True(new DesktopTargetProvider().TryResolve(new(new("host"), new(compilerPath: "uninstalled-parser-location")), out var host));
             File.WriteAllText(Path.Combine(root, "target-sdk.json"), JsonSerializer.Serialize(new
             {
-                platformId = host.platformId, host.architectureId, host.abiId, host.triple,
-                byteOrder = "littleEndian", requiresExplicitSdk = true, supportsDynamicModules = true,
-                host.sourceConventions, headerSearchPaths = host.headerSearchPaths,
-                systemIncludeDirectories = new[] { "sdk/include" }, defines = new[] { "PROFILE_VERSION=1" }
+                platformId = host.platformId,
+                host.architectureId,
+                host.abiId,
+                host.triple,
+                byteOrder = "littleEndian",
+                requiresExplicitSdk = true,
+                supportsDynamicModules = true,
+                host.sourceConventions,
+                headerSearchPaths = host.headerSearchPaths,
+                systemIncludeDirectories = new[] { "sdk/include" },
+                defines = new[] { "PROFILE_VERSION=1" }
             }));
             string sdkHeader = Path.Combine(root, "sdk", "include", "private_sdk.h");
             File.WriteAllText(sdkHeader, "#define EXAMPLE_SDK_VALUE 42\n");
             byte[] entry = File.ReadAllBytes(typeof(ExamplePlugin).Assembly.Location);
             File.WriteAllBytes(Path.Combine(root, "target-plugin.dll"), entry);
-            PluginManifest manifest = new() { schemaVersion = 1, assembly = "target-plugin.dll", entryType = typeof(ExamplePlugin).FullName!,
-                plugin = new ExamplePlugin().descriptor, assets = [new("target-plugin.dll", new(Convert.ToHexStringLower(SHA256.HashData(entry))))] };
+            PluginManifest manifest = new()
+            {
+                schemaVersion = 1,
+                assembly = "target-plugin.dll",
+                entryType = typeof(ExamplePlugin).FullName!,
+                plugin = new ExamplePlugin().descriptor,
+                assets = [new("target-plugin.dll", new(Convert.ToHexStringLower(SHA256.HashData(entry))))]
+            };
             File.WriteAllText(Path.Combine(root, "plugin.json"), JsonSerializer.Serialize(manifest,
                 new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
             using JsonDocument first = Generate(root, toolPath);
@@ -81,11 +94,17 @@ public sealed class CustomTargetPluginCommandTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static JsonDocument Generate(string root, string toolPath)
+    private static JsonDocument Generate(
+        string root,
+        string toolPath
+    )
         => Execute(root, toolPath, "generate");
 
-    private static JsonDocument Execute(string root, string toolPath, string command)
-    {
+    private static JsonDocument Execute(
+        string root,
+        string toolPath,
+        string command
+    ) {
         using StringWriter output = new(), error = new();
         int exit = CliInvocation.Run([command, "bindgen.json", "--json"], root, output, error, toolPath);
         Assert.True(exit == 0, output + Environment.NewLine + error);
@@ -119,6 +138,9 @@ public sealed class CustomTargetPluginCommandTests
         return Path.Combine(application, "BGCS.Tool.dll");
     }
 
-    private static string? Stage(JsonDocument document, string name) => document.RootElement.GetProperty("cacheStages").EnumerateArray()
+    private static string? Stage(
+        JsonDocument document,
+        string name
+    ) => document.RootElement.GetProperty("cacheStages").EnumerateArray()
         .Single(stage => stage.GetProperty("stage").GetString() == name).GetProperty("status").GetString();
 }

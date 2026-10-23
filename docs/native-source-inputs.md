@@ -128,7 +128,7 @@ headers are not consumer compiler resources.
 A `.cpp` file can be an analysis input, but a translation unit is not necessarily
 a suitable public include. Generated bridge declarations should include a
 public, self-contained header. Keep implementation `.cpp` files in the consumer's
-build, or declare a project shim through `cpp.nativeShims[].sourceFiles` with its
+build, or declare a project shim through `bridge.nativeShims[].sourceFiles` with its
 separate `publicHeaders`. Including an implementation file from a bridge while
 also compiling it can duplicate definitions. BGCS does not rewrite user-owned
 source to manufacture a public interface.

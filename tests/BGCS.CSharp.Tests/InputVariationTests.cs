@@ -23,12 +23,17 @@ public sealed class InputVariationTests
     [InlineData(ManagedApiStyle.Instance, true)]
     [InlineData(ManagedApiStyle.Static, false)]
     [InlineData(ManagedApiStyle.Static, true)]
-    public async Task AlternateInputsShareTheOriginalImportAndCheckedForwarding(ManagedApiStyle style, bool singleFile)
-    {
+    public async Task AlternateInputsShareTheOriginalImportAndCheckedForwarding(
+        ManagedApiStyle style,
+        bool singleFile
+    ) {
         ManagedApiModel original = NeutralBackendTests.Model();
         ManagedApiModel model = new DefaultManagedProjection().Project(original.interop, new("Generated.Example", "NativeApi")
-        { style = style, functions = [new("add") { inputVariations = [new([new("left", new("long", "checked((int){value})"))]),
-            new([new("left", new("short", "(int){value}"))]) { name = "AddShort" }] }] }, CancellationToken.None);
+        {
+            style = style,
+            functions = [new("add") { inputVariations = [new([new("left", new("long", "checked((int){value})"))]),
+            new([new("left", new("short", "(int){value}"))]) { name = "AddShort" }] }]
+        }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { singleFile = singleFile, includeRuntimeSource = singleFile, runtimeNamespace = singleFile ? "Generated.Example.Runtime" : "BGCS.Runtime" };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);

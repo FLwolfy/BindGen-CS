@@ -101,6 +101,8 @@ public sealed class PresentationSelectionConfigurationTests
     private static ManagedReceiverRequest Member(string function) => new(function, "Node", "self") { kind = ManagedReceiverKind.Value };
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "selection", nativeName = "selection" }, source = new() { headers = ["native.h"] }
+        schemaVersion = 2,
+        library = new() { id = "selection", nativeName = "selection" },
+        source = new() { headers = ["native.h"] }
     };
 }

@@ -24,8 +24,10 @@ public sealed class NativeExternalProjectionTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExistingNumericsAndReorderedClosedGenericTypesCopyThroughTheVerifiedRawAbi(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExistingNumericsAndReorderedClosedGenericTypesCopyThroughTheVerifiedRawAbi(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-external-projection-native-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -54,11 +56,15 @@ public sealed class NativeExternalProjectionTests
             await File.WriteAllTextAsync(Path.Combine(root, "consumer-types.cs"), consumerTypes);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "external", nativeName = "point_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "external", nativeName = "point_fixture" },
                 source = new() { headers = ["point.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
-                { projectionInputs = new() { sources = ["consumer-types.cs"] },
-                    @namespace = "Generated.External", name = "PointApi", importMode = mode,
+                {
+                    projectionInputs = new() { sources = ["consumer-types.cs"] },
+                    @namespace = "Generated.External",
+                    name = "PointApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("Point::x", "nativeX").Add("transform_generic", "TransformGeneric"),
                     externalTypes =
                     [
@@ -83,8 +89,12 @@ public sealed class NativeExternalProjectionTests
             string targetRoot = Path.Combine(result.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed, new(configuration.library.nativeName, new NoWrites())
-            { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.External.Runtime" : "BGCS.Runtime", includeRuntimeSource = sourceRuntime,
-                managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!) });
+            {
+                importMode = mode,
+                runtimeNamespace = sourceRuntime ? "Generated.External.Runtime" : "BGCS.Runtime",
+                includeRuntimeSource = sourceRuntime,
+                managedRuntime = TestComposition.ResolveRuntime(target.resolvedTarget!)
+            });
             Assert.Equal(2, plan.externalTypeProjections.Length);
             Assert.DoesNotContain(plan.methods, method => method.parameterTypes.Any(type => type.Contains("Vector2", StringComparison.Ordinal) || type.Contains("Pair<", StringComparison.Ordinal)));
             var sources = Directory.GetFiles(Path.Combine(targetRoot, "managed"), "*.cs", SearchOption.AllDirectories)
@@ -113,10 +123,13 @@ public sealed class NativeExternalProjectionTests
             {
                 var previous = Directory.GetFiles(result.outputRoot, "*", SearchOption.AllDirectories)
                     .ToDictionary(path => Path.GetRelativePath(result.outputRoot, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
-                BindingConfiguration incompatible = configuration with { api = configuration.api with
+                BindingConfiguration incompatible = configuration with
                 {
-                    externalTypes = [configuration.api.externalTypes[0], configuration.api.externalTypes[1] with { managedType = "ExternalConsumer.Pair<int>" }]
-                } };
+                    api = configuration.api with
+                    {
+                        externalTypes = [configuration.api.externalTypes[0], configuration.api.externalTypes[1] with { managedType = "ExternalConsumer.Pair<int>" }]
+                    }
+                };
                 GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(incompatible, root));
                 Assert.False(rejected.success);
                 Assert.Contains("scalar kind, signedness and width", rejected.GetDiagnosticSummary(), StringComparison.Ordinal);
@@ -131,7 +144,10 @@ public sealed class NativeExternalProjectionTests
     private static ImmutableDictionary<string, string> Fields() => ImmutableDictionary<string, string>.Empty.Add("x", "X").Add("y", "Y");
     private sealed class NoWrites : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot write artifacts.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot write artifacts.");
     }
     private static string WorkerRoot()
     {

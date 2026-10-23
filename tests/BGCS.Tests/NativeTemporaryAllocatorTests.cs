@@ -20,8 +20,10 @@ public sealed class NativeTemporaryAllocatorTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedText_UsesIndependentNativePairsAndCleanupAfterContextClosure(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedText_UsesIndependentNativePairsAndCleanupAfterContextClosure(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-temporary-allocator-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -43,21 +45,34 @@ public sealed class NativeTemporaryAllocatorTests
             foreach ((string name, int width) in new[] { ("example_text8", 1), ("example_text16", 2), ("example_text32", 4) })
                 textContracts.Add(new()
                 {
-                    function = name, parameter = "text", encoding = width switch { 1 => NativeTextEncoding.Utf8, 2 => NativeTextEncoding.Utf16, _ => NativeTextEncoding.Utf32 },
-                    codeUnitWidth = width, byteOrder = NativeTextByteOrder.Native, lengthUnit = NativeLengthUnit.CodeUnits,
-                    direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call,
-                    retainsPointer = false, zeroTerminated = true, allowsNull = false
+                    function = name,
+                    parameter = "text",
+                    encoding = width switch { 1 => NativeTextEncoding.Utf8, 2 => NativeTextEncoding.Utf16, _ => NativeTextEncoding.Utf32 },
+                    codeUnitWidth = width,
+                    byteOrder = NativeTextByteOrder.Native,
+                    lengthUnit = NativeLengthUnit.CodeUnits,
+                    direction = NativeParameterDirection.Input,
+                    lifetime = NativeLifetimeKind.Call,
+                    retainsPointer = false,
+                    zeroTerminated = true,
+                    allowsNull = false
                 });
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "temporary-allocator", nativeName = "temporary_allocator_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "temporary-allocator", nativeName = "temporary_allocator_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], includeTransitivelyReferencedHeaders = false, parseMacros = false },
-                api = new() { @namespace = "Generated.TemporaryAllocator", name = "AllocatorApi", importMode = mode,
-                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
+                api = new()
+                {
+                    @namespace = "Generated.TemporaryAllocator",
+                    name = "AllocatorApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
                 semantics = new() { stringParameters = textContracts.ToImmutable() },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             string build = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(Path.Combine(repository,

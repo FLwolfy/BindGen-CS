@@ -1,6 +1,6 @@
 # 快速开始
 
-[Wiki](README.cn.md) | [English](getting-started.md)
+[文档首页](README.cn.md) | [English](getting-started.md)
 
 ## 环境要求与平台证据
 
@@ -22,7 +22,7 @@ Windows x64 可以使用 Windows worker 和 Android NDK 头文件解析 Android 
 安装已发布的命令行工具：
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.0.0
+dotnet tool install --global BindGen-CS --version 4.1.0
 bindgen-cs --help
 ```
 
@@ -87,7 +87,7 @@ bindgen-cs init include/native.h --language c --config bindings/bindgen.json
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="4.0.0" />
+  <PackageReference Include="BGCS.Runtime" Version="4.1.0" />
 </ItemGroup>
 ```
 

@@ -164,8 +164,10 @@ public sealed class GenerationStageCacheIntegrationTests
     private static BindingHostBuilder Builder() => BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot());
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "cache_fixture", nativeName = "cache_fixture" },
-        source = new() { headers = ["native.h"], parseMacros = false }, api = new() { @namespace = "Generated.Cache", name = "CacheApi" }
+        schemaVersion = 2,
+        library = new() { id = "cache_fixture", nativeName = "cache_fixture" },
+        source = new() { headers = ["native.h"], parseMacros = false },
+        api = new() { @namespace = "Generated.Cache", name = "CacheApi" }
     };
     private static string[] ManagedBytes(GenerationResult result) => result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp")
         .OrderBy(artifact => artifact.relativePath, StringComparer.Ordinal).Select(artifact => artifact.relativePath + ":" + Convert.ToBase64String(File.ReadAllBytes(Path.Combine(result.outputRoot, artifact.relativePath)))).ToArray();
@@ -180,42 +182,65 @@ public sealed class GenerationStageCacheIntegrationTests
     {
         public string id => "count-validation";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        { validate(); return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty); }
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) { validate(); return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty); }
     }
     private sealed class UnknownStateTransform : INativeModuleTransform
     {
         public string id => "unknown-state";
         public int priority => 0;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
     }
     private sealed class FingerprintedTransform(int version) : INativeModuleTransform, ICacheFingerprintProvider
     {
         public string id => "state";
         public int priority => 0;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(version.ToString("x64")), []);
     }
     private sealed class PatchProcessor(int version) : IArtifactProcessor
     {
         public string id => "late-patch";
         public int priority => 0;
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             ArtifactDescriptor artifact = request.artifacts.First(artifact => artifact.mediaType == "text/x-csharp");
             string text = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken);
             await request.content.ReplaceTextAsync(artifact.relativePath, text + "\n// patch-version: " + version + "\n", cancellationToken);
         }
     }
-    private sealed class FingerprintedPatch(int version, Action processed) : IArtifactProcessor, ICacheFingerprintProvider
+    private sealed class FingerprintedPatch(
+        int version,
+        Action processed
+    ) : IArtifactProcessor, ICacheFingerprintProvider
     {
         public string id => "fingerprinted-patch";
         public int priority => 0;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(version.ToString("x64")), []);
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             processed();
             ArtifactDescriptor artifact = request.artifacts.First(artifact => artifact.mediaType == "text/x-csharp");
             string text = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken);

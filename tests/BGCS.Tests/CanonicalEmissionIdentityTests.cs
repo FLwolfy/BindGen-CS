@@ -25,8 +25,10 @@ public sealed class CanonicalEmissionIdentityTests
     [InlineData("{\"\\u0061\":1,\"long name <>\":null,\"array\":[{\"\\u0062\":false,\"a\":0},{\"b\":false,\"a\":1}]}", "{\"array\":[{\"a\":0,\"b\":false},{\"a\":1,\"b\":false}],\"long name <>\":null,\"a\":1}")]
     [InlineData("""{"λ😀":1,"\u0001\t\"\\":2,"<>&":{"λ😀":false,"\u0001\t\"\\":null}}""",
         """{"<>&":{"\u0001\t\"\\":null,"\u03bb\ud83d\ude00":false},"\u0001\t\"\\":2,"\u03bb\ud83d\ude00":1}""")]
-    public async Task EquivalentObjectOrderingReusesTheVerifiedEmissionAndRestoresExactBytes(string firstSettings, string reorderedSettings)
-    {
+    public async Task EquivalentObjectOrderingReusesTheVerifiedEmissionAndRestoresExactBytes(
+        string firstSettings,
+        string reorderedSettings
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-canonical-emission-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -118,10 +120,14 @@ public sealed class CanonicalEmissionIdentityTests
 
     private static BindingConfiguration Configuration(string settings) => new()
     {
-        schemaVersion = 2, library = new() { id = "canonical", nativeName = "canonical" },
+        schemaVersion = 2,
+        library = new() { id = "canonical", nativeName = "canonical" },
         source = new() { headers = ["native.h"], parseMacros = false },
-        extensions = new() { options = ImmutableDictionary<string, PluginSettingsConfiguration>.Empty.Add("canonical.settings", new()
-            { values = JsonSerializer.Deserialize<JsonElement>(settings) }) }
+        extensions = new()
+        {
+            options = ImmutableDictionary<string, PluginSettingsConfiguration>.Empty.Add("canonical.settings", new()
+            { values = JsonSerializer.Deserialize<JsonElement>(settings) })
+        }
     };
     private static string EmissionStatus(GenerationResult result) => Assert.Single(result.cacheStages.Where(stage => stage.stage == "csharpEmission")).status;
     private static string[] ManagedBytes(GenerationResult result) => result.artifacts.Where(artifact => artifact.mediaType == "text/x-csharp")
@@ -129,15 +135,28 @@ public sealed class CanonicalEmissionIdentityTests
     private sealed class SettingsPlugin : IBindingPlugin, ICacheFingerprintProvider
     {
         public PluginDescriptor descriptor => new("canonical.settings", "4.0.0", [new("canonical.transform", ExtensionPort.NativeModuleTransform)])
-            { configurationSchema = JsonSerializer.SerializeToElement(new { type = "object", additionalProperties = true }) };
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+        { configurationSchema = JsonSerializer.SerializeToElement(new { type = "object", additionalProperties = true }) };
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        )
             => registry.RegisterFactory<INativeModuleTransform>("canonical.transform", _ => new IdentityTransform());
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken) => new(new(new string('a', 64)), []);
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) => new(new(new string('a', 64)), []);
     }
     private sealed class IdentityTransform : INativeModuleTransform, ICacheFingerprintProvider
     {
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken) => new(new(new string('b', 64)), []);
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        ) => new(new(new string('b', 64)), []);
     }
     private static string WorkerRoot()
     {

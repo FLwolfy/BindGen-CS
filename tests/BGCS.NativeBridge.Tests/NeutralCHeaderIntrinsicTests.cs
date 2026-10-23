@@ -39,7 +39,8 @@ public sealed class NeutralCHeaderIntrinsicTests
         function = shape == "parameter" ? function with { children = [new("parameter")] } : function with { returnType = new("int") };
         NativeModule module = new(original.targetId, original.triple, original.pointerSize, original.types,
             original.declarations.Replace(original.GetDeclaration(function.id), function).AddRange(shape == "parameter"
-                ? ImmutableArray.Create(new NativeDeclaration(new("parameter"), "Parameter", "value", "CompilerAction::value", new("int"), function.source) { parent = function.id }) : []), []) { language = SourceLanguage.C };
+                ? ImmutableArray.Create(new NativeDeclaration(new("parameter"), "Parameter", "value", "CompilerAction::value", new("int"), function.source) { parent = function.id }) : []), [])
+        { language = SourceLanguage.C };
         BridgeExport export = Assert.Single(Plan(module).exports);
         Assert.Equal(shape == "parameter" ? 1 : 0, export.parameters.Length);
         Assert.Equal(shape == "result", export.resultType is not null);
@@ -61,7 +62,8 @@ public sealed class NeutralCHeaderIntrinsicTests
             _ => intrinsic with { addressabilityEvidence = null }
         };
         NativeModule module = new(source.targetId, source.triple, source.pointerSize, source.types,
-            source.declarations.Replace(intrinsic, changed), []) { language = SourceLanguage.C };
+            source.declarations.Replace(intrinsic, changed), [])
+        { language = SourceLanguage.C };
         if (invalid == "evidence") Assert.Throws<InvalidOperationException>(() => Plan(module));
         else Assert.Throws<NotSupportedException>(() => Plan(module));
     }
@@ -73,7 +75,10 @@ public sealed class NeutralCHeaderIntrinsicTests
         SourceLocation source = new("intrinsics.h", 1, 1);
         NativeDeclaration callable = new(new("intrinsic"), "Function", "CompilerAction", "CompilerAction", null, source)
         {
-            returnType = new("void"), callingConvention = "C", linkage = "C", nativeLinkage = NativeLinkageKind.External,
+            returnType = new("void"),
+            callingConvention = "C",
+            linkage = "C",
+            nativeLinkage = NativeLinkageKind.External,
             addressability = NativeCallableAddressability.DirectCallOnly,
             addressabilityEvidence = new(EvidenceLevel.Declared, "frontend:test:address-expression")
         };

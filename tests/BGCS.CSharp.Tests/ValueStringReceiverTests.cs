@@ -29,8 +29,10 @@ public sealed class ValueStringReceiverTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task OwnedMemberRetainsItsReceiverAndFreshTextWhileComputingHiddenInputCounts(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task OwnedMemberRetainsItsReceiverAndFreshTextWhileComputingHiddenInputCounts(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = ValueStringResultTests.Project(Module());
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("value_strings", sink)
@@ -84,8 +86,14 @@ public sealed class ValueStringReceiverTests
         else if (fault != "const-owned")
         {
             InteropParameter self = member.parameters[0];
-            member = member with { parameters = member.parameters.SetItem(0, self with { ownership = self.ownership! with
-            { retainsPointer = fault == "retained" ? true : null, lifetime = self.ownership.lifetime with { kind = fault == "unknown-call" ? NativeLifetimeKind.Unknown : NativeLifetimeKind.Call } } }) };
+            member = member with
+            {
+                parameters = member.parameters.SetItem(0, self with
+                {
+                    ownership = self.ownership! with
+                    { retainsPointer = fault == "retained" ? true : null, lifetime = self.ownership.lifetime with { kind = fault == "unknown-call" ? NativeLifetimeKind.Unknown : NativeLifetimeKind.Call } }
+                })
+            };
         }
         var types = module.types;
         var functions = module.functions.SetItem(module.functions.IndexOf(module.functions.Single(function => function.id == member.id)), member);
@@ -110,15 +118,20 @@ public sealed class ValueStringReceiverTests
     {
         InteropModule original = Module();
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types,
-            original.functions.Where(function => function.id.value is not ("create-widget" or "clone-widget")).ToImmutableArray(), []) { byteOrder = original.byteOrder };
+            original.functions.Where(function => function.id.value is not ("create-widget" or "clone-widget")).ToImmutableArray(), [])
+        { byteOrder = original.byteOrder };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(ValueStringResultTests.Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.valueStringResults);
         Assert.Contains(plan.methods, method => method.nativeExport == new StableId("make"));
         Assert.Contains(plan.ownedProjectionOmissions, omission => omission.nativeExport == new StableId("make"));
     }
 
-    internal static async Task Compile(NeutralBackendTests.MemorySink sink, string consumer, BindingImportMode mode, bool sourceRuntime)
-    {
+    internal static async Task Compile(
+        NeutralBackendTests.MemorySink sink,
+        string consumer,
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         if (mode == BindingImportMode.LibraryImport) { await ValueReceiverTests.CompileWithSdkAsync(sink, consumer, sourceRuntime); return; }
         CSharpCompilation compilation = CSharpCompilation.Create("ReceiverComposition_" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(pair => CSharpSyntaxTree.ParseText(pair.Value, new(LanguageVersion.CSharp14), pair.Key)).Append(CSharpSyntaxTree.ParseText(consumer)),
@@ -145,13 +158,19 @@ public sealed class ValueStringReceiverTests
             NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
             { zeroTerminated = false, allowsNull = false, retainsPointer = false, lengthParameter = new(prefix + "-length"), lengthDirection = NativeParameterDirection.Input } },
          new(new(prefix + "-length"), "length", new("count"))];
-        InteropFunction Status(string id, string name, ImmutableArray<InteropParameter> inputs, bool ownedResult)
-        {
+        InteropFunction Status(
+            string id,
+            string name,
+            ImmutableArray<InteropParameter> inputs,
+            bool ownedResult
+        ) {
             StableId errorId = new(id + "-error"), resultId = new(id + "-result");
             OwnershipContract error = original.functions[0].error!.errorOwnership! with { lifetime = new(NativeLifetimeKind.Owner, errorId, evidence) };
             if (ownedResult) inputs = inputs.Add(new(resultId, "result", output.id)
-            { ownership = new(NativeOwnershipKind.Owned, new(NativeLifetimeKind.Owner, resultId, evidence), evidence)
-                { releaseFunction = new("destroy-widget"), allocator = new("widget-domain"), releaseThreadDomain = "any" } });
+            {
+                ownership = new(NativeOwnershipKind.Owned, new(NativeLifetimeKind.Owner, resultId, evidence), evidence)
+                { releaseFunction = new("destroy-widget"), allocator = new("widget-domain"), releaseThreadDomain = "any" }
+            });
             return new(new(id), name, new("status"), inputs.Add(new(errorId, "error", new("error-output")) { ownership = error }), "C")
             { sourceOwnerType = owner, error = new("0", evidence) { valueParameter = ownedResult ? resultId : null, errorParameter = errorId, errorOwnership = error } };
         }
@@ -160,6 +179,7 @@ public sealed class ValueStringReceiverTests
         return new(original.libraryId, original.targetId, original.pointerSize, original.types.AddRange(ImmutableArray.Create(widget, pointer, output)),
             original.functions.SetItem(0, make).AddRange(ImmutableArray.Create(Status("create-widget", "CreateWidget", [], true),
                 Status("destroy-widget", "DestroyWidget", [Self("destroy-widget-self") with { ownership = null }], false), Status("set-text", "SetText", ImmutableArray.Create(Self("set-self")).AddRange(Text("set")), false),
-                Status("clone-widget", "Clone", ImmutableArray.Create(Self("clone-self")).AddRange(Text("clone")), true))), []) { byteOrder = original.byteOrder };
+                Status("clone-widget", "Clone", ImmutableArray.Create(Self("clone-self")).AddRange(Text("clone")), true))), [])
+        { byteOrder = original.byteOrder };
     }
 }

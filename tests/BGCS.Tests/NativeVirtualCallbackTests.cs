@@ -20,13 +20,48 @@ namespace BGCS.Tests;
 
 public sealed class NativeVirtualCallbackTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Callback(nint userData, int value, out int result);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int ReferenceCallback(nint userData, nint value);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int CreateProxy(nint userData, nint callback0, nint callback1, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Cast(nint self, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Invoke(nint self, int value, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Callback(
+        nint userData,
+        int value,
+        out int result
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ReferenceCallback(
+        nint userData,
+        nint value
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int CreateProxy(
+        nint userData,
+        nint callback0,
+        nint callback1,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Cast(
+        nint self,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Invoke(
+        nint self,
+        int value,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Count(
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void ReleaseError(nint error);
 
     [Fact]
@@ -63,7 +98,9 @@ public sealed class NativeVirtualCallbackTests
                 source = new() { language = SourceLanguage.Cpp, headers = ["fixture.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 bridge = new() { cpp = new() { virtualCallbacks = [new("calculator", "Demo::Calculator")] } },
                 api = new() { @namespace = "Generated.Virtual", name = "VirtualApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             string worker = Path.Combine(Repository(), "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", BuildConfiguration(), "net10.0");
             ConcurrentQueue<SourceLanguage> parses = new();
             await using BindingHost host = BindingGenerator.CreateBuilder().ObserveWorkerParses(worker, parses).Build();
@@ -141,15 +178,20 @@ public sealed class NativeVirtualCallbackTests
             Count live = Function<Count>(plan.exports.Single(export => export.operation.declaration is { } id && plan.source.GetDeclaration(id).qualifiedName == "Demo::Live"));
             CreateProxy create = Function<CreateProxy>(factory);
             int calls = 0;
-            callback = (nint userData, int value, out int output) =>
-            {
+            callback = (
+                nint userData,
+                int value,
+                out int output
+            ) => {
                 calls++;
                 output = value + checked((int)userData);
                 return value < 0 ? 73 : 0;
             };
             int referenceCalls = 0;
-            referenceCallback = (nint userData, nint value) =>
-            {
+            referenceCallback = (
+                nint userData,
+                nint value
+            ) => {
                 referenceCalls++;
                 int input = Marshal.ReadInt32(value);
                 if (input < 0) return 91;

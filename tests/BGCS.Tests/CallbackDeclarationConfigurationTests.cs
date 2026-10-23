@@ -10,8 +10,10 @@ public sealed class CallbackDeclarationConfigurationTests
     {
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 2, library = new() { id = "callback-flags", nativeName = "callback-flags" },
-            source = new() { headers = ["native.h"] }, api = new() { emitCallbackDelegates = false }
+            schemaVersion = 2,
+            library = new() { id = "callback-flags", nativeName = "callback-flags" },
+            source = new() { headers = ["native.h"] },
+            api = new() { emitCallbackDelegates = false }
         };
         Assert.False(BindingConfigurationLoader.ValidateAndFreeze(configuration).api.emitCallbackDelegates);
         Assert.True(new ApiConfiguration().emitCallbackDelegates);

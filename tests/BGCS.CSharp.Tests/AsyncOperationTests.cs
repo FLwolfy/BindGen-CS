@@ -67,8 +67,11 @@ public sealed class AsyncOperationTests
         ManagedApiModel original = Model();
         InteropFunction start = original.interop.functions[0];
         AsyncContract protocol = start.asynchronous!;
-        if (fault == "buffer-lifetime") start = start with { parameters = start.parameters.SetItem(2, start.parameters[2] with
-            { buffer = start.parameters[2].buffer! with { lifetime = start.parameters[2].buffer!.lifetime with { kind = NativeLifetimeKind.Unknown } } }) };
+        if (fault == "buffer-lifetime") start = start with
+        {
+            parameters = start.parameters.SetItem(2, start.parameters[2] with
+            { buffer = start.parameters[2].buffer! with { lifetime = start.parameters[2].buffer!.lifetime with { kind = NativeLifetimeKind.Unknown } } })
+        };
         protocol = fault switch
         {
             "completion" => protocol with { completionQuiescence = NativeQuiescenceKind.Unknown },
@@ -83,7 +86,8 @@ public sealed class AsyncOperationTests
             _ => protocol
         };
         InteropModule module = new(original.interop.libraryId, original.interop.targetId, 8, original.interop.types,
-            original.interop.functions.SetItem(0, start with { asynchronous = protocol }), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            original.interop.functions.SetItem(0, start with { asynchronous = protocol }), [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(original with { interop = module }, new("native", new NeutralBackendTests.MemorySink()));
         Assert.Empty(plan.asyncOperations);
         Assert.Single(plan.callbackOmissions);
@@ -104,20 +108,28 @@ public sealed class AsyncOperationTests
         start = start with
         {
             parameters = start.parameters.SetItem(0, start.parameters[0] with { callback = callback })
-                .Add(new(new("memory"), "memory", buffer.id) { buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput,
-                    new(NativeLifetimeKind.Operation, null, evidence), evidence) { lengthParameter = new("length"), retainsPointer = true, allowsNull = false } })
+                .Add(new(new("memory"), "memory", buffer.id)
+                {
+                    buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.InputOutput,
+                    new(NativeLifetimeKind.Operation, null, evidence), evidence)
+                    { lengthParameter = new("length"), retainsPointer = true, allowsNull = false }
+                })
                 .Add(new(new("length"), "length", integer.id)),
             asynchronous = new(new("callback"), NativeQuiescenceKind.NoNewInvocations, evidence)
             {
-                resultArgumentIndex = 0, statusArgumentIndex = 1,
+                resultArgumentIndex = 0,
+                statusArgumentIndex = 1,
                 successStatus = new(NativeScalarConstantKind.Integer, "0", 4, true, evidence),
                 cancellationStatus = new(NativeScalarConstantKind.Integer, "1", 4, true, evidence),
-                cancelFunction = new("cancel"), cancellationHandleParameter = new("cancel-handle"), retainedParameters = [new("memory")]
+                cancelFunction = new("cancel"),
+                cancellationHandleParameter = new("cancel-handle"),
+                retainedParameters = [new("memory")]
             }
         };
         InteropFunction cancel = new(new("cancel"), "cancel", new("void"), [new(new("cancel-handle"), "handle", pointer.id)], "C");
         InteropModule updated = new(module.libraryId, module.targetId, 8, module.types.Select(type => type.id == callable.id ? callable : type).Append(buffer).ToImmutableArray(),
-            [start, module.functions[1], cancel], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [start, module.functions[1], cancel], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(updated, new("Generated.Async", "AsyncApi"), CancellationToken.None);
     }
 }

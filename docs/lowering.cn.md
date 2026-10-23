@@ -48,7 +48,7 @@ flowchart TD
 
 普通输入与原生参数保持一对一。展开输入使用 `BridgeArgumentGroup`，包含准确原生参数声明/类型 ID、命名 C carrier binding 和有内容指纹的表达式。组顺序与原参数一致，所有 C 输入被完整且不重复地使用。普通单载体组可以省略额外表达式。
 
-验证器拒绝缺失、重复、无关或乱序绑定；emitter 只替换声明的名称，生成一次原生调用，该调用由消费者编译的 bridge 执行。参数组不能推断所有权或托管 pinning 协议。声明式入口为 `cpp.typeLowerings[].abiParameters`，完整配置见实战手册。
+验证器拒绝缺失、重复、无关或乱序绑定；emitter 只替换声明的名称，生成一次原生调用，该调用由消费者编译的 bridge 执行。参数组不能推断所有权或托管 pinning 协议。声明式入口为 `bridge.typeLowerings[].abiParameters`，完整配置见实战手册。
 
 有限标准序列适配使用 `BridgeArgumentGroup.standardSequence`，无需拼接 source-expression 模板。模型保存准确元素类型、编译器 extent、复制/借用操作和证据。新增导出通过 `inputAdapterOf` 关联保留的原导出；生成前检查完整 data/length 覆盖与不变的结果身份。结果仅限标量/void，或具备完整析构配对和 creating-call 清理证明的新建拥有型默认标准 `basic_string`/`filesystem::path` 值。此适配器仍不接受借用、pointer/reference、自定义文本及其他容器结果，也不处理构造和自定义调用/结果表达式。`bridge.cpp.sequenceInputAdapters` 配置和明确的借用限制见实战手册。
 

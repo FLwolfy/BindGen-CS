@@ -30,7 +30,10 @@ public sealed class ManagedNamingPolicyTests
     [InlineData(ManagedNameCasing.ScreamingSnake, "HTTP_SERVER2_D_VALUE")]
     [InlineData(ManagedNameCasing.UpperFlat, "HTTPSERVER2DVALUE")]
     [InlineData(ManagedNameCasing.LowerFlat, "httpserver2dvalue")]
-    public void AcronymAndDigitBoundariesHaveExplicitInvariantSpellings(ManagedNameCasing casing, string expected)
+    public void AcronymAndDigitBoundariesHaveExplicitInvariantSpellings(
+        ManagedNameCasing casing,
+        string expected
+    )
         => Assert.Equal(expected, ManagedNamingResolver.Convert("HTTPServer2D_value", casing));
 
     [Theory]
@@ -56,7 +59,8 @@ public sealed class ManagedNamingPolicyTests
             fields = new() { casing = ManagedNameCasing.Camel, removePrefixes = ["m_"] },
             functions = new() { casing = ManagedNameCasing.Pascal, removePrefixes = ["bgcs_"] },
             parameters = new() { casing = ManagedNameCasing.Camel, removePrefixes = ["P_"] },
-            reservedNames = ["item"], reservedSuffix = "Argument"
+            reservedNames = ["item"],
+            reservedSuffix = "Argument"
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Policy", "Api")
         { naming = policy, names = ImmutableDictionary<string, string>.Empty.Add("BGCS_HTTP_result_t::m_override_value", "event") }, CancellationToken.None);
@@ -97,12 +101,14 @@ public sealed class ManagedNamingPolicyTests
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropModule native = new("replacement_names", "windows-x64-msvc", 8, [integer],
-            [new(new("read"), "api_http_request", integer.id, [], "C"), new(new("exact"), "api_exact", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [new(new("read"), "api_http_request", integer.id, [], "C"), new(new("exact"), "api_exact", integer.id, [], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedNamingPolicy policy = new()
         {
             functions = new() { casing = ManagedNameCasing.Pascal, removePrefixes = ["api_"], prefix = "Pre", suffix = "Suffix" },
             replacements = [new("http", "Io") { ignoreCase = true }, new("Io", "Net"), new("Pre", "")],
-            reservedNames = ["NetRequestSuffix"], reservedSuffix = "Member"
+            reservedNames = ["NetRequestSuffix"],
+            reservedSuffix = "Member"
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Replacements", "Api")
         { naming = policy, names = ImmutableDictionary<string, string>.Empty.Add("api_exact", "HttpExact") }, CancellationToken.None);
@@ -117,7 +123,8 @@ public sealed class ManagedNamingPolicyTests
     {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropModule native = new("replacement_names", "windows-x64-msvc", 8, [integer],
-            [new(new("left"), "left", integer.id, [], "C"), new(new("right"), "right", integer.id, [], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [new(new("left"), "left", integer.id, [], "C"), new(new("right"), "right", integer.id, [], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(native, new("Generated.Replacements", "Api")
         { naming = new() { replacements = [new("Left", "Same"), new("Right", "Same")] } }, CancellationToken.None);
         Sink sink = new();
@@ -131,6 +138,9 @@ public sealed class ManagedNamingPolicyTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 }

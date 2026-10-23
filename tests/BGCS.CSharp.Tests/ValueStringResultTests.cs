@@ -41,13 +41,21 @@ public sealed class ValueStringResultTests
     [InlineData(BindingImportMode.FunctionTable, true, NativeTextEncoding.Utf32)]
     [InlineData(BindingImportMode.DllImport, true, NativeTextEncoding.Utf32)]
     [InlineData(BindingImportMode.LibraryImport, true, NativeTextEncoding.Utf32)]
-    public async Task FreshTextCopiesUseOneRetainedCallAndOneBoundedBulkCopy(BindingImportMode mode, bool sourceRuntime, NativeTextEncoding encoding)
-    {
+    public async Task FreshTextCopiesUseOneRetainedCallAndOneBoundedBulkCopy(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        NativeTextEncoding encoding
+    ) {
         InteropModule module = Module(encoding);
         ManagedApiModel model = Project(module);
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("value_strings", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.ValueStrings.Runtime" : "BGCS.Runtime", maximumValueStringCodeUnits = 73 };
+        EmissionRequest request = new("value_strings", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.ValueStrings.Runtime" : "BGCS.Runtime",
+            maximumValueStringCodeUnits = 73
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpValueStringResultPlan result = Assert.Single(plan.valueStringResults);
         Assert.Equal(73, result.maximumCodeUnits);
@@ -99,8 +107,11 @@ public sealed class ValueStringResultTests
         if (fault == "unknown-encoding") protocol = protocol with { text = protocol.text! with { encoding = NativeTextEncoding.Unknown, encodingEvidence = new(EvidenceLevel.Unknown, "not-declared") } };
         if (fault == "unknown-release-scope") protocol = protocol with { scopedRelease = null };
         types = types.SetItem(holderIndex, types[holderIndex] with { valueProtocol = protocol });
-        if (fault == "wrong-owned-release") functions = functions.SetItem(0, functions[0] with { parameters = functions[0].parameters.SetItem(0,
-            functions[0].parameters[0] with { ownership = functions[0].parameters[0].ownership! with { releaseFunction = new("other-release") } }) });
+        if (fault == "wrong-owned-release") functions = functions.SetItem(0, functions[0] with
+        {
+            parameters = functions[0].parameters.SetItem(0,
+            functions[0].parameters[0] with { ownership = functions[0].parameters[0].ownership! with { releaseFunction = new("other-release") } })
+        });
         if (fault == "asynchronous") functions = functions.SetItem(0, functions[0] with { asynchronous = new(new("completion"), NativeQuiescenceKind.NoActiveNativeInvocations, protocol.evidence) });
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, types, functions, []) { byteOrder = original.byteOrder };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(Project(module), new("value_strings", new NeutralBackendTests.MemorySink()));
@@ -123,16 +134,28 @@ public sealed class ValueStringResultTests
         InteropType holder = new(new("holder"), "Holder", NativeTypeCategory.Record, null, null) { sourceNativeType = new("source-holder") };
         InteropType constant = new(new("constant-holder"), "const Holder", NativeTypeCategory.Qualified, null, null) { elementType = holder.id, qualifier = "Const" };
         InteropType error = new(new("error"), "Error", NativeTypeCategory.Record, null, null);
-        InteropType Pointer(string id, StableId element) => new(new(id), id, NativeTypeCategory.Pointer, 8, 8) { elementType = element };
+        InteropType Pointer(
+            string id,
+            StableId element
+        ) => new(new(id), id, NativeTypeCategory.Pointer, 8, 8) { elementType = element };
         InteropType holderPointer = Pointer("holder-pointer", holder.id), constPointer = Pointer("const-pointer", constant.id), resultPointer = Pointer("result-pointer", holderPointer.id);
         InteropType errorPointer = Pointer("error-pointer", error.id), errorOutput = Pointer("error-output", errorPointer.id), countOutput = Pointer("count-output", count.id), unitPointer = Pointer("unit-pointer", unit.id);
-        InteropParameter Receiver(string id, bool mutable = false) => new(new(id), "self", mutable ? holderPointer.id : constPointer.id)
+        InteropParameter Receiver(
+            string id,
+            bool mutable = false
+        ) => new(new(id), "self", mutable ? holderPointer.id : constPointer.id)
         { ownership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Call, null, facts), facts) { retainsPointer = false } };
-        InteropFunction Status(string id, ImmutableArray<InteropParameter> inputs, StableId? outputType)
-        {
+        InteropFunction Status(
+            string id,
+            ImmutableArray<InteropParameter> inputs,
+            StableId? outputType
+        ) {
             InteropParameter? output = outputType is StableId type ? new(new(id + "-result"), "result", type) : null;
-            if (id == "make") output = output! with { ownership = new(NativeOwnershipKind.Owned, new(NativeLifetimeKind.Owner, output!.id, facts), facts)
-                { releaseFunction = new("destroy"), allocator = new("default-native-value") } };
+            if (id == "make") output = output! with
+            {
+                ownership = new(NativeOwnershipKind.Owned, new(NativeLifetimeKind.Owner, output!.id, facts), facts)
+                { releaseFunction = new("destroy"), allocator = new("default-native-value") }
+            };
             StableId errorId = new(id + "-error");
             OwnershipContract ownership = new(NativeOwnershipKind.Owned, new(NativeLifetimeKind.Owner, errorId, facts), facts)
             { releaseFunction = new("error-free"), allocator = new("native-error-domain"), releaseThreadDomain = "any" };
@@ -147,13 +170,21 @@ public sealed class ValueStringResultTests
         InteropFunction copy = Status("copy", [Receiver("copy-self"), new(new("copy-destination"), "destination", unitPointer.id), new(new("copy-capacity"), "capacity", count.id)], countOutput.id);
         InteropFunction destroy = Status("destroy", [Receiver("destroy-self", true)], null);
         InteropFunction free = new(new("error-free"), "error_free", none.id, [new(new("free-error"), "error", errorPointer.id)], "C");
-        holder = holder with { valueProtocol = new(new("protocol"), NativeValueFamily.String, holder.id, holder.sourceNativeType!.Value,
+        holder = holder with
+        {
+            valueProtocol = new(new("protocol"), NativeValueFamily.String, holder.id, holder.sourceNativeType!.Value,
             [new(NativeValueOperationKind.Count, length.id, new("length-self"), []), new(NativeValueOperationKind.GetAt, get.id, new("get-self"), [new("get-index")]),
                 new(NativeValueOperationKind.CopyCodeUnits, copy.id, new("copy-self"), [new("copy-destination"), new("copy-capacity")])], [new(new("source-unit"), unit.id, false)], facts)
-        { releaseExport = destroy.id, scopedRelease = new(NativeValueReleaseScope.CreatingCall, facts), sequence = new(facts),
-            text = new(width, false, NativeByteOrder.LittleEndian, facts) { encoding = encoding, encodingEvidence = asserted } } };
+            {
+                releaseExport = destroy.id,
+                scopedRelease = new(NativeValueReleaseScope.CreatingCall, facts),
+                sequence = new(facts),
+                text = new(width, false, NativeByteOrder.LittleEndian, facts) { encoding = encoding, encodingEvidence = asserted }
+            }
+        };
         return new("value-strings", "windows-x64-msvc", 8,
             [none, status, count, unit, holder, constant, error, holderPointer, constPointer, resultPointer, errorPointer, errorOutput, countOutput, unitPointer],
-            [make, length, get, copy, destroy, free], []) { byteOrder = NativeByteOrder.LittleEndian };
+            [make, length, get, copy, destroy, free], [])
+        { byteOrder = NativeByteOrder.LittleEndian };
     }
 }

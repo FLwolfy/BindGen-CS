@@ -79,6 +79,9 @@ public sealed class TypedBridgeOperationTests
     private sealed class Sink : IArtifactSink
     {
         public int writes { get; private set; }
-        public string WriteText(string relativePath, string content) { writes++; return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { writes++; return relativePath; }
     }
 }

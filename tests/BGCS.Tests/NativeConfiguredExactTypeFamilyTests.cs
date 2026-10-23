@@ -29,8 +29,10 @@ public sealed class NativeConfiguredExactTypeFamilyTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NonTemplateStringAliasAndPathKeepCountedUtf8AndTheirActualNativeIdentity(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NonTemplateStringAliasAndPathKeepCountedUtf8AndTheirActualNativeIdentity(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = NewRoot();
         try
         {
@@ -52,7 +54,7 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
-                { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
+            { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Exact.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExactApiContext" : "ExactApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, configuration.library.nativeName, $$"""
@@ -118,14 +120,21 @@ public sealed class NativeConfiguredExactTypeFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
-    {
+    private static string ConsumerBody(
+        NativeBridgePlan bridge,
+        CSharpEmissionPlan plan
+    ) {
         StringBuilder source = new();
-        string Call(BridgeExport export, params string[] arguments)
-        {
+        string Call(
+            BridgeExport export,
+            params string[] arguments
+        ) {
             CSharpMethodPlan method = plan.methods.Single(method => method.nativeExport == export.id);
             Assert.Equal(method.parameterTypes.Length, arguments.Length);
-            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((argument, index) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
+            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((
+                argument,
+                index
+            ) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
         }
         CSharpMethodPlan errorRelease = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
         string releaseError = "api.Raw." + errorRelease.name + "((" + errorRelease.parameterTypes[0] + ")error);error=0;";
@@ -139,12 +148,18 @@ public sealed class NativeConfiguredExactTypeFamilyTests
             BridgeExport destroy = Assert.Single(bridge.exports, export => export.operation.kind == BridgeOperationKind.Destroy && export.operation.ownerType == owner);
             byte[] expected = Encoding.UTF8.GetBytes(text ? "A\0B😀" : "dir/😀.txt");
             source.AppendLine("{nint holder=0,error=0;ulong count=0;sbyte unit=0;byte pathByte=0;");
-            void Success(string invocation, string condition = "") => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
+            void Success(
+                string invocation,
+                string condition = ""
+            ) => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
                 .Append(condition.Length == 0 ? "" : " || " + condition).AppendLine(")throw new InvalidOperationException(\"exact native operation\");");
             Success(Call(make, "&holder", "&error"), "holder==0");
             source.AppendLine("try {");
             Success(Call(Access(text ? StandardValueAction.Count : StandardValueAction.PathUtf8Count), "holder", "&count", "&error"), "count!=" + expected.Length);
-            foreach ((byte value, int index) in expected.Select((value, index) => (value, index)))
+            foreach ((byte value, int index) in expected.Select((
+                value,
+                index
+            ) => (value, index)))
                 Success(Call(Access(text ? StandardValueAction.GetAt : StandardValueAction.PathUtf8Byte), "holder", index + "UL", text ? "&unit" : "&pathByte", "&error"),
                     text ? "unchecked((byte)unit)!=" + value : "pathByte!=" + value);
             if (text)
@@ -166,18 +181,41 @@ public sealed class NativeConfiguredExactTypeFamilyTests
         return source.ToString();
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime) => new()
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) => new()
     {
-        schemaVersion = 2, library = new() { id = "exact", nativeName = "exact_fixture" },
-        source = new() { language = SourceLanguage.Cpp, headers = ["exact.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-            selection = new() { includeDeclarations = ["exact::MakeText", "exact::MakePath"] } },
-        api = new() { @namespace = "Generated.Exact", name = "ExactApi", importMode = mode,
-            style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
-        bridge = new() { cpp = new() { familyBindings = [
+        schemaVersion = 2,
+        library = new() { id = "exact", nativeName = "exact_fixture" },
+        source = new()
+        {
+            language = SourceLanguage.Cpp,
+            headers = ["exact.hpp"],
+            parseMacros = false,
+            includeTransitivelyReferencedHeaders = false,
+            selection = new() { includeDeclarations = ["exact::MakeText", "exact::MakePath"] }
+        },
+        api = new()
+        {
+            @namespace = "Generated.Exact",
+            name = "ExactApi",
+            importMode = mode,
+            style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance,
+            nestGeneratedTypesInApi = sourceRuntime
+        },
+        bridge = new()
+        {
+            cpp = new()
+            {
+                familyBindings = [
             new() { nativeType = "exact::TextAlias", family = StandardValueKind.String, stringEncoding = NativeTextEncoding.Utf8, evidence = new(EvidenceLevel.UserAsserted, "exact-UTF8-string-protocol") },
-            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.GenericUtf8, evidence = new(EvidenceLevel.UserAsserted, "exact-generic-UTF8-path-protocol") }] } },
-        runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-         cache = new() { enabled = false }
+            new() { nativeType = "exact::Path", family = StandardValueKind.Path, pathFormat = NativePathFormat.GenericUtf8, evidence = new(EvidenceLevel.UserAsserted, "exact-generic-UTF8-path-protocol") }]
+            }
+        },
+        runtime = new() { mode = sourceRuntime ? "source" : "package" },
+        output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+        cache = new() { enabled = false }
     };
 
     private static string NewRoot() { string root = Path.Combine(Path.GetTempPath(), "bgcs-configured-exact-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root); return root; }
@@ -190,7 +228,13 @@ public sealed class NativeConfiguredExactTypeFamilyTests
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
         return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
-    private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
+    private sealed class NoWrites : IArtifactSink
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit artifacts.");
+    }
 
     private const string Header = """
         #include <string>

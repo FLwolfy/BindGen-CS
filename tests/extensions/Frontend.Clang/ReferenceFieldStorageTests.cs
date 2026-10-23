@@ -17,8 +17,10 @@ public sealed class ReferenceFieldStorageTests : FrontendTestHost
     [Theory]
     [InlineData("i686-pc-linux-gnu", 4)]
     [InlineData("x86_64-pc-linux-gnu", 8)]
-    public async Task ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(string triple, int slotSize)
-    {
+    public async Task ObjectAndFunctionReferenceSlotsAreMeasuredSeparatelyFromTheirReferents(
+        string triple,
+        int slotSize
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-reference-slots-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -33,7 +35,7 @@ public sealed class ReferenceFieldStorageTests : FrontendTestHost
                 Variants* borrow_variants(Variants* value);
                 """);
             FrontendRequest request = new(new NativeTargetDescriptor(new("reference-fields"), "test", "test", "test", triple, new()), SourceLanguage.Cpp, [header])
-                { pathBase = root, languageStandard = "c++23", parseMacros = false };
+            { pathBase = root, languageStandard = "c++23", parseMacros = false };
             NativeModule module = (await new ClangFrontend(host).ParseAsync(request, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             NativeDeclaration references = Assert.Single(module.declarations, declaration => declaration.qualifiedName == "References");
@@ -56,7 +58,10 @@ public sealed class ReferenceFieldStorageTests : FrontendTestHost
             }
             Assert.Equal(3 * slotSize, Field(variants, "tail").offset);
 
-            NativeDeclaration Field(NativeDeclaration parent, string name)
+            NativeDeclaration Field(
+                NativeDeclaration parent,
+                string name
+            )
                 => Assert.Single(parent.children.Select(module.GetDeclaration), declaration => declaration.kind == "Field" && declaration.name == name);
         }
         finally { Directory.Delete(root, recursive: true); }

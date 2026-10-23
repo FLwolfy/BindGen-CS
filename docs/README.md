@@ -1,4 +1,4 @@
-# BGCS 4.0 documentation
+# BGCS documentation
 
 [简体中文](README.cn.md) | [Repository README](../README.md)
 

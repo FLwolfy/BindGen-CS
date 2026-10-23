@@ -29,8 +29,10 @@ public sealed class NativeConfiguredAssociativeFamilyTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExactCustomAssociativeAndExpectedProtocolsUseActualNativeValuesAndBoundaries(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ExactCustomAssociativeAndExpectedProtocolsUseActualNativeValuesAndBoundaries(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = NewRoot();
         try
         {
@@ -54,7 +56,7 @@ public sealed class NativeConfiguredAssociativeFamilyTests
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             string runtime = sourceRuntime ? "Generated.Associative.Runtime" : "BGCS.Runtime";
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
-                { importMode = mode, runtimeNamespace = runtime });
+            { importMode = mode, runtimeNamespace = runtime });
             string context = sourceRuntime ? "AssociativeApiContext" : "AssociativeApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             string body = ConsumerBody(bridge, plan);
@@ -113,16 +115,23 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
-    {
+    private static string ConsumerBody(
+        NativeBridgePlan bridge,
+        CSharpEmissionPlan plan
+    ) {
         StringBuilder source = new();
         CSharpMethodPlan releaseError = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
         string ErrorRelease(string address) => "api.Raw." + releaseError.name + "((" + releaseError.parameterTypes[0] + ")(" + address + "));";
-        string Call(BridgeExport export, params string[] arguments)
-        {
+        string Call(
+            BridgeExport export,
+            params string[] arguments
+        ) {
             CSharpMethodPlan method = plan.methods.Single(method => method.nativeExport == export.id);
             Assert.Equal(method.parameterTypes.Length, arguments.Length);
-            return "api.Raw." + method.name + "(" + string.Join(",", arguments.Select((argument, index) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
+            return "api.Raw." + method.name + "(" + string.Join(",", arguments.Select((
+                argument,
+                index
+            ) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
         }
         foreach (string name in new[] { "MakeMap", "MakeSet", "MakeBrokenSet", "MakeValue", "MakeError", "MakeVoidValue", "MakeVoidError" })
         {
@@ -184,20 +193,43 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         return source.ToString();
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime)
-    {
-        CppFamilyBinding Binding(string name, StandardValueKind family) => new() { nativeTemplate = "associative::" + name, family = family,
-            evidence = new(EvidenceLevel.UserAsserted, "fixture-explicit-associative-protocol:" + name) };
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
+        CppFamilyBinding Binding(
+            string name,
+            StandardValueKind family
+        ) => new()
+        {
+            nativeTemplate = "associative::" + name,
+            family = family,
+            evidence = new(EvidenceLevel.UserAsserted, "fixture-explicit-associative-protocol:" + name)
+        };
         return new()
         {
-            schemaVersion = 2, library = new() { id = "associative", nativeName = "associative_fixture" },
-            source = new() { language = SourceLanguage.Cpp, headers = ["associative.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-                selection = new() { includeDeclarations = new[] { "MakeMap", "MakeSet", "MakeBrokenSet", "MakeValue", "MakeError", "MakeVoidValue", "MakeVoidError" }.Select(name => "associative::" + name).ToImmutableArray() } },
-            api = new() { @namespace = "Generated.Associative", name = "AssociativeApi", importMode = mode,
-                style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
+            schemaVersion = 2,
+            library = new() { id = "associative", nativeName = "associative_fixture" },
+            source = new()
+            {
+                language = SourceLanguage.Cpp,
+                headers = ["associative.hpp"],
+                parseMacros = false,
+                includeTransitivelyReferencedHeaders = false,
+                selection = new() { includeDeclarations = new[] { "MakeMap", "MakeSet", "MakeBrokenSet", "MakeValue", "MakeError", "MakeVoidValue", "MakeVoidError" }.Select(name => "associative::" + name).ToImmutableArray() }
+            },
+            api = new()
+            {
+                @namespace = "Generated.Associative",
+                name = "AssociativeApi",
+                importMode = mode,
+                style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance,
+                nestGeneratedTypesInApi = sourceRuntime
+            },
             bridge = new() { cpp = new() { familyBindings = [Binding("Map", StandardValueKind.Map), Binding("Set", StandardValueKind.Set), Binding("Result", StandardValueKind.Expected)] } },
-            runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-             cache = new() { enabled = false }
+            runtime = new() { mode = sourceRuntime ? "source" : "package" },
+            output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+            cache = new() { enabled = false }
         };
     }
 
@@ -211,7 +243,13 @@ public sealed class NativeConfiguredAssociativeFamilyTests
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
         return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
-    private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
+    private sealed class NoWrites : IArtifactSink
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit artifacts.");
+    }
 
     private const string Header = """
         #include <map>

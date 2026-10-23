@@ -18,8 +18,11 @@ public sealed class NativeStringConstantFactTests : FrontendTestHost
     [InlineData(SourceLanguage.C, "aarch64-unknown-linux-gnu", 4)]
     [InlineData(SourceLanguage.Cpp, "aarch64-unknown-linux-gnu", 4)]
     [InlineData(SourceLanguage.C, "powerpc64-unknown-linux-gnu", 4)]
-    public async Task CompilerLiteralUnitsRetainEmbeddedZerosConcatenationUnicodeAndTargetWideWidth(SourceLanguage language, string triple, int wideWidth)
-    {
+    public async Task CompilerLiteralUnitsRetainEmbeddedZerosConcatenationUnicodeAndTargetWideWidth(
+        SourceLanguage language,
+        string triple,
+        int wideWidth
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-literal-facts-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try

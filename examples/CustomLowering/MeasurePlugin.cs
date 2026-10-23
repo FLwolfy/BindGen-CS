@@ -16,12 +16,18 @@ namespace BGCS.Examples.CustomLowering;
 public sealed class MeasurePlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.measure", "4.0.0", [new("example.measure", ExtensionPort.NativeTypeLowering, 100)]);
+    public PluginDescriptor descriptor => new("bgcs.examples.measure", "4.1.0", [new("example.measure", ExtensionPort.NativeTypeLowering, 100)]);
     /// <inheritdoc />
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    )
         => registry.RegisterFactory<INativeTypeLowering>("example.measure", _ => new MeasureLowering());
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => Identity(cancellationToken);
     internal static CacheFingerprintContribution Identity(CancellationToken cancellationToken)
     {
@@ -35,12 +41,18 @@ public sealed class MeasurePlugin : IBindingPlugin, ICacheFingerprintProvider
 public sealed class MeasureLowering : INativeTypeLowering, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public bool CanLower(NativeTypeView type, LoweringContext context)
+    public bool CanLower(
+        NativeTypeView type,
+        LoweringContext context
+    )
         => context.module.language == BGCS.Core.Inputs.SourceLanguage.C && type.type.category == NativeTypeCategory.Record
             && type.type.declaration is StableId declaration && context.module.GetDeclaration(declaration).qualifiedName == "Measure";
     /// <inheritdoc />
-    public NativeTypeLoweringPlan Lower(NativeTypeView type, LoweringContext context, CancellationToken cancellationToken)
-    {
+    public NativeTypeLoweringPlan Lower(
+        NativeTypeView type,
+        LoweringContext context,
+        CancellationToken cancellationToken
+    ) {
         cancellationToken.ThrowIfCancellationRequested();
         if (!CanLower(type, context)) throw new ArgumentException("This lowering owns only the declared C Measure value.", nameof(type));
         NativeDeclaration declaration = context.module.GetDeclaration(type.type.declaration!.Value);
@@ -56,10 +68,16 @@ public sealed class MeasureLowering : INativeTypeLowering, ICacheFingerprintProv
         };
     }
     /// <inheritdoc />
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => MeasurePlugin.Identity(cancellationToken);
-    private static ControlledSourceFragment Expression(string text, StableId nativeType)
+    private static ControlledSourceFragment Expression(
+        string text,
+        StableId nativeType
+    )
         => new("example.measure", SourceFragmentKind.Expression, text,
             new(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))))
-            { typeDependencies = [nativeType], evidence = new(EvidenceLevel.UserAsserted, "example.measure/conversion") };
+        { typeDependencies = [nativeType], evidence = new(EvidenceLevel.UserAsserted, "example.measure/conversion") };
 }

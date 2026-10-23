@@ -24,4 +24,4 @@ Evidence levels are Unknown, Inferred, Declared, UserAsserted and Verified. Prov
 
 Unknown ownership or encoding cannot create a safe friendly wrapper. A correct raw boundary remains available with explicit protocol obligations. Unknown by-value ABI cannot be approved by equal sizeof; use an applicable pointer/shim mechanism or refuse it.
 
-Current executed scope and remaining issues are recorded under records/acceptance and exact-commit CI/package receipts.
+Executed scope is established by exact-commit CI, package and public-consumption receipts linked from [release history](releases/README.md). The [historical ledger](history/4.0-development-ledger.md) describes intermediate attempts, not current platform status.

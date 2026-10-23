@@ -25,7 +25,8 @@ public sealed class SourceFixturePlugin : IBindingPlugin, ICacheFingerprintProvi
     {
         configurationSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object", additionalProperties = false,
+            type = "object",
+            additionalProperties = false,
             properties = new
             {
                 increment = new { type = "integer", minimum = -1000, maximum = 1000 },
@@ -35,31 +36,44 @@ public sealed class SourceFixturePlugin : IBindingPlugin, ICacheFingerprintProvi
     };
 
     /// <inheritdoc/>
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    ) {
         m_increment = configuration.settings.TryGetProperty("increment", out JsonElement increment) ? increment.GetInt32() : 12;
         m_invalidManaged = configuration.settings.TryGetProperty("invalidManaged", out JsonElement invalid) && invalid.GetBoolean();
         registry.RegisterFactory<ISourceContributor>("fixture.source/helpers", _ => new Sources(m_increment, m_invalidManaged));
     }
 
     /// <inheritdoc/>
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => Fingerprint(m_increment, m_invalidManaged);
 
     /// <inheritdoc/>
     public void Dispose() { }
 
-    private static CacheFingerprintContribution Fingerprint(int increment, bool invalidManaged)
+    private static CacheFingerprintContribution Fingerprint(
+        int increment,
+        bool invalidManaged
+    )
         => new(new(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
             "source-fixture-v2:" + increment.ToString(CultureInfo.InvariantCulture) + ":" + invalidManaged)))), []);
 
-    private sealed class Sources(int increment, bool invalidManaged) : ISourceContributor, ICacheFingerprintProvider
+    private sealed class Sources(
+        int increment,
+        bool invalidManaged
+    ) : ISourceContributor, ICacheFingerprintProvider
     {
         public string id => "fixture.source/helpers";
         public int priority => 0;
 
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             if (!request.source.snapshotExcludedDirectories.IsEmpty)
                 throw new InvalidOperationException("The source contribution request exposed private output directories.");
@@ -81,7 +95,10 @@ public sealed class SourceFixturePlugin : IBindingPlugin, ICacheFingerprintProvi
 
         private const string descriptorOrigin = "Contracts-only source fixture declares its generated inputs.";
 
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => Fingerprint(increment, invalidManaged);
     }
 }

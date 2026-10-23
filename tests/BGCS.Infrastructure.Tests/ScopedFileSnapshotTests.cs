@@ -125,8 +125,11 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         return (snapshot, original, aliasFile);
     }
 
-    private static void WriteBytes(string path, int length, int seed)
-    {
+    private static void WriteBytes(
+        string path,
+        int length,
+        int seed
+    ) {
         byte[] buffer = Enumerable.Range(0, Math.Min(length, 65536)).Select(index => (byte)(index * 31 + seed)).ToArray();
         using FileStream output = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         for (int remaining = length; remaining > 0;)
@@ -137,8 +140,10 @@ public sealed class ScopedFileSnapshotTests : IDisposable
         }
     }
 
-    private async Task Link(string path, string target)
-    {
+    private async Task Link(
+        string path,
+        string target
+    ) {
         if (OperatingSystem.IsWindows())
         {
             string executable = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");

@@ -43,12 +43,17 @@ public sealed class NativeCppOverloadTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "overloads", nativeName = "overloads_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "overloads", nativeName = "overloads_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["overloads.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.NativeOverloads", name = "OverloadApi" },
-                semantics = new() { ownedResults = [new() { function = "Demo::Counter::Counter(int)", releaseThreadDomain = "any" },
-                    new() { function = "Demo::Counter::Counter(double)", releaseThreadDomain = "any" }] },
-                runtime = new() { mode = "package" },  cache = new() { enabled = false }
+                semantics = new()
+                {
+                    ownedResults = [new() { function = "Demo::Counter::Counter(int)", releaseThreadDomain = "any" },
+                    new() { function = "Demo::Counter::Counter(double)", releaseThreadDomain = "any" }]
+                },
+                runtime = new() { mode = "package" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
@@ -60,8 +65,10 @@ public sealed class NativeCppOverloadTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void Invoke(string sources, string binary)
-    {
+    private static void Invoke(
+        string sources,
+        string binary
+    ) {
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("NativeOverloads_" + Guid.NewGuid().ToString("N"),
             Directory.EnumerateFiles(sources, "*.cs", SearchOption.AllDirectories).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new(LanguageVersion.CSharp14), path)),

@@ -30,8 +30,10 @@ public sealed class NativeMetadataTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CanonicalCallsRetainNativeFactsAcrossImportModesAndRuntimeLayouts(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CanonicalCallsRetainNativeFactsAcrossImportModesAndRuntimeLayouts(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = Model(true, sourceRuntime);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = Request(mode, sourceRuntime, sink);
@@ -117,7 +119,8 @@ public sealed class NativeMetadataTests
             integer.id, [new(new("argument-" + index), "value", integer.id)], "C")
         { sourceQualifiedName = "native::operation_" + index }).ToImmutableArray();
         InteropModule module = new(original.interop.libraryId, original.interop.targetId, original.interop.pointerSize,
-            original.interop.types, functions, []) { byteOrder = original.interop.byteOrder };
+            original.interop.types, functions, [])
+        { byteOrder = original.interop.byteOrder };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.MetadataIndex", "NativeApi")
         { emitNativeMetadata = true }, CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
@@ -125,7 +128,8 @@ public sealed class NativeMetadataTests
         await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         InteropModule reordered = new(module.libraryId, module.targetId, module.pointerSize, module.types,
-            module.functions.Reverse().ToImmutableArray(), []) { byteOrder = module.byteOrder };
+            module.functions.Reverse().ToImmutableArray(), [])
+        { byteOrder = module.byteOrder };
         plan = plan with { api = model with { interop = reordered } };
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);
 
@@ -243,14 +247,16 @@ public sealed class NativeMetadataTests
         { byteOrder = NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Metadata", "MetadataApi")
         {
-            emitNativeMetadata = true, emitCallbackDelegates = false,
+            emitNativeMetadata = true,
+            emitCallbackDelegates = false,
             names = ImmutableDictionary<string, string>.Empty.Add("native_install", "Install")
         }, CancellationToken.None);
         ManagedRuntimeProfile profile = new("metadata-browser", new ManagedRuntimeId("fixture.nonblocking-runtime"),
             NativeModuleMechanism.StaticAdapter, [BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
         {
             functionPointerTransport = ManagedFunctionPointerTransport.NativeInteger,
-            libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault, defaultCallingConvention = "Cdecl"
+            libraryImportConvention = ManagedImportConventionStrategy.RuntimeDefault,
+            defaultCallingConvention = "Cdecl"
         };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("__Internal", sink) { importMode = mode, managedRuntime = profile };
@@ -273,8 +279,10 @@ public sealed class NativeMetadataTests
             sink.sources.Select(source => (source.Key, source.Key == key ? changed : source.Value)), request.libraryName));
     }
 
-    private static ManagedApiModel Model(bool enabled, bool sourceRuntime)
-    {
+    private static ManagedApiModel Model(
+        bool enabled,
+        bool sourceRuntime
+    ) {
         ManagedApiModel original = NeutralBackendTests.Model();
         InteropFunction function = original.interop.functions[0] with { sourceQualifiedName = "native::operator\"\"_tag" };
         InteropModule interop = new(original.interop.libraryId, original.interop.targetId, original.interop.pointerSize,
@@ -288,16 +296,26 @@ public sealed class NativeMetadataTests
         };
         ManagedApiModel model = new DefaultManagedProjection().Project(interop, new("Generated.Example", "NativeApi")
         {
-            emitNativeMetadata = enabled, nestGeneratedTypesInApi = sourceRuntime,
+            emitNativeMetadata = enabled,
+            nestGeneratedTypesInApi = sourceRuntime,
             style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
             names = ImmutableDictionary<string, string>.Empty.Add(function.exportName, "ManagedAdd")
         }, CancellationToken.None);
         return model with { methods = model.methods.SetItem(0, model.methods[0] with { name = "ManagedAdd", parameterNames = ["renamedLeft", "renamedRight"] }) };
     }
 
-    private static EmissionRequest Request(BindingImportMode mode, bool sourceRuntime, NeutralBackendTests.MemorySink sink)
-        => new("metadata_fixture", sink) { importMode = mode, includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.Example.CustomRuntime" : "BGCS.Runtime" };
+    private static EmissionRequest Request(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        NeutralBackendTests.MemorySink sink
+    )
+        => new("metadata_fixture", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            singleFile = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.Example.CustomRuntime" : "BGCS.Runtime"
+        };
     private static CompilationUnitSyntax[] Roots(NeutralBackendTests.MemorySink sink)
         => sink.sources.Values.Select(source => CSharpSyntaxTree.ParseText(source).GetCompilationUnitRoot()).ToArray();
     private static bool IsNative(AttributeSyntax attribute) => attribute.Name.ToString().EndsWith(".NativeNameAttribute", StringComparison.Ordinal);

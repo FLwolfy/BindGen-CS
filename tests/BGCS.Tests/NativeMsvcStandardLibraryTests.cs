@@ -18,11 +18,34 @@ namespace BGCS.Tests;
 
 public sealed class NativeMsvcStandardLibraryTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Construct(out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Getter(nint self, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int IntegerValue(nint self, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Count(nint self, out ulong result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Construct(
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Getter(
+        nint self,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int IntegerValue(
+        nint self,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Count(
+        nint self,
+        out ulong result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
 
     [Fact]
     [Trait("Category", "WindowsNativeProvider")]
@@ -38,9 +61,12 @@ public sealed class NativeMsvcStandardLibraryTests
             await File.WriteAllTextAsync(Path.Combine(root, "box.hpp"), Source);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "msvc_stl", nativeName = "msvc_stl_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "msvc_stl", nativeName = "msvc_stl_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["box.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationRequest request = new(configuration, root);
             GenerationResult built = await host.GenerateAsync(request);
@@ -58,7 +84,9 @@ public sealed class NativeMsvcStandardLibraryTests
             string binary = Path.Combine(nativeDirectory, "msvc_stl_bridge.dll");
             string architecture = RuntimeInformation.ProcessArchitecture switch
             {
-                Architecture.X64 => "x64", Architecture.X86 => "x86", Architecture.Arm64 => "arm64",
+                Architecture.X64 => "x64",
+                Architecture.X86 => "x86",
+                Architecture.Arm64 => "arm64",
                 _ => throw new PlatformNotSupportedException("The MSVC fixture requires a supported Windows process architecture.")
             };
             string compiler = MsvcToolchainDiscovery.FindCompiler(architecture) ?? throw new FileNotFoundException("The fixture requires the actual installed MSVC compiler.");

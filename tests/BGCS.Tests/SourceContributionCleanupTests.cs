@@ -36,10 +36,12 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
             await File.WriteAllTextAsync(Path.Combine(root, "original.h"), "#pragma once\nint original(void);\n");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "source-cleanup-" + Guid.NewGuid().ToString("N"), nativeName = "source_cleanup" },
+                schemaVersion = 2,
+                library = new() { id = "source-cleanup-" + Guid.NewGuid().ToString("N"), nativeName = "source_cleanup" },
                 source = new() { language = SourceLanguage.C, headers = ["original.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.SourceCleanup", name = "CleanupApi" },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder()
                 .UseDetachedFrontend(() => new ProtectOwnedFileFrontend(WorkerRoot(), state))
@@ -134,8 +136,10 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
 
     private static Dictionary<string, byte[]> Snapshot(string root) => Directory.GetFiles(root, "*", SearchOption.AllDirectories)
         .ToDictionary(path => Path.GetRelativePath(root, path), File.ReadAllBytes, StringComparer.Ordinal);
-    private static void AssertSame(Dictionary<string, byte[]> expected, Dictionary<string, byte[]> actual)
-    {
+    private static void AssertSame(
+        Dictionary<string, byte[]> expected,
+        Dictionary<string, byte[]> actual
+    ) {
         Assert.Equal(expected.Keys.Order(StringComparer.Ordinal), actual.Keys.Order(StringComparer.Ordinal));
         foreach ((string path, byte[] bytes) in expected) Assert.Equal(bytes, actual[path]);
     }
@@ -154,8 +158,10 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
     {
         public string id => "cleanup.store";
         public int priority => 0;
-        public ValueTask<SourceContribution> ContributeAsync(SourceContributionRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<SourceContribution> ContributeAsync(
+            SourceContributionRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new SourceContribution([SourceContributionArtifact.FromUtf8("generated.h", SourceContributionRole.PublicHeader,
                 "text/x-c-header", "#pragma once\nint contributed(void);\n", SourceLanguage.C, exposeToBindings: true)], new(BGCS.Core.Common.EvidenceLevel.Declared, "cleanup fixture")));
@@ -167,17 +173,24 @@ public sealed class SourceContributionCleanupTests(ITestOutputHelper output)
         }
     }
 
-    private sealed class ProtectOwnedFileFrontend(string workerRoot, StoreState state) : IFrontend
+    private sealed class ProtectOwnedFileFrontend(
+        string workerRoot,
+        StoreState state
+    ) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
         private readonly FrontendWorkerClient m_worker = new(Path.Combine(workerRoot, "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
-        public async ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             FrontendResult result = await m_worker.ParseAsync(request, cancellationToken);
             state.parses++;
             string file = request.sourcePathMappings.Single(pair => pair.Value == "contributions/cleanup.store/generated.h").Key;

@@ -52,7 +52,10 @@ public sealed class PresumedSourceLocationTests : FrontendTestHost
             {
                 FrontendRequest request = new(new TargetResolver().Resolve(new(new("host"))), language, [aggregate])
                 {
-                    pathBase = root, parseMacros = false, parseComments = true, usePresumedSourceLocations = true,
+                    pathBase = root,
+                    parseMacros = false,
+                    parseComments = true,
+                    usePresumedSourceLocations = true,
                     sourcePathMappings = ImmutableDictionary<string, string>.Empty.Add(aggregate, "effective/module.h")
                         .Add(original, "include/original.h").Add(sdk, "sdk/original.h")
                 };
@@ -74,7 +77,9 @@ public sealed class PresumedSourceLocationTests : FrontendTestHost
             await File.WriteAllTextAsync(aggregate, "# 73 \"" + original.Replace('\\', '/') + "\"\nint broken( ;\n");
             var result = await new ClangFrontend(host).ParseAsync(new(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.C, [aggregate])
             {
-                pathBase = root, parseMacros = false, usePresumedSourceLocations = true,
+                pathBase = root,
+                parseMacros = false,
+                usePresumedSourceLocations = true,
                 sourcePathMappings = ImmutableDictionary<string, string>.Empty.Add(aggregate, "effective/module.h").Add(original, "include/original.h")
             }, CancellationToken.None);
             Assert.Contains(result.module.diagnostics, diagnostic => diagnostic.isFailure && diagnostic.location is { file: "include/original.h", line: 73 });

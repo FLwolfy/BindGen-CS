@@ -18,8 +18,11 @@ public sealed class FailedCleanupRetentionTests
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
     [InlineData(true, true, true)]
-    public void AmbiguousResourceCleanup_RetainsFinalizableProviderWithoutRootingFailedHandle(bool ownedHandle, bool disposeResource, bool closeContext)
-    {
+    public void AmbiguousResourceCleanup_RetainsFinalizableProviderWithoutRootingFailedHandle(
+        bool ownedHandle,
+        bool disposeResource,
+        bool closeContext
+    ) {
         Counters counters = new();
         Abandoned abandoned = CreateResource(counters, ownedHandle, disposeResource, closeContext, failRelease: true);
         Collect();
@@ -36,8 +39,10 @@ public sealed class FailedCleanupRetentionTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public void SuccessfulResourceFinalization_ReleasesModuleAndAllSessionRoots(bool ownedHandle, bool closeContext)
-    {
+    public void SuccessfulResourceFinalization_ReleasesModuleAndAllSessionRoots(
+        bool ownedHandle,
+        bool closeContext
+    ) {
         Counters counters = new();
         Abandoned abandoned = CreateResource(counters, ownedHandle, disposeResource: false, closeContext, failRelease: false);
         Collect();
@@ -91,7 +96,14 @@ public sealed class FailedCleanupRetentionTests
         { Interlocked.Increment(ref counters.releaseAttempts); throw new InvalidOperationException("Terminal native resource cleanup failure."); }
         SafeHandle resource = ownedHandle
             ? new OwnedNativeHandle(64, session.AcquireResource(), _ => Release(), "test-domain")
-            : new NativeAllocator("test-domain", (_, _) => 64, (_, _, _) => Release(), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
+            : new NativeAllocator("test-domain", (
+                _,
+                _
+            ) => 64, (
+                _,
+                _,
+                _
+            ) => Release(), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
         Task closing = session.DisposeAsync().AsTask();
         Assert.False(closing.IsCompleted);
         resource.Dispose();
@@ -104,8 +116,13 @@ public sealed class FailedCleanupRetentionTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static Abandoned CreateResource(Counters counters, bool ownedHandle, bool disposeResource, bool closeContext, bool failRelease)
-    {
+    private static Abandoned CreateResource(
+        Counters counters,
+        bool ownedHandle,
+        bool disposeResource,
+        bool closeContext,
+        bool failRelease
+    ) {
         FinalizableProvider provider = new(counters);
         NativeModuleSession session = new(provider);
         void Release()
@@ -115,15 +132,25 @@ public sealed class FailedCleanupRetentionTests
         }
         SafeHandle resource = ownedHandle
             ? new OwnedNativeHandle(64, session.AcquireResource(), _ => Release(), "test-domain")
-            : new NativeAllocator("test-domain", (_, _) => 64, (_, _, _) => Release(), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
+            : new NativeAllocator("test-domain", (
+                _,
+                _
+            ) => 64, (
+                _,
+                _,
+                _
+            ) => Release(), NativeAllocatorThreadDomain.AnyThread, session).Allocate(8, 8);
         if (closeContext) session.Dispose();
         if (disposeResource) resource.Dispose();
         return new(new(session, trackResurrection: true), new(provider, trackResurrection: true), new(resource, trackResurrection: true));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static Abandoned CreateSession(Counters counters, bool closeContext, bool failUnload)
-    {
+    private static Abandoned CreateSession(
+        Counters counters,
+        bool closeContext,
+        bool failUnload
+    ) {
         FinalizableProvider provider = new(counters, failUnload);
         NativeModuleSession session = new(provider);
         if (closeContext) session.Dispose();
@@ -136,7 +163,11 @@ public sealed class FailedCleanupRetentionTests
         { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); }
     }
 
-    private sealed record Abandoned(WeakReference session, WeakReference provider, WeakReference? resource);
+    private sealed record Abandoned(
+        WeakReference session,
+        WeakReference provider,
+        WeakReference? resource
+    );
 
     private sealed class Counters
     {
@@ -150,9 +181,14 @@ public sealed class FailedCleanupRetentionTests
         private readonly ModuleHandle m_handle;
         private readonly Counters m_counters;
         private readonly bool m_failUnload;
-        internal FinalizableProvider(Counters counters, bool failUnload = false)
-        { m_counters = counters; m_failUnload = failUnload; m_handle = new(counters); }
-        public bool TryGetExport(string name, out nint address) { address = 0; return false; }
+        internal FinalizableProvider(
+            Counters counters,
+            bool failUnload = false
+        ) { m_counters = counters; m_failUnload = failUnload; m_handle = new(counters); }
+        public bool TryGetExport(
+            string name,
+            out nint address
+        ) { address = 0; return false; }
         public void Dispose()
         {
             Interlocked.Increment(ref m_counters.providerDisposeAttempts);

@@ -24,13 +24,18 @@ public sealed class ManagedNamesPlugin : IBindingPlugin, ICacheFingerprintProvid
     /// <summary>Gets whether this plugin has been released after its service.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    ) {
         string prefix = configuration.settings.TryGetProperty("prefix", out JsonElement value) ? value.GetString()! : "custom_";
         registry.RegisterFactory<IManagedApiTransform>("fixture.managed-names", _ => transform = new(prefix));
     }
     /// <inheritdoc/>
-    public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    )
         => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("managed-names-plugin-v1")))), []);
     /// <inheritdoc/>
     public void Dispose()

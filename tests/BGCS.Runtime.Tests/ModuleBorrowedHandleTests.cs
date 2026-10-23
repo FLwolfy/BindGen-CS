@@ -160,7 +160,10 @@ public sealed class ModuleBorrowedHandleTests
     {
         internal int releases;
         internal bool failRelease;
-        public bool TryGetExport(string name, out nint address) { address = 0; return false; }
+        public bool TryGetExport(
+            string name,
+            out nint address
+        ) { address = 0; return false; }
         public void Dispose()
         {
             Interlocked.Increment(ref releases);

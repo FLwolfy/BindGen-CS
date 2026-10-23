@@ -119,7 +119,10 @@ public sealed class PluginManifestTests : IDisposable
         File.WriteAllBytes(Path.Combine(root, "EntryPlugin.dll"), entry);
         PluginManifest manifest = new()
         {
-            schemaVersion = 1, assembly = "EntryPlugin.dll", entryType = "Entry", plugin = new("dynamic.plugin", "1.0.0", [new("dynamic.transform", ExtensionPort.NativeModuleTransform)]),
+            schemaVersion = 1,
+            assembly = "EntryPlugin.dll",
+            entryType = "Entry",
+            plugin = new("dynamic.plugin", "1.0.0", [new("dynamic.transform", ExtensionPort.NativeModuleTransform)]),
             assets = [Asset("EntryPlugin.dll", entry), Asset(name + ".dll", privateDependency)]
         };
         string path = Path.Combine(root, "plugin.json");
@@ -127,8 +130,10 @@ public sealed class PluginManifestTests : IDisposable
         return new PluginManifestReader(TestHostPaths.Create()).Read(path);
     }
 
-    private async Task CreateAlias(string path, string target)
-    {
+    private async Task CreateAlias(
+        string path,
+        string target
+    ) {
         Assert.StartsWith(Path.GetFullPath(m_root) + Path.DirectorySeparatorChar, Path.GetFullPath(path), StringComparison.Ordinal);
         Assert.StartsWith(Path.GetFullPath(m_root) + Path.DirectorySeparatorChar, Path.GetFullPath(target), StringComparison.Ordinal);
         if (OperatingSystem.IsWindows())
@@ -196,8 +201,11 @@ public sealed class PluginManifestTests : IDisposable
         _ = Read(QuantityManifest(entry));
         GenerationRequest request = new(new()
         {
-            schemaVersion = 2, library = new() { id = "fixture", nativeName = "fixture" }, source = new() { headers = ["unused.h"] },
-            extensions = new() { plugins = ["plugin.json"] }, cache = new() { enabled = false }
+            schemaVersion = 2,
+            library = new() { id = "fixture", nativeName = "fixture" },
+            source = new() { headers = ["unused.h"] },
+            extensions = new() { plugins = ["plugin.json"] },
+            cache = new() { enabled = false }
         }, m_root);
         request = await request.MaterializeAsync(TestHostPaths.Create(), CancellationToken.None);
         Assert.Equal(2, request.pluginSnapshots.SelectMany(snapshot => snapshot.files).Count());
@@ -228,7 +236,10 @@ public sealed class PluginManifestTests : IDisposable
     private sealed class ProbeRegistry : IExtensionRegistryBuilder
     {
         public Func<object>? factory { get; private set; }
-        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class => this.factory = () => factory(new(null, AppContext.BaseDirectory));
+        public void RegisterFactory<TService>(
+            string id,
+            Func<ExtensionActivationContext, TService> factory
+        ) where TService : class => this.factory = () => factory(new(null, AppContext.BaseDirectory));
     }
 
     private LockedPluginManifest Read(PluginManifest manifest)
@@ -241,14 +252,23 @@ public sealed class PluginManifestTests : IDisposable
 
     private static PluginManifest QuantityManifest(byte[] entry) => new()
     {
-        schemaVersion = 1, assembly = "QuantityPlugin.dll", entryType = typeof(NeutralPlugin.QuantityPlugin).FullName!,
-        plugin = new NeutralPlugin.QuantityPlugin().descriptor, assets = [Asset("QuantityPlugin.dll", entry)]
+        schemaVersion = 1,
+        assembly = "QuantityPlugin.dll",
+        entryType = typeof(NeutralPlugin.QuantityPlugin).FullName!,
+        plugin = new NeutralPlugin.QuantityPlugin().descriptor,
+        assets = [Asset("QuantityPlugin.dll", entry)]
     };
 
-    private static PluginAsset Asset(string path, byte[] bytes) => new(path, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
+    private static PluginAsset Asset(
+        string path,
+        byte[] bytes
+    ) => new(path, new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
 
-    private static byte[] Compile(string name, string source, params MetadataReference[] additional)
-    {
+    private static byte[] Compile(
+        string name,
+        string source,
+        params MetadataReference[] additional
+    ) {
         string runtime = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         string[] platform = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         IEnumerable<MetadataReference> references = platform.Where(path => Path.GetDirectoryName(path) == runtime).Select(path => MetadataReference.CreateFromFile(path))

@@ -145,8 +145,10 @@ public sealed class ManagedTransformTests
         internal bool transformDisposed { get; private set; }
         public PluginDescriptor descriptor => new("fixture.metadata-mutation", "1.0.0",
             [new("fixture.metadata-transform", ExtensionPort.ManagedApiTransform, m_priority)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        {
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) {
             registry.RegisterFactory<IManagedApiTransform>("fixture.metadata-transform", _ =>
             {
                 serviceCreated = true;
@@ -158,30 +160,46 @@ public sealed class ManagedTransformTests
         public void Dispose() => disposed = true;
     }
 
-    private sealed class LateRegistrationTransform(Action register, Action release) : IManagedApiTransform, IDisposable
+    private sealed class LateRegistrationTransform(
+        Action register,
+        Action release
+    ) : IManagedApiTransform, IDisposable
     {
-        public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
-        { register(); return model; }
+        public ManagedApiModel Transform(
+            ManagedApiModel model,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) { register(); return model; }
         public void Dispose() => release();
     }
 
-    private sealed class Observed(string name, List<string> trace) : IManagedApiTransform, IDisposable
+    private sealed class Observed(
+        string name,
+        List<string> trace
+    ) : IManagedApiTransform, IDisposable
     {
-        public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
-        { trace.Add(name); return model; }
+        public ManagedApiModel Transform(
+            ManagedApiModel model,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) { trace.Add(name); return model; }
         public void Dispose() => trace.Add("dispose:" + name);
     }
 
     private sealed class Faulty(string fault) : IManagedApiTransform, IDisposable
     {
         internal bool disposed { get; private set; }
-        public ManagedApiModel Transform(ManagedApiModel model, AnalysisContext context, CancellationToken cancellationToken)
-        {
+        public ManagedApiModel Transform(
+            ManagedApiModel model,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) {
             if (fault == "null") return null!;
             if (fault is not ("clone-abi" or "change-abi")) return model;
             InteropModule abi = model.interop;
             InteropModule replacement = new(abi.libraryId, abi.targetId, abi.pointerSize, abi.types,
-                abi.functions, abi.diagnostics) { byteOrder = abi.byteOrder };
+                abi.functions, abi.diagnostics)
+            { byteOrder = abi.byteOrder };
             if (fault == "change-abi") replacement = new(abi.libraryId, abi.targetId, abi.pointerSize,
                 abi.types.Select(type => type.category == NativeTypeCategory.Enumeration ? type with { size = 8 } : type).ToImmutableArray(), abi.functions, []);
             return model with { interop = replacement };
@@ -198,7 +216,8 @@ public sealed class ManagedTransformTests
         .Select(artifact => File.ReadAllText(Path.Combine(result.outputRoot, artifact.relativePath))));
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "managed_transform", nativeName = "managed_transform" },
+        schemaVersion = 2,
+        library = new() { id = "managed_transform", nativeName = "managed_transform" },
         source = new() { headers = ["native.h"], parseMacros = false },
         api = new() { @namespace = "Generated.ManagedTransform", name = "ManagedApi" }
     };

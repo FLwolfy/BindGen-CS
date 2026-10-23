@@ -63,5 +63,9 @@ public sealed class ExplainCommandTests
         return new(exitCode, output.ToString(), error.ToString());
     }
 
-    private sealed record CommandResult(int ExitCode, string Output, string Error);
+    private sealed record CommandResult(
+        int ExitCode,
+        string Output,
+        string Error
+    );
 }

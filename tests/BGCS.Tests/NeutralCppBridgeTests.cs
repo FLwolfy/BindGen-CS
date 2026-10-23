@@ -24,11 +24,36 @@ namespace BGCS.Tests;
 
 public sealed class NeutralCppBridgeTests
 {
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Create(int value, out nint result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Add(nint self, int delta, out int result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Destroy(nint self, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Identity(ulong value, out ulong result, out nint error);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int Cast(nint self, out nint result, out nint error);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Create(
+        int value,
+        out nint result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Add(
+        nint self,
+        int delta,
+        out int result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Destroy(
+        nint self,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Identity(
+        ulong value,
+        out ulong result,
+        out nint error
+    );
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int Cast(
+        nint self,
+        out nint result,
+        out nint error
+    );
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate nint ErrorMessage(nint error);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void ErrorRelease(nint error);
 
@@ -71,10 +96,13 @@ public sealed class NeutralCppBridgeTests
             await File.WriteAllTextAsync(Path.Combine(temporary, "dependency.hpp"), "inline int dependency_only(int value) { return value; }");
             BindingConfiguration input = new()
             {
-                schemaVersion = 2, library = new() { id = "widget", nativeName = "widget_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "widget", nativeName = "widget_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.Widget", name = "WidgetApi", names = ImmutableDictionary<string, string>.Empty.Add("Sample::Widget::Identity", "Identity").Add("Sample::echo_flags", "EchoFlags").Add("Sample::add_quantity", "AddQuantity") },
-                runtime = new() { mode = "source" }, cache = new() { enabled = false }};
+                runtime = new() { mode = "source" },
+                cache = new() { enabled = false }
+            };
             System.Collections.Generic.List<BGCS.Tests.NeutralPlugin.QuantityPlugin> plugins = [];
             BindingHostBuilder builder = BindingGenerator.CreateBuilder().UseWorkerDirectory(worker);
             if (manifestPlugin)
@@ -85,7 +113,9 @@ public sealed class NeutralCppBridgeTests
                 await File.WriteAllBytesAsync(Path.Combine(pluginRoot, "QuantityPlugin.dll"), implementation);
                 PluginManifest manifest = new()
                 {
-                    schemaVersion = 1, plugin = new BGCS.Tests.NeutralPlugin.QuantityPlugin().descriptor, assembly = "QuantityPlugin.dll",
+                    schemaVersion = 1,
+                    plugin = new BGCS.Tests.NeutralPlugin.QuantityPlugin().descriptor,
+                    assembly = "QuantityPlugin.dll",
                     entryType = typeof(BGCS.Tests.NeutralPlugin.QuantityPlugin).FullName!,
                     assets = [new("QuantityPlugin.dll", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(implementation))))]
                 };
@@ -173,8 +203,10 @@ public sealed class NeutralCppBridgeTests
         }
     }
 
-    private static void InvokeGeneratedScalarWrapper(string managedRoot, string libraryPath)
-    {
+    private static void InvokeGeneratedScalarWrapper(
+        string managedRoot,
+        string libraryPath
+    ) {
         var trees = Directory.GetFiles(managedRoot, "*.cs", SearchOption.AllDirectories)
             .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new CSharpParseOptions(LanguageVersion.CSharp14), path));
         string[] assemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))!.Split(Path.PathSeparator);

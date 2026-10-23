@@ -17,14 +17,20 @@ public sealed class FlatIdentifierNamingTests
     [InlineData("CREATEWINDOW", "CreateWindow")]
     [InlineData("DEPTHBUFFER", "DepthBuffer")]
     [InlineData("GETMOUSEPOS", "GetMousePos")]
-    public void VersionedEnglishWordsRestoreTheEstablishedFlatIdentifierExamples(string input, string expected)
+    public void VersionedEnglishWordsRestoreTheEstablishedFlatIdentifierExamples(
+        string input,
+        string expected
+    )
         => Assert.Equal(expected, ManagedNamingResolver.Convert(input, ManagedNameCasing.Pascal, English()));
 
     [Theory]
     [InlineData("CREATEWINDOW", "Createwindow")]
     [InlineData("DEPTHBUFFER", "Depthbuffer")]
     [InlineData("GETMOUSEPOS", "Getmousepos")]
-    public void NoSegmentationRemainsTheDefault(string input, string expected)
+    public void NoSegmentationRemainsTheDefault(
+        string input,
+        string expected
+    )
         => Assert.Equal(expected, ManagedNamingResolver.Convert(input, ManagedNameCasing.Pascal, new()));
 
     [Theory]
@@ -33,7 +39,10 @@ public sealed class FlatIdentifierNamingTests
     [InlineData("ABC_ABC", "AbcAbc")]
     [InlineData("createwindow", "Createwindow")]
     [InlineData("CreateWindow", "CreateWindow")]
-    public void CustomLongestPrefixesPreserveUnknownAndNumericFragments(string input, string expected)
+    public void CustomLongestPrefixesPreserveUnknownAndNumericFragments(
+        string input,
+        string expected
+    )
         => Assert.Equal(expected, ManagedNamingResolver.Convert(input, ManagedNameCasing.Pascal, Custom("A", "AB", "ABC")));
 
     [Theory]
@@ -41,7 +50,10 @@ public sealed class FlatIdentifierNamingTests
     [InlineData(ManagedNameCasing.Camel, "createWindow")]
     [InlineData(ManagedNameCasing.Snake, "create_window")]
     [InlineData(ManagedNameCasing.ScreamingSnake, "CREATE_WINDOW")]
-    public void OutputCasingUsesTheSelectedWordBoundaries(ManagedNameCasing casing, string expected)
+    public void OutputCasingUsesTheSelectedWordBoundaries(
+        ManagedNameCasing casing,
+        string expected
+    )
         => Assert.Equal(expected, ManagedNamingResolver.Convert("CREATEWINDOW", casing, English()));
 
     [Theory]
@@ -93,8 +105,14 @@ public sealed class FlatIdentifierNamingTests
         ManagedNamingPolicy second = Custom("createwindow");
         string[] names = await Task.WhenAll(Enumerable.Range(0, 32).Select(index => Task.Run(() =>
             Project(module, index % 2 == 0 ? first : second).methods.Single().name)));
-        Assert.All(names.Where((_, index) => index % 2 == 0), name => Assert.Equal("CreateWindow", name));
-        Assert.All(names.Where((_, index) => index % 2 != 0), name => Assert.Equal("Createwindow", name));
+        Assert.All(names.Where((
+            _,
+            index
+        ) => index % 2 == 0), name => Assert.Equal("CreateWindow", name));
+        Assert.All(names.Where((
+            _,
+            index
+        ) => index % 2 != 0), name => Assert.Equal("Createwindow", name));
         Assert.Equal("CREATEWINDOW", Assert.Single(module.functions).exportName);
     }
 
@@ -103,10 +121,10 @@ public sealed class FlatIdentifierNamingTests
     {
         InteropModule module = Module();
         ManagedApiModel ordinary = new DefaultManagedProjection().Project(module, new("Names", "Api")
-            { naming = new() { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English } }, CancellationToken.None);
+        { naming = new() { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English } }, CancellationToken.None);
         Assert.Equal("CREATEWINDOW", Assert.Single(ordinary.methods).name);
         ManagedApiModel exact = new DefaultManagedProjection().Project(module, new("Names", "Api")
-            { naming = English(), names = ImmutableDictionary<string, string>.Empty.Add("CREATEWINDOW", "ExactSpelling") }, CancellationToken.None);
+        { naming = English(), names = ImmutableDictionary<string, string>.Empty.Add("CREATEWINDOW", "ExactSpelling") }, CancellationToken.None);
         Assert.Equal("ExactSpelling", Assert.Single(exact.methods).name);
     }
 
@@ -118,10 +136,13 @@ public sealed class FlatIdentifierNamingTests
     }
 
     private static ManagedNamingPolicy English() => new()
-        { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English, functions = new() { casing = ManagedNameCasing.Pascal } };
+    { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.English, functions = new() { casing = ManagedNameCasing.Pascal } };
     private static ManagedNamingPolicy Custom(params string[] words) => new()
-        { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.Custom, flatIdentifierWords = words.ToImmutableArray(), functions = new() { casing = ManagedNameCasing.Pascal } };
-    private static ManagedApiModel Project(InteropModule module, ManagedNamingPolicy policy)
+    { flatIdentifierSegmentation = ManagedFlatIdentifierSegmentation.Custom, flatIdentifierWords = words.ToImmutableArray(), functions = new() { casing = ManagedNameCasing.Pascal } };
+    private static ManagedApiModel Project(
+        InteropModule module,
+        ManagedNamingPolicy policy
+    )
         => new DefaultManagedProjection().Project(module, new("Names", "Api") { naming = policy }, CancellationToken.None);
     private static InteropModule Module()
     {

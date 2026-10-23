@@ -76,8 +76,12 @@ public sealed class BufferValueProtocolTests
     {
         var (module, function) = Module();
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:value");
-        InteropParameter parameter = function.parameters[0] with { buffer = null, singleValue = new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence)
-            { retainsPointer = false, allowsNull = false } };
+        InteropParameter parameter = function.parameters[0] with
+        {
+            buffer = null,
+            singleValue = new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence)
+            { retainsPointer = false, allowsNull = false }
+        };
         function = function with { parameters = function.parameters.SetItem(0, parameter) };
         CSharpValueParameterPlan plan = new ValueParameterPlanner().Plan(module, function, parameter, Resolve, new Dictionary<StableId, CSharpStoragePlan>());
         Assert.Equal(direction, plan.direction);
@@ -101,7 +105,7 @@ public sealed class BufferValueProtocolTests
         var (module, function) = Module();
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:value");
         ValueParameterContract value = new(NativeParameterDirection.Output, new(NativeLifetimeKind.Call, null, evidence), evidence)
-            { retainsPointer = false, allowsNull = false };
+        { retainsPointer = false, allowsNull = false };
         switch (mutation)
         {
             case "unknown": value = value with { retainsPointer = null }; break;
@@ -119,10 +123,18 @@ public sealed class BufferValueProtocolTests
     }
 
     private static string Resolve(StableId type) => type.value == "pointer" || type.value == "count-pointer" ? "int*" : "int";
-    private static InteropModule ChangeCount(InteropModule module, InteropType type) => new(module.libraryId, module.targetId, module.pointerSize,
-        module.types.SetItem(2, type), module.functions, module.diagnostics) { byteOrder = module.byteOrder };
-    private static InteropModule ChangeElement(InteropModule module, InteropType type) => new(module.libraryId, module.targetId, module.pointerSize,
-        module.types.SetItem(0, type), module.functions, module.diagnostics) { byteOrder = module.byteOrder };
+    private static InteropModule ChangeCount(
+        InteropModule module,
+        InteropType type
+    ) => new(module.libraryId, module.targetId, module.pointerSize,
+        module.types.SetItem(2, type), module.functions, module.diagnostics)
+    { byteOrder = module.byteOrder };
+    private static InteropModule ChangeElement(
+        InteropModule module,
+        InteropType type
+    ) => new(module.libraryId, module.targetId, module.pointerSize,
+        module.types.SetItem(0, type), module.functions, module.diagnostics)
+    { byteOrder = module.byteOrder };
 
     private static (InteropModule, InteropFunction) Module()
     {
@@ -131,8 +143,12 @@ public sealed class BufferValueProtocolTests
         InteropType pointer = new(new("pointer"), "int*", NativeTypeCategory.Pointer, 8, 8) { elementType = integer.id };
         InteropType count = integer with { id = new("count-value") };
         InteropType countPointer = pointer with { id = new("count-pointer"), elementType = count.id };
-        InteropParameter buffer = new(new("buffer"), "buffer", pointer.id) { buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.Output,
-            new(NativeLifetimeKind.Call, null, evidence), evidence) { capacityParameter = new("bound"), writtenCountParameter = new("count"), retainsPointer = false, allowsNull = true } };
+        InteropParameter buffer = new(new("buffer"), "buffer", pointer.id)
+        {
+            buffer = new(integer.id, NativeLengthUnit.Elements, NativeParameterDirection.Output,
+            new(NativeLifetimeKind.Call, null, evidence), evidence)
+            { capacityParameter = new("bound"), writtenCountParameter = new("count"), retainsPointer = false, allowsNull = true }
+        };
         InteropFunction function = new(new("write"), "write", integer.id,
             [buffer, new(new("bound"), "capacity", integer.id), new(new("count"), "written", countPointer.id)], "C");
         return (new("buffer", "windows-x64-msvc", 8, [integer, pointer, count, countPointer], [function], []) { byteOrder = NativeByteOrder.LittleEndian }, function);

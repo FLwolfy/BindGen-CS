@@ -42,13 +42,18 @@ public sealed class SourceDiagnosticTests
 
     private sealed class FailedFrontend : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromException<FrontendResult>(new InvalidDataException("fixture worker summary", new IOException("fixture worker throw-site\n at Collection.insert")));
     }
 
@@ -59,8 +64,11 @@ public sealed class SourceDiagnosticTests
     [InlineData(BindingImportMode.FunctionTable, 32, "BGCS-C-ABI")]
     [InlineData(BindingImportMode.DllImport, 32, "BGCS-C-ABI")]
     [InlineData(BindingImportMode.LibraryImport, 32, "BGCS-C-ABI")]
-    public async Task RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(BindingImportMode importMode, int alignment, string expectedCode)
-    {
+    public async Task RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(
+        BindingImportMode importMode,
+        int alignment,
+        string expectedCode
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-abi-location-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -71,7 +79,8 @@ public sealed class SourceDiagnosticTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "location", nativeName = "unused" },
+                schemaVersion = 2,
+                library = new() { id = "location", nativeName = "unused" },
                 source = new() { language = SourceLanguage.C, headers = ["abi.h"], parseMacros = false },
                 bridge = new() { aggregateStrategy = AggregateCallStrategy.Direct },
                 api = new() { @namespace = "Generated.Location", name = "LocationApi", importMode = importMode },

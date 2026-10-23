@@ -23,8 +23,10 @@ public sealed class FunctionTableNamespaceTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task ExactFunctionTableNamespaceUsesGlobalRuntimeTypesWithBuiltInAndCustomProviders(bool sourceRuntime, bool customProvider)
-    {
+    public async Task ExactFunctionTableNamespaceUsesGlobalRuntimeTypesWithBuiltInAndCustomProviders(
+        bool sourceRuntime,
+        bool customProvider
+    ) {
         ManagedApiModel model = NeutralBackendTests.Model() with { @namespace = "Example.FunctionTable" };
         string runtime = sourceRuntime ? "Custom.Runtime" : "BGCS.Runtime";
         NeutralBackendTests.MemorySink sink = new();

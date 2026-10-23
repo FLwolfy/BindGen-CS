@@ -21,7 +21,10 @@ public sealed class NativeRetainedCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task RealNativeThreadsRetainStateUntilFullJoinAndSelfCloseNeverJoinsItsOwnFrame(BindingImportMode mode, bool sourceRuntime)
+    public async Task RealNativeThreadsRetainStateUntilFullJoinAndSelfCloseNeverJoinsItsOwnFrame(
+        BindingImportMode mode,
+        bool sourceRuntime
+    )
         => await RunAsync(mode, sourceRuntime, paired: false);
 
     [Theory]
@@ -31,11 +34,17 @@ public sealed class NativeRetainedCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task SameCallbackAndUserDataUnregisterWaitsForTheCompleteNativeThreadFrame(BindingImportMode mode, bool sourceRuntime)
+    public async Task SameCallbackAndUserDataUnregisterWaitsForTheCompleteNativeThreadFrame(
+        BindingImportMode mode,
+        bool sourceRuntime
+    )
         => await RunAsync(mode, sourceRuntime, paired: true);
 
-    private static async Task RunAsync(BindingImportMode mode, bool sourceRuntime, bool paired)
-    {
+    private static async Task RunAsync(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        bool paired
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-retained-callback-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -142,7 +151,8 @@ public sealed class NativeRetainedCallbackTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "retained", nativeName = "retained_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "retained", nativeName = "retained_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["retained.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 semantics = new()
                 {
@@ -158,11 +168,16 @@ public sealed class NativeRetainedCallbackTests
                         } : new() { unregisterHandleParameter = "handle", nullResultQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations, releaseThreadDomain = "any" }
                     }]
                 },
-                api = new() { @namespace = "Generated.Retained", name = "RetainedApi", importMode = mode,
-                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
+                api = new()
+                {
+                    @namespace = "Generated.Retained",
+                    name = "RetainedApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

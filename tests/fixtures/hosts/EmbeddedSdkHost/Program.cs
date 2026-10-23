@@ -28,8 +28,12 @@ internal static class Program
             bool success = inspection.success && difference.success && !difference.hasChanges && unchanged;
             Console.WriteLine(JsonSerializer.Serialize(new
             {
-                success, tempRoot = Path.GetTempPath(), inspectionSucceeded = inspection.success,
-                differenceSucceeded = difference.success, difference.hasChanges, formalOutputUnchanged = unchanged,
+                success,
+                tempRoot = Path.GetTempPath(),
+                inspectionSucceeded = inspection.success,
+                differenceSucceeded = difference.success,
+                difference.hasChanges,
+                formalOutputUnchanged = unchanged,
                 diagnostics = inspection.diagnostics.Concat(difference.diagnostics)
             }));
             return success ? 0 : 1;

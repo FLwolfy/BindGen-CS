@@ -31,8 +31,12 @@ public sealed class ExactMixedBitfieldSourceTests
     [Theory]
     [InlineData("windows-x64-msvc", "windows", "msvc", "x86_64-pc-windows-msvc")]
     [InlineData("linux-x64-gnu", "linux", "gnu", "x86_64-unknown-linux-gnu")]
-    public async Task ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts(string targetId, string platform, string abi, string triple)
-    {
+    public async Task ActualTargetParsingPreservesTheExactMixedPackedAndBooleanSourceLayouts(
+        string targetId,
+        string platform,
+        string abi,
+        string triple
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-exact-bitfield-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -131,6 +135,9 @@ public sealed class ExactMixedBitfieldSourceTests
     private sealed class MemorySink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 }

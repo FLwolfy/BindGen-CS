@@ -78,16 +78,23 @@ public sealed class WorkerPluginHostTests
         string basePath = Path.Combine(fixture.settings, "base.json");
         File.WriteAllText(basePath, JsonSerializer.Serialize(new
         {
-            schemaVersion = 2, library = new { id = "worker_host", nativeName = "worker_host" },
+            schemaVersion = 2,
+            library = new { id = "worker_host", nativeName = "worker_host" },
             source = new { headers = new[] { Path.Combine(fixture.source, "native.h") }, includeDirectories = new[] { fixture.source }, parseMacros = false },
-            output = new { root = fixture.output }, cache = new { directory = Path.Combine(fixture.root, "cache") },
-            extensions = new { plugins = new[] { fixture.manifest }, options = new Dictionary<string, object>
-                { ["clang.fixture"] = new { values = new { externalFile = "external.txt" } } } }
+            output = new { root = fixture.output },
+            cache = new { directory = Path.Combine(fixture.root, "cache") },
+            extensions = new
+            {
+                plugins = new[] { fixture.manifest },
+                options = new Dictionary<string, object>
+                { ["clang.fixture"] = new { values = new { externalFile = "external.txt" } } }
+            }
         }));
         string path = Path.Combine(child, "bindgen.json");
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            schemaVersion = 2, extends = new[] { basePath },
+            schemaVersion = 2,
+            extends = new[] { basePath },
             extensions = new { options = new Dictionary<string, object> { ["clang.fixture"] = new { values = new { mode = "normal" } } } }
         }));
         GenerationRequest request = TestInputs.LoadRequest(path);
@@ -160,8 +167,11 @@ public sealed class WorkerPluginHostTests
             Assert.False(rejected.published);
             Assert.Contains("parser identity", rejected.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
         }
-        fixture.WriteManifest(original with { plugin = original.plugin with
-        { services = [new("clang.fixture.facts", ExtensionPort.FrontendFactContributor), new("ordinary", ExtensionPort.InteropTransform)] } });
+        fixture.WriteManifest(original with
+        {
+            plugin = original.plugin with
+            { services = [new("clang.fixture.facts", ExtensionPort.FrontendFactContributor), new("ordinary", ExtensionPort.InteropTransform)] }
+        });
         Assert.ThrowsAny<Exception>(() => fixture.Builder());
         fixture.WriteManifest(original with { workerOnly = false, workerParserIdentity = null });
         Assert.ThrowsAny<Exception>(() => fixture.Builder());
@@ -172,23 +182,32 @@ public sealed class WorkerPluginHostTests
     {
         public string id => "late-input-change";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             File.WriteAllText(path, "changed-after-validation");
             return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty);
         }
     }
-    private static string Stage(GenerationResult result, string name) => Assert.Single(result.cacheStages, stage => stage.stage == name).status;
-    private static void AssertSuccess(GenerationResult result, string text)
-    {
+    private static string Stage(
+        GenerationResult result,
+        string name
+    ) => Assert.Single(result.cacheStages, stage => stage.stage == name).status;
+    private static void AssertSuccess(
+        GenerationResult result,
+        string text
+    ) {
         Assert.True(result.success, result.GetDiagnosticSummary());
         Assert.Equal("advanced-clang:read_value:" + text, Assert.Single(Assert.Single(result.targetModels).native.declarations,
             declaration => declaration.name == "read_value").documentation);
     }
     private static Dictionary<string, byte[]> Snapshot(string root) => Directory.GetFiles(root, "*", SearchOption.AllDirectories)
         .ToDictionary(path => Path.GetRelativePath(root, path), File.ReadAllBytes, StringComparer.Ordinal);
-    private static void AssertSnapshot(string root, Dictionary<string, byte[]> before)
-    {
+    private static void AssertSnapshot(
+        string root,
+        Dictionary<string, byte[]> before
+    ) {
         Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(root, "*", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(root, path)).Order(StringComparer.Ordinal));
         foreach ((string path, byte[] bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(root, path)));

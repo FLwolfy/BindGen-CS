@@ -27,8 +27,10 @@ public sealed class CallbackStatusCompositionTests
     [InlineData(BindingImportMode.FunctionTable, "owned")]
     [InlineData(BindingImportMode.DllImport, "owned")]
     [InlineData(BindingImportMode.LibraryImport, "owned")]
-    public async Task StatusCleanupIsReusedBeforeCallbackFailureAndOwnedResultsAreReleased(BindingImportMode mode, string shape)
-    {
+    public async Task StatusCleanupIsReusedBeforeCallbackFailureAndOwnedResultsAreReleased(
+        BindingImportMode mode,
+        string shape
+    ) {
         var model = new DefaultManagedProjection().Project(Module(shape), new("Generated.Status", "StatusApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
@@ -66,8 +68,13 @@ public sealed class CallbackStatusCompositionTests
         InteropParameter callback = new(new("callback-input"), "callback", callbackPointer.id)
         {
             callback = new(callable.id, new(NativeLifetimeKind.Call, null, evidence), evidence)
-            { retained = false, threading = NativeCallbackThreading.CallerThread, userDataParameter = new("userdata"), callableUserDataIndex = 1,
-                failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence) }
+            {
+                retained = false,
+                threading = NativeCallbackThreading.CallerThread,
+                userDataParameter = new("userdata"),
+                callableUserDataIndex = 1,
+                failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence)
+            }
         };
         InteropFunction create = module.functions[0];
         var parameters = create.parameters.Insert(0, callback).Insert(2, new(new("userdata"), "userdata", pointer.id));

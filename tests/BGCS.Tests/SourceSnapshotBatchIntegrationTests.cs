@@ -99,8 +99,10 @@ public sealed class SourceSnapshotBatchIntegrationTests
     }
 
 
-    private static async Task Warm(BindingHost host, GenerationRequest request)
-    {
+    private static async Task Warm(
+        BindingHost host,
+        GenerationRequest request
+    ) {
         GenerationResult cold = await host.GenerateAsync(request);
         Assert.True(cold.success, cold.GetDiagnosticSummary());
         Assert.All(cold.cacheStages, stage => Assert.Equal("miss", stage.status));
@@ -115,8 +117,10 @@ public sealed class SourceSnapshotBatchIntegrationTests
         Assert.Equal("hit", Assert.Single(result.cacheStages, stage => stage.stage == "csharpEmission").status);
     }
 
-    private static void Rewrite(string path, string value)
-    {
+    private static void Rewrite(
+        string path,
+        string value
+    ) {
         DateTime timestamp = File.GetLastWriteTimeUtc(path);
         Assert.Equal(new FileInfo(path).Length, (long)System.Text.Encoding.UTF8.GetByteCount(value));
         File.WriteAllText(path, value);
@@ -127,8 +131,10 @@ public sealed class SourceSnapshotBatchIntegrationTests
     {
         public string id => "batch-mutation";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             mutation();
             return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty);
         }
@@ -138,11 +144,20 @@ public sealed class SourceSnapshotBatchIntegrationTests
     {
         internal static PluginDescriptor Descriptor { get; } = new("batch.directory", "1.0.0", [new("batch.directory.transform", ExtensionPort.NativeModuleTransform)]);
         public PluginDescriptor descriptor => Descriptor;
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken)
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        )
             => [new(directory, ExternalInputKind.Directory)];
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(new string('a', 64)), [new(directory, ExternalInputKind.Directory)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        )
             => registry.RegisterFactory<INativeModuleTransform>("batch.directory.transform", _ => new DirectoryTransform());
         public void Dispose() { }
     }
@@ -151,12 +166,22 @@ public sealed class SourceSnapshotBatchIntegrationTests
     {
         public string id => "batch.directory.transform";
         public int priority => 0;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken) => module;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) => module;
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(new string('b', 64)), []);
     }
 
-    private sealed class MutationState(string input, bool restore)
+    private sealed class MutationState(
+        string input,
+        bool restore
+    )
     {
         internal string path => input;
         internal bool restoreDuringTransform => restore;
@@ -168,12 +193,20 @@ public sealed class SourceSnapshotBatchIntegrationTests
         internal static PluginDescriptor Descriptor { get; } = new("batch.contradiction", "1.0.0",
             [new("batch.restore", ExtensionPort.NativeModuleTransform)]);
         public PluginDescriptor descriptor => Descriptor;
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken)
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        )
             => [new(state.path, ExternalInputKind.File)];
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(state.path)))), [new(state.path, ExternalInputKind.File)]);
-        public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-        {
+        public void Configure(
+            IExtensionRegistryBuilder registry,
+            PluginConfiguration configuration
+        ) {
             if (state.armed) Rewrite(state.path, "other");
             registry.RegisterFactory<INativeModuleTransform>("batch.restore", _ => new RestoreTransform(state));
         }
@@ -184,19 +217,27 @@ public sealed class SourceSnapshotBatchIntegrationTests
     {
         public string id => "batch.restore";
         public int priority => 0;
-        public NativeModule Transform(NativeModule module, AnalysisContext context, CancellationToken cancellationToken)
-        {
+        public NativeModule Transform(
+            NativeModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) {
             if (state.armed && state.restoreDuringTransform) Rewrite(state.path, "first");
             return module;
         }
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(state.path)))), [new(state.path, ExternalInputKind.File)]);
     }
 
     private static Dictionary<string, byte[]> Snapshot(string root) => Directory.GetFiles(root, "*", SearchOption.AllDirectories)
         .ToDictionary(path => Path.GetRelativePath(root, path), File.ReadAllBytes, StringComparer.Ordinal);
-    private static void AssertSnapshot(string root, Dictionary<string, byte[]> before)
-    {
+    private static void AssertSnapshot(
+        string root,
+        Dictionary<string, byte[]> before
+    ) {
         Assert.Equal(before.Keys.Order(StringComparer.Ordinal), Directory.GetFiles(root, "*", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(root, path)).Order(StringComparer.Ordinal));
         foreach ((string path, byte[] content) in before) Assert.Equal(content, File.ReadAllBytes(Path.Combine(root, path)));

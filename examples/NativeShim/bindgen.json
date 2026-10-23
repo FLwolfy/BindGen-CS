@@ -5,12 +5,13 @@
     "nativeName": "widget_bridge"
   },
   "source": {
-    "language": "cpp",
+    "language": "c",
     "headers": [
-      "native/entry.hpp"
+      "shims/widget_c.h"
     ],
     "includeDirectories": [
-      "native"
+      "native",
+      "shims"
     ]
   },
   "api": {

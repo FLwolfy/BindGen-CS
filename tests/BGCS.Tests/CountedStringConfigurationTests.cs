@@ -15,8 +15,13 @@ public sealed class CountedStringConfigurationTests
     [InlineData("direction-without-length")]
     public void InvalidCountedAllocationRulesFailBeforeParsing(string fault)
     {
-        StringParameterConfiguration rule = new() { function = "set_name", parameter = "data", lengthParameter = "count",
-            lengthDirection = NativeParameterDirection.Input };
+        StringParameterConfiguration rule = new()
+        {
+            function = "set_name",
+            parameter = "data",
+            lengthParameter = "count",
+            lengthDirection = NativeParameterDirection.Input
+        };
         rule = fault switch
         {
             "zero-bound" => rule with { maximumCodeUnits = 0 },
@@ -24,8 +29,13 @@ public sealed class CountedStringConfigurationTests
             "undefined-direction" => rule with { lengthDirection = (NativeParameterDirection)999 },
             _ => rule with { lengthParameter = null }
         };
-        BindingConfiguration configuration = new() { schemaVersion = 2, library = new() { id = "text", nativeName = "text" },
-            source = new() { headers = ["native.h"] }, semantics = new() { stringParameters = [rule] } };
+        BindingConfiguration configuration = new()
+        {
+            schemaVersion = 2,
+            library = new() { id = "text", nativeName = "text" },
+            source = new() { headers = ["native.h"] },
+            semantics = new() { stringParameters = [rule] }
+        };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }
 

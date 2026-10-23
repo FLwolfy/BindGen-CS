@@ -100,15 +100,20 @@ public sealed class VaListNeutralGenerationTests
         }
     }
 
-    private static NativeType Underlying(NativeModule module, StableId identity)
-    {
+    private static NativeType Underlying(
+        NativeModule module,
+        StableId identity
+    ) {
         NativeType type = module.GetType(identity);
         HashSet<StableId> visited = [];
         while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified && type.elementType is StableId element && visited.Add(type.id)) type = module.GetType(element);
         return type;
     }
-    private static EmissionRequest Request(ManagedApiModel model, Sink sink, BindingImportMode mode)
-    {
+    private static EmissionRequest Request(
+        ManagedApiModel model,
+        Sink sink,
+        BindingImportMode mode
+    ) {
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new(model.interop.targetId)));
         ManagedRuntimeProfile runtime = TestComposition.ResolveRuntime(target);
         var plans = ImmutableArray.CreateBuilder<NativeCallPlan>();
@@ -119,8 +124,12 @@ public sealed class VaListNeutralGenerationTests
         }
         return new("va_list", sink) { importMode = mode, managedRuntime = runtime, callPlans = plans.ToImmutable() };
     }
-    private static void AssertCarrierLayout(Sink sink, CSharpEmissionPlan plan, InteropType native, int[] offsets)
-    {
+    private static void AssertCarrierLayout(
+        Sink sink,
+        CSharpEmissionPlan plan,
+        InteropType native,
+        int[] offsets
+    ) {
         var compilation = Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create("VaListStorage" + Guid.NewGuid().ToString("N"),
             sink.sources.Select(source => Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source.Value, path: source.Key)),
             ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
@@ -139,7 +148,10 @@ public sealed class VaListNeutralGenerationTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
     private sealed class Scratch : IDisposable
     {

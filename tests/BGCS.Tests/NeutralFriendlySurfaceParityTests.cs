@@ -29,11 +29,14 @@ public sealed class NeutralFriendlySurfaceParityTests
             bool sourceRuntime = mode == BindingImportMode.LibraryImport;
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "friendly-parity", nativeName = "friendly_parity_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "friendly-parity", nativeName = "friendly_parity_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["friendly.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.FriendlyParity", name = "FriendlyApi", importMode = mode,
+                    @namespace = "Generated.FriendlyParity",
+                    name = "FriendlyApi",
+                    importMode = mode,
                     naming = new() { functions = new() { casing = ManagedNameCasing.Pascal, removePrefixes = ["bgcs_"] } },
                     names = ImmutableDictionary<string, string>.Empty.Add("bgcs_add::left", "x").Add("bgcs_read::value", "result"),
                     functionContainers = [new("Math", [new("bgcs_add", "Add")])],
@@ -61,7 +64,7 @@ public sealed class NeutralFriendlySurfaceParityTests
                         lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false
                     }]
                 },
-                 cache = new() { enabled = false },
+                cache = new() { enabled = false },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" }
             };

@@ -89,15 +89,19 @@ public sealed class FrontendArgumentBoundaryTests
 
     private sealed class CapturingFrontend : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             using HostServices host = TestHostPaths.CreateHost();
             return new ClangFrontend(host).PrepareAsync(request, cancellationToken);
         }
 
         internal FrontendRequest? request;
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest input, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest input,
+            CancellationToken cancellationToken
+        ) {
             request = input;
             NativeModule module = new(input.target.targetId.value, input.target.triple, TestComposition.PointerSize(input.target), [], [], []) { language = input.language, byteOrder = input.target.byteOrder };
             return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot([], [])));

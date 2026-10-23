@@ -32,12 +32,15 @@ public sealed class ExplicitTargetTripleTests
             {
                 BindingConfiguration configuration = new()
                 {
-                    schemaVersion = 2, library = new() { id = "triple", nativeName = "triple" }, source = new() { headers = ["native.h"] },
-                    targets = [new() { id = "linux-x64-gnu", triple = triple }], cache = new() { enabled = false }
+                    schemaVersion = 2,
+                    library = new() { id = "triple", nativeName = "triple" },
+                    source = new() { headers = ["native.h"] },
+                    targets = [new() { id = "linux-x64-gnu", triple = triple }],
+                    cache = new() { enabled = false }
                 };
                 string path = Path.Combine(root, "bindgen.json");
                 await File.WriteAllTextAsync(path, JsonSerializer.Serialize(configuration, new JsonSerializerOptions
-                    { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
+                { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
                 BindingConfiguration loaded = new BindingConfigurationLoader(TestHostPaths.Create()).Load(path);
                 Assert.Equal(triple, Assert.Single(loaded.targets).triple);
                 GenerationResult result = await host.GenerateAsync(new(loaded, root));
@@ -68,15 +71,19 @@ public sealed class ExplicitTargetTripleTests
 
     private sealed class CapturingFrontend : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
         internal FrontendRequest? request;
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest input, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest input,
+            CancellationToken cancellationToken
+        ) {
             request = input;
             NativeModule module = new(input.target.targetId.value, input.target.triple, 8, [], [], []) { language = input.language, byteOrder = input.target.byteOrder };
             return ValueTask.FromResult(new FrontendResult(module, new SourceSnapshot([], [])));

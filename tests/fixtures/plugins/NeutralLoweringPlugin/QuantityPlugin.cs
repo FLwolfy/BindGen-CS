@@ -17,8 +17,10 @@ public sealed class QuantityPlugin : IBindingPlugin
     /// <summary>Gets whether the plugin has released its session state.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public void Configure(IExtensionRegistryBuilder registry, PluginConfiguration configuration)
-    {
+    public void Configure(
+        IExtensionRegistryBuilder registry,
+        PluginConfiguration configuration
+    ) {
         registry.RegisterFactory<INativeTypeLowering>("fixture.quantity", _ => lowering = new());
         registry.RegisterFactory<IGenerationValidator>("fixture.quantity-validation", _ => validator = new());
         registry.RegisterFactory<IArtifactProcessor>("fixture.quantity-processing", _ => processor = new());

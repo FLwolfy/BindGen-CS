@@ -29,14 +29,20 @@ public sealed class CountedStringInputTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CountedTextHidesOnlyItsCheckedLengthAndKeepsTheRawAbi(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CountedTextHidesOnlyItsCheckedLengthAndKeepsTheRawAbi(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         InteropModule module = Module();
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Counted", "CountedApi"), CancellationToken.None);
         Assert.Equal(new StableId("data"), Assert.Single(Assert.Single(model.methods).stringInputs));
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("counted_native", sink) { importMode = mode, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.Counted.Runtime" : "BGCS.Runtime" };
+        EmissionRequest request = new("counted_native", sink)
+        {
+            importMode = mode,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.Counted.Runtime" : "BGCS.Runtime"
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         CSharpStringInputPlan text = Assert.Single(Assert.Single(plan.methods).stringInputs);
         Assert.Equal(1, text.lengthIndex);
@@ -105,10 +111,16 @@ public sealed class CountedStringInputTests
             _ => text
         };
         parameter = parameter with { text = text };
-        if (fault is "competing-buffer" or "competing-buffer-other-count") parameter = parameter with { buffer = new(new("unit"), NativeLengthUnit.Bytes, NativeParameterDirection.Input, text.lifetime, text.evidence)
-            { lengthParameter = new(fault == "competing-buffer" ? "length" : "other-count"), retainsPointer = false, allowsNull = false } };
-        if (fault == "competing-value") parameter = parameter with { singleValue = new(NativeParameterDirection.Input, text.lifetime, text.evidence)
-            { retainsPointer = false, allowsNull = false } };
+        if (fault is "competing-buffer" or "competing-buffer-other-count") parameter = parameter with
+        {
+            buffer = new(new("unit"), NativeLengthUnit.Bytes, NativeParameterDirection.Input, text.lifetime, text.evidence)
+            { lengthParameter = new(fault == "competing-buffer" ? "length" : "other-count"), retainsPointer = false, allowsNull = false }
+        };
+        if (fault == "competing-value") parameter = parameter with
+        {
+            singleValue = new(NativeParameterDirection.Input, text.lifetime, text.evidence)
+            { retainsPointer = false, allowsNull = false }
+        };
         if (fault == "competing-callback") parameter = parameter with { callback = new(parameter.type, text.lifetime, text.evidence) };
         function = function with { parameters = function.parameters.SetItem(0, parameter) };
         if (fault == "competing-buffer-other-count") function = function with { parameters = function.parameters.Add(new(new("other-count"), "otherCount", new("count"))) };
@@ -129,7 +141,8 @@ public sealed class CountedStringInputTests
     {
         InteropModule original = Module();
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.Select(type => type.id == new StableId("unit")
-            ? type with { primitiveKind = "SignedChar", nativeName = "signed char", isSigned = true } : type).ToImmutableArray(), original.functions, []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            ? type with { primitiveKind = "SignedChar", nativeName = "signed char", isSigned = true } : type).ToImmutableArray(), original.functions, [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.Counted", "CountedApi"), CancellationToken.None);
         Assert.Single(Assert.Single(model.methods).stringInputs);
         CSharpMethodPlan method = Assert.Single(new CSharpTestPlanner().Plan(model, new("native", new NeutralBackendTests.MemorySink())).methods);
@@ -144,10 +157,14 @@ public sealed class CountedStringInputTests
         InteropType pointer = new(new("pointer"), "const unsigned char*", NativeTypeCategory.Pointer, 8, 8) { elementType = unit.id };
         InteropType count = new(new("count"), "unsigned int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "UnsignedInt", isSigned = false };
         InteropType result = new(new("result"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
-        InteropParameter data = new(new("data"), "data", pointer.id) { text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits,
+        InteropParameter data = new(new("data"), "data", pointer.id)
+        {
+            text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits,
             NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
-        { zeroTerminated = false, retainsPointer = false, allowsNull = false, lengthParameter = new("length"), lengthDirection = NativeParameterDirection.Input } };
+            { zeroTerminated = false, retainsPointer = false, allowsNull = false, lengthParameter = new("length"), lengthDirection = NativeParameterDirection.Input }
+        };
         return new("counted", "windows-x64-msvc", 8, [unit, pointer, count, result],
-            [new(new("read"), "ReadText", result.id, [data, new(new("length"), "length", count.id)], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [new(new("read"), "ReadText", result.id, [data, new(new("length"), "length", count.id)], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
     }
 }

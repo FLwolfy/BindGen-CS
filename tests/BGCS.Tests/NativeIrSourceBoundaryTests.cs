@@ -42,12 +42,16 @@ public sealed class NativeIrSourceBoundaryTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "ir-source-boundary", nativeName = "ir_source_boundary" },
+                schemaVersion = 2,
+                library = new() { id = "ir-source-boundary", nativeName = "ir_source_boundary" },
                 source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 api = new() { @namespace = "Generated.IrSource", name = "SourceApi", importMode = mode },
-                semantics = new() { callbackParameters = [new() { function = "NativeInvoke", parameter = "callback", lifetime = NativeLifetimeKind.Call,
-                    retained = false, threading = NativeCallbackThreading.CallerThread, failureReturn = "-1" }] },
-                 cache = new() { enabled = false }
+                semantics = new()
+                {
+                    callbackParameters = [new() { function = "NativeInvoke", parameter = "callback", lifetime = NativeLifetimeKind.Call,
+                    retained = false, threading = NativeCallbackThreading.CallerThread, failureReturn = "-1" }]
+                },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = Host();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root), compileManaged: true);
@@ -85,6 +89,9 @@ public sealed class NativeIrSourceBoundaryTests
 
     private sealed class UnusedSink : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning must not emit an artifact.");
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning must not emit an artifact.");
     }
 }

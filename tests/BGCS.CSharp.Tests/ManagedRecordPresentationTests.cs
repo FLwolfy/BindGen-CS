@@ -68,7 +68,10 @@ public sealed class ManagedRecordPresentationTests
                 .Where(variable => variable.Identifier.ValueText == "NativeSize")
                 .Select(variable => (LiteralExpressionSyntax)variable.Initializer!.Value).ToArray();
             mutations += constants.Length;
-            return (source.Key, Text: root.ReplaceNodes(constants, (original, _) =>
+            return (source.Key, Text: root.ReplaceNodes(constants, (
+                original,
+                _
+            ) =>
                 SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(15)).WithTriviaFrom(original)).ToFullString());
         }).ToArray();
         Assert.Equal(1, mutations);
@@ -97,8 +100,10 @@ public sealed class ManagedRecordPresentationTests
         Exception failure = invalid == "overlap" ? Assert.Throws<NotSupportedException>(plan) : Assert.Throws<ArgumentException>(plan);
         Assert.Contains(invalid switch
         {
-            "unknown-field" => "exactly one native field", "size-collision" => "size constant conflicts",
-            "validity-collision" => "validity property conflicts", "sentinel-overflow" => "outside its exact friendly type range",
+            "unknown-field" => "exactly one native field",
+            "size-collision" => "size constant conflicts",
+            "validity-collision" => "validity property conflicts",
+            "sentinel-overflow" => "outside its exact friendly type range",
             _ => "overlapping native storage fields"
         }, failure.Message, StringComparison.Ordinal);
         Assert.Empty(sink.sources);
@@ -106,24 +111,36 @@ public sealed class ManagedRecordPresentationTests
 
     private static ManagedRecordRuleRequest Rule() => new("NativeRecord")
     {
-        name = "RenamedRecord", documentation = "Carrier <value> && data, not a native constructor.",
+        name = "RenamedRecord",
+        documentation = "Carrier <value> && data, not a native constructor.",
         fields = [new("value") { name = "Id", documentation = "The native ID < 0 sentinel." }, new("counter") { name = "Counter" }],
-        constructorFields = ["value", "counter"], emitSizeConstant = true,
+        constructorFields = ["value", "counter"],
+        emitSizeConstant = true,
         validity = new("value", new(ManagedDefaultValueKind.Integer, "-1"))
     };
 
-    private static ManagedApiModel Model(ManagedRecordRuleRequest rule, bool overlap = false)
-    {
+    private static ManagedApiModel Model(
+        ManagedRecordRuleRequest rule,
+        bool overlap = false
+    ) {
         ManagedApiModel original = NeutralBackendTests.Model();
         InteropType integer = original.interop.types[0];
         InteropType count = new(new("count"), "unsigned long long", NativeTypeCategory.Primitive, 8, 8) { primitiveKind = "ULongLong", isSigned = false };
         InteropType record = new(new("native-record"), "NativeRecord", NativeTypeCategory.Record, 16, 8)
-        { declarationName = "NativeRecord", recordKind = overlap ? "Union" : "Struct",
-            fields = [new(new("record-value"), "value", integer.id, 0, 0, null), new(new("record-counter"), "counter", count.id, overlap ? 0 : 8, overlap ? 0 : 64, null)] };
+        {
+            declarationName = "NativeRecord",
+            recordKind = overlap ? "Union" : "Struct",
+            fields = [new(new("record-value"), "value", integer.id, 0, 0, null), new(new("record-counter"), "counter", count.id, overlap ? 0 : 8, overlap ? 0 : 64, null)]
+        };
         InteropModule source = original.interop;
         InteropModule module = new(source.libraryId, source.targetId, source.pointerSize, source.types.Add(count).Add(record), source.functions, source.diagnostics)
-        { byteOrder = source.byteOrder, constants = source.constants, functionAliases = source.functionAliases,
-            stringConstants = source.stringConstants, virtualProxies = source.virtualProxies };
+        {
+            byteOrder = source.byteOrder,
+            constants = source.constants,
+            functionAliases = source.functionAliases,
+            stringConstants = source.stringConstants,
+            virtualProxies = source.virtualProxies
+        };
         return new DefaultManagedProjection().Project(module, new("Generated.Example", "NativeApi") { records = [rule] }, CancellationToken.None);
     }
 }

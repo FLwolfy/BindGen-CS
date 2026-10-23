@@ -428,8 +428,8 @@ def main() -> None:
         parser.error("--host-tool requires --sdk-only; complete certification already installs the tool.")
     if args.sdk_only and (args.wasm or args.native_feature_matrix) and not args.host_tool:
         parser.error("Partial browser/native feature matrices require --host-tool to consume an actual installed generator product.")
-    if not re.fullmatch(r"4\.0\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", args.version):
-        parser.error("Only 4.0.0 or private 4.0.0-ci candidate packages can be certified from this tree.")
+    if not re.fullmatch(r"4\.1\.0(?:-ci(?:\.[0-9A-Za-z-]+)*)?", args.version):
+        parser.error("Only 4.1.0 or private 4.1.0-ci candidate packages can be certified from this tree.")
     packages = args.packages.resolve()
     evidence = args.output.resolve()
     evidence.mkdir(parents=True, exist_ok=True)

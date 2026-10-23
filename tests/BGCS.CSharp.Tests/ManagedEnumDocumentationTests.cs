@@ -32,7 +32,8 @@ public sealed class ManagedEnumDocumentationTests
         ManagedApiModel original = NeutralBackendTests.Model();
         ManagedApiModel model = original with
         {
-            enums = [definition], nestGeneratedTypesInApi = nested,
+            enums = [definition],
+            nestGeneratedTypesInApi = nested,
             style = nested ? ManagedApiStyle.Static : ManagedApiStyle.Instance
         };
         (CSharpCompilation compilation, CSharpEmissionPlan plan) = await CompileAsync(model, nested);
@@ -111,7 +112,10 @@ public sealed class ManagedEnumDocumentationTests
         Assert.Null(definition.documentation);
     }
 
-    private static INamedTypeSymbol Enum(CSharpCompilation compilation, bool nested)
+    private static INamedTypeSymbol Enum(
+        CSharpCompilation compilation,
+        bool nested
+    )
         => compilation.GetTypeByMetadataName(nested ? "Generated.Example.NativeApi+CustomMode" : "Generated.Example.CustomMode")
             ?? throw new InvalidOperationException("The managed enum was not emitted in its declared scope.");
 
@@ -121,11 +125,17 @@ public sealed class ManagedEnumDocumentationTests
         return string.IsNullOrWhiteSpace(xml) ? string.Empty : XElement.Parse(xml).Element("summary")?.Value.Trim() ?? string.Empty;
     }
 
-    private static async Task<(CSharpCompilation Compilation, CSharpEmissionPlan Plan)> CompileAsync(ManagedApiModel model, bool sourceRuntime)
-    {
+    private static async Task<(CSharpCompilation Compilation, CSharpEmissionPlan Plan)> CompileAsync(
+        ManagedApiModel model,
+        bool sourceRuntime
+    ) {
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { singleFile = sourceRuntime, includeRuntimeSource = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime" };
+        EmissionRequest request = new("native", sink)
+        {
+            singleFile = sourceRuntime,
+            includeRuntimeSource = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.Example.Runtime" : "BGCS.Runtime"
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
         new EmittedInteropContractReader().Verify(plan, sink.sources.Select(source => (source.Key, source.Value)), request.libraryName);

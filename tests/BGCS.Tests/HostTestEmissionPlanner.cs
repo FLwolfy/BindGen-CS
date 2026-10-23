@@ -19,8 +19,11 @@ namespace BGCS.Tests;
 // They do not manufacture Verified layout evidence or grant another platform an ABI.
 internal sealed class HostTestEmissionPlanner
 {
-    internal CSharpEmissionPlan Plan(ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken = default)
-    {
+    internal CSharpEmissionPlan Plan(
+        ManagedApiModel model,
+        EmissionRequest request,
+        CancellationToken cancellationToken = default
+    ) {
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new(model.interop.targetId)));
         ManagedRuntimeProfile established = TestComposition.ResolveRuntime(target);
         ManagedRuntimeProfile selected = request.managedRuntime ?? established;

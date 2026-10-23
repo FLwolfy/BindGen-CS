@@ -80,8 +80,10 @@ public sealed class WorkerFactPluginTests : WorkerTestHost
     [InlineData("throw", typeof(InvalidDataException))]
     [InlineData("changeFingerprint", typeof(InvalidDataException))]
     [InlineData("crash", typeof(IOException))]
-    public async Task ContributorFailureOrDriftingStateStaysInsideWorker(string mode, Type exceptionType)
-    {
+    public async Task ContributorFailureOrDriftingStateStaysInsideWorker(
+        string mode,
+        Type exceptionType
+    ) {
         int host = Environment.ProcessId;
         FrontendRequest request = Create(mode: mode);
         FrontendWorkerClient client = Client();
@@ -181,8 +183,10 @@ public sealed class WorkerFactPluginTests : WorkerTestHost
         Assert.Contains("purpose", failure.Message, StringComparison.Ordinal);
     }
 
-    private FrontendRequest Create(bool fingerprinted = true, string mode = "normal")
-    {
+    private FrontendRequest Create(
+        bool fingerprinted = true,
+        string mode = "normal"
+    ) {
         string solution = Root();
         string output = Path.Combine(solution, "tests", "fixtures", "plugins", "ClangFactPlugin", "bin", Configuration(), "net10.0");
         string[] names = ["ClangFactPlugin.dll", "ClangFactPlugin.deps.json"];
@@ -193,14 +197,20 @@ public sealed class WorkerFactPluginTests : WorkerTestHost
         {
             configurationSchema = JsonSerializer.SerializeToElement(new
             {
-                type = "object", additionalProperties = false, required = new[] { "externalFile" },
+                type = "object",
+                additionalProperties = false,
+                required = new[] { "externalFile" },
                 properties = new { externalFile = new { type = "string", minLength = 1 }, mode = new { type = "string" } }
             })
         };
         PluginManifest manifest = new()
         {
-            schemaVersion = 1, assembly = "ClangFactPlugin.dll", entryType = fingerprinted ? "ClangFactFixture.FingerprintedFactPlugin" : "ClangFactFixture.FactPlugin",
-            plugin = descriptor, workerOnly = true, workerParserIdentity = ClangParserIdentity.C_IDENTITY,
+            schemaVersion = 1,
+            assembly = "ClangFactPlugin.dll",
+            entryType = fingerprinted ? "ClangFactFixture.FingerprintedFactPlugin" : "ClangFactFixture.FactPlugin",
+            plugin = descriptor,
+            workerOnly = true,
+            workerParserIdentity = ClangParserIdentity.C_IDENTITY,
             assets = names.Select(name => new PluginAsset(name, new(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(m_root, name))))))).ToImmutableArray()
         };
         string manifestPath = Path.Combine(m_root, "plugin.json");
@@ -211,7 +221,9 @@ public sealed class WorkerFactPluginTests : WorkerTestHost
         NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
         return new(target, SourceLanguage.C, [Path.Combine(m_root, "input.h")])
         {
-            pathBase = m_root, parseMacros = false, workerPlugins = [activation],
+            pathBase = m_root,
+            parseMacros = false,
+            workerPlugins = [activation],
             workerPluginContext = new(JsonSerializer.SerializeToElement(new { source = "fixture" }), m_root, target)
         };
     }

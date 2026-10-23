@@ -150,7 +150,7 @@
       "id": "P13",
       "problem": "Documentation and installed examples must match the current product",
       "owner": "README.md",
-      "implementation": "Current documentation uses Core, schema2 and4.0.0; installation examples still require actual accepted packages.",
+      "implementation": "Current documentation uses Core, schema2 and4.1.0; installation examples still require actual accepted packages.",
       "validationSources": [
         "scripts/test-cli-examples.py",
         "scripts/generate-config-docs.py"
@@ -180,5 +180,5 @@
     "Portable logical input roots and relocated generated source",
     "Shared dependent-template type references preserve declaration ownership"
   ],
-  "evidenceIndex": "records/acceptance/CURRENT_ISSUES.md"
+  "evidenceIndex": "docs/releases/4.0.0.md"
 }

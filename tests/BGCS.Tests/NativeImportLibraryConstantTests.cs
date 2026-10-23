@@ -17,8 +17,10 @@ public sealed class NativeImportLibraryConstantTests
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ConsumerLibraryConstantsCompileInvokeAndInvalidateWithoutReplacingGoodOutput(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ConsumerLibraryConstantsCompileInvokeAndInvalidateWithoutReplacingGoodOutput(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-import-constant-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -36,12 +38,21 @@ public sealed class NativeImportLibraryConstantTests
             await File.WriteAllTextAsync(Path.Combine(root, "LibraryNames.cs"), consumer);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "import-constant", nativeName = "import_constant_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "import-constant", nativeName = "import_constant_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["answer.h"], includeTransitivelyReferencedHeaders = false },
-                api = new() { projectionInputs = new() { sources = ["LibraryNames.cs"] }, @namespace = "Generated.ImportConstant", name = "AnswerApi", importMode = mode,
-                    emitLibraryNameConstant = false, importLibraryNameConstant = "Vendor.LibraryNames.Native" },
+                api = new()
+                {
+                    projectionInputs = new() { sources = ["LibraryNames.cs"] },
+                    @namespace = "Generated.ImportConstant",
+                    name = "AnswerApi",
+                    importMode = mode,
+                    emitLibraryNameConstant = false,
+                    importLibraryNameConstant = "Vendor.LibraryNames.Native"
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                output = new() { layout = sourceRuntime ? "singleFile" : "split" }, cache = new() { enabled = true }
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = true }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

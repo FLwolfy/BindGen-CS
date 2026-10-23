@@ -37,7 +37,7 @@ public sealed class CppTargetTests : FrontendTestHost
             File.WriteAllText(header, "#include <sdk_value.h>\n#include <BgcsFixture/value.h>\nbgcs_sdk_value read_value(bgcs_framework_value value);\n");
             Assert.True(new DesktopTargetProvider().TryResolve(new(new("macos-x64-darwin"), new(sysRoot: sdk)), out NativeTargetDescriptor? target));
             FrontendResult parsed = await new ClangFrontend(host).ParseAsync(new(target!, SourceLanguage.C, [header])
-                { pathBase = root, parseMacros = false, headerSearchPaths = target!.headerSearchPaths }, CancellationToken.None);
+            { pathBase = root, parseMacros = false, headerSearchPaths = target!.headerSearchPaths }, CancellationToken.None);
             Assert.DoesNotContain(parsed.module.diagnostics, diagnostic => diagnostic.isFailure);
             Assert.Contains(parsed.module.declarations, declaration => declaration.name == "read_value");
             Assert.Contains(parsed.snapshot.searchDirectories, directory => directory.path == frameworks);
@@ -76,8 +76,10 @@ public sealed class CppTargetTests : FrontendTestHost
     [InlineData("linux-arm64-musl", "aarch64-unknown-linux-musl")]
     [InlineData("macos-arm64-darwin", "arm64-apple-darwin")]
     [InlineData("emscripten-wasm32-emscripten", "wasm32-unknown-emscripten")]
-    public void ResolveExplicitTargetProducesStableTripleAndIdentifier(string id, string triple)
-    {
+    public void ResolveExplicitTargetProducesStableTripleAndIdentifier(
+        string id,
+        string triple
+    ) {
         NativeTargetDescriptor target = Resolve(id);
         Assert.Equal(id, target.targetId.value); Assert.Equal(triple, target.triple);
     }
@@ -155,8 +157,12 @@ public sealed class CppTargetTests : FrontendTestHost
     [InlineData("linux-arm64-gnu", 8, 4, 16)]
     [InlineData("macos-arm64-darwin", 8, 4, 8)]
     [InlineData("emscripten-wasm32-emscripten", 4, 4, 16)]
-    public async Task PrimitivesUseTargetAbiSizes(string id, int longSize, int wcharSize, int longDoubleSize)
-    {
+    public async Task PrimitivesUseTargetAbiSizes(
+        string id,
+        int longSize,
+        int wcharSize,
+        int longDoubleSize
+    ) {
         NativeModule module = (await ParseSourceAsync("struct NativeAbiValues { char plainChar; long signedLong; unsigned long unsignedLong; wchar_t wide; long double extendedValue; };", Resolve(id))).module;
         Assert.DoesNotContain(module.diagnostics, value => value.isFailure);
         foreach ((string name, int size) in new[] { ("signedLong", longSize), ("unsignedLong", longSize), ("wide", wcharSize), ("extendedValue", longDoubleSize) })

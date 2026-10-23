@@ -13,8 +13,10 @@ public sealed unsafe class StringResultCodecTests
     [InlineData(2, true)]
     [InlineData(4, false)]
     [InlineData(4, true)]
-    public void ExactExtentsPreserveEmbeddedNullsAndNonBmpScalars(int width, bool bigEndian)
-    {
+    public void ExactExtentsPreserveEmbeddedNullsAndNonBmpScalars(
+        int width,
+        bool bigEndian
+    ) {
         const string value = "A\0😀B";
         byte[] bytes = Encoding(width, bigEndian).GetBytes(value);
         fixed (byte* pointer = bytes)
@@ -27,8 +29,10 @@ public sealed unsafe class StringResultCodecTests
     [InlineData(2, true)]
     [InlineData(4, false)]
     [InlineData(4, true)]
-    public void TerminatorAtGuardPageBoundaryStopsBeforeUnmappedMemory(int width, bool bigEndian)
-    {
+    public void TerminatorAtGuardPageBoundaryStopsBeforeUnmappedMemory(
+        int width,
+        bool bigEndian
+    ) {
         using GuardedPages pages = new();
         byte[] bytes = Encoding(width, bigEndian).GetBytes("A😀B\0");
         nint address = pages.readableEnd - bytes.Length;
@@ -69,11 +73,24 @@ public sealed unsafe class StringResultCodecTests
         Assert.Throws<OverflowException>(() => Utf16Codec.DecodeLength(unchecked((nint)(nuint.MaxValue - 1)), 2));
     }
 
-    private static Encoding Encoding(int width, bool bigEndian) => width switch
+    private static Encoding Encoding(
+        int width,
+        bool bigEndian
+    ) => width switch
     { 1 => new UTF8Encoding(false, true), 2 => new UnicodeEncoding(bigEndian, false, true), _ => new UTF32Encoding(bigEndian, false, true) };
-    private static string? Decode(nint address, int maximum, int width, bool bigEndian) => width switch
+    private static string? Decode(
+        nint address,
+        int maximum,
+        int width,
+        bool bigEndian
+    ) => width switch
     { 1 => Utf8Codec.Decode(address, maximum), 2 => Utf16Codec.Decode(address, maximum, bigEndian), _ => Utf32Codec.Decode(address, maximum, bigEndian) };
-    private static string? DecodeLength(nint address, int count, int width, bool bigEndian) => width switch
+    private static string? DecodeLength(
+        nint address,
+        int count,
+        int width,
+        bool bigEndian
+    ) => width switch
     { 1 => Utf8Codec.DecodeLength(address, count), 2 => Utf16Codec.DecodeLength(address, count, bigEndian), _ => Utf32Codec.DecodeLength(address, count, bigEndian) };
 
     private sealed class GuardedPages : IDisposable
@@ -104,11 +121,47 @@ public sealed unsafe class StringResultCodecTests
             if (OperatingSystem.IsWindows()) _ = VirtualFree(m_start, 0, 0x8000);
             else _ = munmap(m_start, m_length);
         }
-        [DllImport("kernel32.dll", SetLastError = true)] private static extern nint VirtualAlloc(nint address, nuint size, uint allocationType, uint protection);
-        [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool VirtualProtect(nint address, nuint size, uint protection, out uint previous);
-        [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool VirtualFree(nint address, nuint size, uint type);
-        [DllImport("libc", SetLastError = true)] private static extern nint mmap(nint address, nuint size, int protection, int flags, int file, nint offset);
-        [DllImport("libc", SetLastError = true)] private static extern int mprotect(nint address, nuint size, int protection);
-        [DllImport("libc", SetLastError = true)] private static extern int munmap(nint address, nuint size);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern nint VirtualAlloc(
+            nint address,
+            nuint size,
+            uint allocationType,
+            uint protection
+        );
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool VirtualProtect(
+            nint address,
+            nuint size,
+            uint protection,
+            out uint previous
+        );
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool VirtualFree(
+            nint address,
+            nuint size,
+            uint type
+        );
+        [DllImport("libc", SetLastError = true)]
+        private static extern nint mmap(
+            nint address,
+            nuint size,
+            int protection,
+            int flags,
+            int file,
+            nint offset
+        );
+        [DllImport("libc", SetLastError = true)]
+        private static extern int mprotect(
+            nint address,
+            nuint size,
+            int protection
+        );
+        [DllImport("libc", SetLastError = true)]
+        private static extern int munmap(
+            nint address,
+            nuint size
+        );
     }
 }

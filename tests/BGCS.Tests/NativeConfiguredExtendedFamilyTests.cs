@@ -30,8 +30,10 @@ public sealed class NativeConfiguredExtendedFamilyTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CustomOwnersVariantsPathsAndClocksUseNativeProtocolsWithoutInventedLifetimes(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task CustomOwnersVariantsPathsAndClocksUseNativeProtocolsWithoutInventedLifetimes(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = NewRoot();
         try
         {
@@ -69,7 +71,7 @@ public sealed class NativeConfiguredExtendedFamilyTests
             string targetRoot = Path.Combine(built.outputRoot, target.targetId);
             string binary = Assert.Single(Directory.GetFiles(NativeConsumerHarness.NativeDirectory(targetRoot)));
             CSharpEmissionPlan plan = new HostTestEmissionPlanner().Plan(target.managed!, new(configuration.library.nativeName, new NoWrites())
-                { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Extended.Runtime" : "BGCS.Runtime" });
+            { importMode = mode, runtimeNamespace = sourceRuntime ? "Generated.Extended.Runtime" : "BGCS.Runtime" });
             string context = sourceRuntime ? "ExtendedApiContext" : "ExtendedApi";
             string factory = mode == BindingImportMode.FunctionTable ? "ApiContext.Load(binary)" : "ApiContext.Create()";
             Assert.Equal(42, await NativeConsumerHarness.CompileAndInvokeAsync(Path.Combine(targetRoot, "managed"), binary, configuration.library.nativeName, $$"""
@@ -133,20 +135,31 @@ public sealed class NativeConfiguredExtendedFamilyTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static string ConsumerBody(NativeBridgePlan bridge, CSharpEmissionPlan plan)
-    {
+    private static string ConsumerBody(
+        NativeBridgePlan bridge,
+        CSharpEmissionPlan plan
+    ) {
         StringBuilder source = new();
-        string Call(BridgeExport export, params string[] arguments)
-        {
+        string Call(
+            BridgeExport export,
+            params string[] arguments
+        ) {
             CSharpMethodPlan method = plan.methods.Single(method => method.nativeExport == export.id);
             Assert.Equal(method.parameterTypes.Length, arguments.Length);
-            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((argument, index) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
+            return "api.Raw." + method.name + "(" + string.Join(',', arguments.Select((
+                argument,
+                index
+            ) => "(" + method.parameterTypes[index] + ")(" + argument + ")")) + ")";
         }
         BridgeExport Native(string name) => Assert.Single(bridge.exports, export => export.operation.declaration is StableId declaration
             && bridge.source.GetDeclaration(declaration).qualifiedName == "extended::" + name);
         CSharpMethodPlan errorRelease = plan.methods.Single(method => method.exportName == bridge.errorReleaseExport);
         string releaseErrorCall = "api.Raw." + errorRelease.name + "((" + errorRelease.parameterTypes[0] + ")error);error=0;";
-        void Success(string invocation, string condition = "", string actual = "") => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
+        void Success(
+            string invocation,
+            string condition = "",
+            string actual = ""
+        ) => source.Append("if(").Append(invocation).Append("!=0 || error!=0")
             .Append(condition.Length == 0 ? "" : " || " + condition).Append(")throw new InvalidOperationException(")
             .Append(JsonSerializer.Serialize("configured native operation: " + invocation + "; condition: " + condition))
             .Append(" + \"; error=\" + error")
@@ -160,7 +173,10 @@ public sealed class NativeConfiguredExtendedFamilyTests
         {
             BridgeExport make = Native(factory);
             StableId owner = StandardLibraryFactReader.Resolve(bridge.source, make.nativeResultType!.Value).id;
-            BridgeExport Access(StandardValueAction action, int? alternative = null) => Assert.Single(bridge.exports, export => export.operation.ownerType == owner
+            BridgeExport Access(
+                StandardValueAction action,
+                int? alternative = null
+            ) => Assert.Single(bridge.exports, export => export.operation.ownerType == owner
                 && export.operation.standardValue?.action == action && export.operation.standardValue.alternativeIndex == alternative);
             BridgeExport destroy = Assert.Single(bridge.exports, export => export.operation.kind == BridgeOperationKind.Destroy && export.operation.ownerType == owner);
             source.AppendLine("{ nint holder=0,other=0,error=0,pointer=0;byte flag=0;int integer=0;ulong count=0;double floating=0;");
@@ -201,7 +217,10 @@ public sealed class NativeConfiguredExtendedFamilyTests
             {
                 byte[] expected = Encoding.UTF8.GetBytes("dir/😀.txt");
                 Success(Call(Access(StandardValueAction.PathUtf8Count), "holder", "&count", "&error"), "count!=" + expected.Length);
-                foreach ((byte value, int index) in expected.Select((value, index) => (value, index)))
+                foreach ((byte value, int index) in expected.Select((
+                    value,
+                    index
+                ) => (value, index)))
                     Success(Call(Access(StandardValueAction.PathUtf8Byte), "holder", index + "UL", "&flag", "&error"), "flag!=" + value);
                 Failure(Call(Access(StandardValueAction.PathUtf8Byte), "holder", "999UL", "&flag", "&error"));
             }
@@ -224,26 +243,56 @@ public sealed class NativeConfiguredExtendedFamilyTests
         return source.ToString();
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime)
-    {
-        CppFamilyBinding Binding(string head, StandardValueKind family) => new()
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
+        CppFamilyBinding Binding(
+            string head,
+            StandardValueKind family
+        ) => new()
         {
-            nativeTemplate = "extended::" + head, family = family, evidence = new(EvidenceLevel.UserAsserted, "fixture-explicit-protocol:" + head),
+            nativeTemplate = "extended::" + head,
+            family = family,
+            evidence = new(EvidenceLevel.UserAsserted, "fixture-explicit-protocol:" + head),
             variantAccess = family == StandardValueKind.Variant ? CppVariantAccess.MemberGet : CppVariantAccess.None,
             pathFormat = family == StandardValueKind.Path ? NativePathFormat.GenericUtf8 : null
         };
         return new()
         {
-            schemaVersion = 2, library = new() { id = "extended", nativeName = "extended_fixture" },
-            source = new() { language = SourceLanguage.Cpp, headers = ["extended.hpp"], parseMacros = false, includeTransitivelyReferencedHeaders = false,
-                selection = new() { includeDeclarations = new[] { "MakeUnique", "ConsumeUnique", "MakeShared", "ReadSharedCopy", "Destroyed", "MakeVariantInt", "MakeVariantDouble", "MakePath", "MakeDuration", "MakeMoment" }
-                    .Select(name => "extended::" + name).ToImmutableArray() } },
-            api = new() { @namespace = "Generated.Extended", name = "ExtendedApi", importMode = mode,
-                style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance, nestGeneratedTypesInApi = sourceRuntime },
-            bridge = new() { cpp = new() { familyBindings = [Binding("Unique", StandardValueKind.UniquePointer), Binding("Shared", StandardValueKind.SharedPointer), Binding("Variant", StandardValueKind.Variant),
-                Binding("Path", StandardValueKind.Path), Binding("Ticks", StandardValueKind.Duration), Binding("Moment", StandardValueKind.TimePoint)] } },
-            runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-             cache = new() { enabled = false }
+            schemaVersion = 2,
+            library = new() { id = "extended", nativeName = "extended_fixture" },
+            source = new()
+            {
+                language = SourceLanguage.Cpp,
+                headers = ["extended.hpp"],
+                parseMacros = false,
+                includeTransitivelyReferencedHeaders = false,
+                selection = new()
+                {
+                    includeDeclarations = new[] { "MakeUnique", "ConsumeUnique", "MakeShared", "ReadSharedCopy", "Destroyed", "MakeVariantInt", "MakeVariantDouble", "MakePath", "MakeDuration", "MakeMoment" }
+                    .Select(name => "extended::" + name).ToImmutableArray()
+                }
+            },
+            api = new()
+            {
+                @namespace = "Generated.Extended",
+                name = "ExtendedApi",
+                importMode = mode,
+                style = sourceRuntime ? BGCS.Core.Managed.ManagedApiStyle.Static : BGCS.Core.Managed.ManagedApiStyle.Instance,
+                nestGeneratedTypesInApi = sourceRuntime
+            },
+            bridge = new()
+            {
+                cpp = new()
+                {
+                    familyBindings = [Binding("Unique", StandardValueKind.UniquePointer), Binding("Shared", StandardValueKind.SharedPointer), Binding("Variant", StandardValueKind.Variant),
+                Binding("Path", StandardValueKind.Path), Binding("Ticks", StandardValueKind.Duration), Binding("Moment", StandardValueKind.TimePoint)]
+                }
+            },
+            runtime = new() { mode = sourceRuntime ? "source" : "package" },
+            output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+            cache = new() { enabled = false }
         };
     }
 
@@ -257,7 +306,13 @@ public sealed class NativeConfiguredExtendedFamilyTests
         string configuration = AppContext.BaseDirectory.Contains(Path.DirectorySeparatorChar + "Release" + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? "Release" : "Debug";
         return Path.Combine(root!.FullName, "extensions", "frontends", "BGCS.Frontend.Clang.Worker", "bin", configuration, "net10.0");
     }
-    private sealed class NoWrites : IArtifactSink { public string WriteText(string relativePath, string content) => throw new InvalidOperationException("Planning cannot emit artifacts."); }
+    private sealed class NoWrites : IArtifactSink
+    {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => throw new InvalidOperationException("Planning cannot emit artifacts.");
+    }
 
     private const string Header = """
         #include <memory>

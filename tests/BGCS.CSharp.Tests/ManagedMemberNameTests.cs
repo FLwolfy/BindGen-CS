@@ -76,9 +76,12 @@ public sealed class ManagedMemberNameTests
     {
         ManagedApiModel model = new DefaultManagedProjection().Project(Module(), new("Generated.Names", "Api"), CancellationToken.None);
         ManagedType record = model.types.Single(type => type.nativeType == new StableId("record"));
-        record = record with { memberNames = unknownIdentity
+        record = record with
+        {
+            memberNames = unknownIdentity
             ? record.memberNames.Add(new(new("absent"), "NoSuchField"))
-            : record.memberNames.Select(member => member with { name = "Same" }).ToImmutableArray() };
+            : record.memberNames.Select(member => member with { name = "Same" }).ToImmutableArray()
+        };
         model = model with { types = model.types.Select(type => type.nativeType == record.nativeType ? record : type).ToImmutableArray() };
         Sink sink = new();
         Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(model, new("unused", sink)));
@@ -102,6 +105,9 @@ public sealed class ManagedMemberNameTests
     private sealed class Sink : IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 }

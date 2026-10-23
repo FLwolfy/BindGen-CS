@@ -72,8 +72,10 @@ public sealed class StaticExportTableTests
         Assert.Throws<NotSupportedException>(() => StaticExportTableEmitter.Emit(variadic, ["native.h"]));
         Assert.Throws<ArgumentException>(() => StaticExportTableEmitter.Emit(module, ["bad\"header.h"]));
     }
-    private static InteropModule Module(string target, int pointers)
-    {
+    private static InteropModule Module(
+        string target,
+        int pointers
+    ) {
         InteropType integer = new(new("int"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         return new("static_adapter", target, pointers, [integer], [new(new("twice"), "twice", integer.id, [new(new("twice:arg"), "value", integer.id)], "Cdecl"),
             new(new("increment"), "increment", integer.id, [new(new("increment:arg"), "value", integer.id)], "Cdecl")], []);

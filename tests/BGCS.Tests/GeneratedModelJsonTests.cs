@@ -76,7 +76,10 @@ public sealed class GeneratedModelJsonTests
         Assert.Equal(JsonSerializer.Serialize(result.capabilities), Compact(capabilities.RootElement));
     }
 
-    private static JsonDocument Read(GenerationResult result, string relativePath)
+    private static JsonDocument Read(
+        GenerationResult result,
+        string relativePath
+    )
         => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(result.outputRoot, relativePath)));
 
     private static string Compact(JsonElement value)

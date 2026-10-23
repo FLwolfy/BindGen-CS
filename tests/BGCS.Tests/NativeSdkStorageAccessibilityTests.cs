@@ -74,7 +74,11 @@ public sealed class NativeSdkStorageAccessibilityTests
             var target = ToolchainResolver.ResolveToolchain(new TargetResolver().Resolve(new(new("host"))), SourceLanguage.Cpp);
             FrontendRequest request = new(target, SourceLanguage.Cpp, [header])
             {
-                pathBase = root, languageStandard = "c++23", systemIncludeDirectories = [sdk], parseMacros = false, parseSystemIncludes = false
+                pathBase = root,
+                languageStandard = "c++23",
+                systemIncludeDirectories = [sdk],
+                parseMacros = false,
+                parseSystemIncludes = false
             };
             FrontendWorkerClient worker = new(Path.Combine(WorkerRoot(), "BGCS.Frontend.Clang.Worker.dll"), TestHostPaths.CreateHost());
             NativeModule module = (await worker.ParseAsync(request, CancellationToken.None)).module;

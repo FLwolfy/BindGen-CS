@@ -14,8 +14,11 @@ public sealed unsafe class CountedStringCodecTests
     [InlineData(2, true, 5)]
     [InlineData(4, false, 4)]
     [InlineData(4, true, 4)]
-    public void ExactCountsPreserveEmbeddedZeroAndNonBmpUnits(int width, bool bigEndian, int expected)
-    {
+    public void ExactCountsPreserveEmbeddedZeroAndNonBmpUnits(
+        int width,
+        bool bigEndian,
+        int expected
+    ) {
         using NativeStringLease lease = Encode(width, bigEndian, "A\0😀B", false, 7);
         Assert.Equal(expected, lease.encodedCodeUnitCount);
         Assert.NotEqual(0, lease.pointer);
@@ -54,9 +57,15 @@ public sealed unsafe class CountedStringCodecTests
     public void InvalidUnicodeAndBoundsFailBeforeCustomAllocation(int width)
     {
         int allocations = 0, frees = 0;
-        NativeAllocator allocator = new("counted-text-test", (length, alignment) =>
-        { allocations++; return (nint)NativeMemory.AlignedAlloc(length, alignment); },
-            (address, _, _) => { frees++; NativeMemory.AlignedFree((void*)address); }, NativeAllocatorThreadDomain.AnyThread);
+        NativeAllocator allocator = new("counted-text-test", (
+            length,
+            alignment
+        ) => { allocations++; return (nint)NativeMemory.AlignedAlloc(length, alignment); },
+            (
+                address,
+                _,
+                _
+            ) => { frees++; NativeMemory.AlignedFree((void*)address); }, NativeAllocatorThreadDomain.AnyThread);
         Assert.Throws<EncoderFallbackException>(() => Encode(width, false, "\ud800", false, 8, allocator));
         Assert.Throws<ArgumentOutOfRangeException>(() => Encode(width, false, "AB", false, 1, allocator));
         Assert.Throws<ArgumentOutOfRangeException>(() => Encode(width, false, "", false, 0, allocator));
@@ -71,8 +80,10 @@ public sealed unsafe class CountedStringCodecTests
     [InlineData(1, 6)]
     [InlineData(2, 4)]
     [InlineData(4, 3)]
-    public void ExistingTerminatedInputsExposeCountsWithoutChangingTruncationPolicy(int width, int expected)
-    {
+    public void ExistingTerminatedInputsExposeCountsWithoutChangingTruncationPolicy(
+        int width,
+        int expected
+    ) {
         using NativeStringLease lease = width switch
         {
             1 => Utf8Codec.EncodeNullTerminated("A😀B", false),
@@ -88,7 +99,14 @@ public sealed unsafe class CountedStringCodecTests
         });
     }
 
-    private static NativeStringLease Encode(int width, bool bigEndian, string? value, bool allowsNull, int maximum, NativeAllocator? allocator = null)
+    private static NativeStringLease Encode(
+        int width,
+        bool bigEndian,
+        string? value,
+        bool allowsNull,
+        int maximum,
+        NativeAllocator? allocator = null
+    )
         => width switch
         {
             1 => Utf8Codec.EncodeCounted(value, allowsNull, 64, allocator, maximum),

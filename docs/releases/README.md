@@ -1,6 +1,6 @@
 # BGCS release history
 
-[Wiki](../README.md) | [Publishing](../publish.md) | [GitHub Releases](https://github.com/FLwolfy/BindGen-CS/releases)
+[Documentation](../README.md) | [Publishing](../publish.md) | [GitHub Releases](https://github.com/FLwolfy/BindGen-CS/releases)
 
 All release notes use the same architecture, parser, verification, requirements,
 and provenance sections. Historical archives retain the original tags and package
@@ -8,6 +8,7 @@ bytes. They do not reconstruct unavailable symbols, attestations, or successful 
 
 | Release | Publication scope |
 | --- | --- |
+| [4.1.0](4.1.0.md) | Documentation and example convergence, consistent source formatting and license delivery |
 | [4.0.0](4.0.0.md) | Neutral Core/Engine, typed NativeBridge and explicit optional extensions; publication requires matching current evidence |
 | [3.0.1](3.0.1.md) | Portable native source inputs and shared template-reference corrections |
 | [3.0.0](3.0.0.md) | Four-product major-version contents; actual publication and certification require the same-revision release gates |

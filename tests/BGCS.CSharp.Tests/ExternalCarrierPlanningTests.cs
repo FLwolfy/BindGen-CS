@@ -32,8 +32,12 @@ public sealed class ExternalCarrierPlanningTests
     {
         (InteropModule module, ExternalTypeProjection projection) = Create();
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.ExternalHelpers", "Api"), CancellationToken.None);
-        model = model with { externalTypeProjections = [projection], recipeHelpers =
-            [new("vector", "float", new("Vector2", "{value}.X", "new Vector2({value}, 0)", "System.Numerics"))] };
+        model = model with
+        {
+            externalTypeProjections = [projection],
+            recipeHelpers =
+            [new("vector", "float", new("Vector2", "{value}.X", "new Vector2({value}, 0)", "System.Numerics"))]
+        };
         NamespaceSink sink = new();
         await new CSharpTestBackend().EmitAsync(model, new("unused", sink) { singleFile = singleFile, additionalUsings = ["System.Text", "System.Text"] }, CancellationToken.None);
         SyntaxTree[] trees = sink.sources.Select(source => CSharpSyntaxTree.ParseText(source.Value, path: source.Key))
@@ -54,15 +58,24 @@ public sealed class ExternalCarrierPlanningTests
     private sealed class NamespaceSink : BGCS.Core.Artifacts.IArtifactSink
     {
         internal Dictionary<string, string> sources { get; } = new(StringComparer.Ordinal);
-        public string WriteText(string relativePath, string content) { sources.Add(relativePath, content); return relativePath; }
+        public string WriteText(
+            string relativePath,
+            string content
+        ) { sources.Add(relativePath, content); return relativePath; }
     }
 
     [Fact]
     public void FriendlyCopiesUseExactFieldIdentitiesAndDoNotRequireMatchingClrOffsets()
     {
         (InteropModule module, ExternalTypeProjection projection) = Create();
-        projection = projection with { managedStorage = projection.managedStorage! with { size = 16,
-            fields = [projection.managedStorage.fields[0] with { offset = 8 }, projection.managedStorage.fields[1] with { offset = 0 }] } };
+        projection = projection with
+        {
+            managedStorage = projection.managedStorage! with
+            {
+                size = 16,
+                fields = [projection.managedStorage.fields[0] with { offset = 8 }, projection.managedStorage.fields[1] with { offset = 0 }]
+            }
+        };
         CSharpExternalTypeProjectionPlan planned = new ExternalCarrierPlanner().Plan(module, projection, "RawPoint",
             new Dictionary<StableId, string> { [new("x")] = "nativeX", [new("y")] = "renamedY" });
         Assert.Equal("global::Consumer.Pair<float>", planned.managedType);
@@ -112,7 +125,10 @@ public sealed class ExternalCarrierPlanningTests
     [InlineData("System.Numerics.Vector2", "global::System.Numerics.Vector2")]
     [InlineData("Consumer.Pair<float>", "global::Consumer.Pair<float>")]
     [InlineData("global::Consumer.Pair<System.Int32>", "global::Consumer.Pair<System.Int32>")]
-    public void ClosedConsumerTypesHaveStableUnambiguousSyntax(string input, string expected)
+    public void ClosedConsumerTypesHaveStableUnambiguousSyntax(
+        string input,
+        string expected
+    )
         => Assert.Equal(expected, ExternalCarrierPlanner.NormalizeType(input));
 
     [Theory]
@@ -150,7 +166,8 @@ public sealed class ExternalCarrierPlanningTests
         InteropModule nativeValue = new(original.libraryId, original.targetId, original.pointerSize, original.types, [byValue], [])
         { byteOrder = original.byteOrder };
         ManagedApiModel valueModel = new DefaultManagedProjection().Project(nativeValue, new("Generated.ExternalPolicy", "Api"), CancellationToken.None)
-            with { externalTypeProjections = [projection] };
+            with
+        { externalTypeProjections = [projection] };
         NeutralBackendTests.MemorySink rejected = new();
         CSharpPlanningException failure = await Assert.ThrowsAsync<CSharpPlanningException>(async () =>
             await new CSharpTestBackend().EmitAsync(valueModel, new("external", rejected) { importMode = mode }, CancellationToken.None));
@@ -166,7 +183,8 @@ public sealed class ExternalCarrierPlanningTests
                 new(new("copy"), "copy", nothing.id, [new(new("copy-input"), "input", pointer.id), new(new("copy-output"), "output", pointer.id)], "C")], [])
         { byteOrder = original.byteOrder };
         ManagedApiModel pointerModel = new DefaultManagedProjection().Project(pointerModule, new("Generated.ExternalPolicy", "Api"), CancellationToken.None)
-            with { externalTypeProjections = [projection] };
+            with
+        { externalTypeProjections = [projection] };
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("external", sink) { importMode = mode };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(pointerModel, request);
@@ -205,7 +223,8 @@ public sealed class ExternalCarrierPlanningTests
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.Add(pointer), [function], [])
         { byteOrder = original.byteOrder };
         ManagedApiModel model = new DefaultManagedProjection().Project(module, new("Generated.ExternalBorrow", "Api"), CancellationToken.None)
-            with { externalTypeProjections = [projection] };
+            with
+        { externalTypeProjections = [projection] };
         NamespaceSink sink = new();
         EmissionRequest request = new("external", sink);
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
@@ -279,10 +298,11 @@ public sealed class ExternalCarrierPlanningTests
         input = input with { singleValue = input.singleValue with { copySource = copy } };
         function = function with { parameters = function.parameters.SetItem(0, input) };
         InteropModule module = new(model.interop.libraryId, model.interop.targetId, model.interop.pointerSize, model.interop.types, [function], [])
-            { byteOrder = model.interop.byteOrder };
+        { byteOrder = model.interop.byteOrder };
         Assert.Contains("provenance", new BGCS.Analysis.Safety.ValueParameterAnalyzer().GetRestriction(module, function, input)!, StringComparison.Ordinal);
         ManagedApiModel changed = new DefaultManagedProjection().Project(module, new("Generated.Copied", "Api"), CancellationToken.None)
-            with { externalTypeProjections = model.externalTypeProjections };
+            with
+        { externalTypeProjections = model.externalTypeProjections };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(changed, new("external", new NeutralBackendTests.MemorySink()));
         Assert.DoesNotContain(Assert.Single(plan.methods).valueParameters, value => value.parameterIndex == 0);
         Assert.Equal(BGCS.Core.Capabilities.DeclarationGenerationStatus.GeneratedRaw,
@@ -297,19 +317,26 @@ public sealed class ExternalCarrierPlanningTests
         InteropType pointer = new(new("point-pointer"), "Point*", NativeTypeCategory.Pointer, 8, 8) { elementType = record.id };
         InteropType nothing = new(new("void"), "void", NativeTypeCategory.Primitive, 0, 1) { primitiveKind = "Void" };
         Evidence evidence = new(EvidenceLevel.Declared, "fixture:exact-bridge-operation");
-        ValueParameterContract Value(NativeParameterDirection direction, StableId? source) => new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence)
-            { retainsPointer = false, allowsNull = false, copySource = new(bridge, sourceCallable, source, sourceType, record.id, direction, evidence) };
+        ValueParameterContract Value(
+            NativeParameterDirection direction,
+            StableId? source
+        ) => new(direction, new(NativeLifetimeKind.Call, null, evidence), evidence)
+        { retainsPointer = false, allowsNull = false, copySource = new(bridge, sourceCallable, source, sourceType, record.id, direction, evidence) };
         InteropFunction function = new(new("copy"), "copy", nothing.id,
             [new(new("input"), "value", pointer.id) { sourceDeclaration = sourceParameter, singleValue = Value(NativeParameterDirection.Input, sourceParameter) },
                 new(new("output"), "result", pointer.id) { singleValue = Value(NativeParameterDirection.Output, null) }], "C")
-            { nativeBridgeExport = bridge, sourceDeclaration = sourceCallable };
+        { nativeBridgeExport = bridge, sourceDeclaration = sourceCallable };
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize, original.types.Replace(original.GetType(record.id), record).Add(pointer).Add(nothing), [function], [])
-            { byteOrder = original.byteOrder };
+        { byteOrder = original.byteOrder };
         return new DefaultManagedProjection().Project(module, new("Generated.Copied", "Api"), CancellationToken.None)
-            with { externalTypeProjections = [projection] };
+            with
+        { externalTypeProjections = [projection] };
     }
 
-    private static InteropModule WithRecord(InteropModule module, InteropType record)
+    private static InteropModule WithRecord(
+        InteropModule module,
+        InteropType record
+    )
         => new(module.libraryId, module.targetId, module.pointerSize, [module.types[0], record], [], []) { byteOrder = module.byteOrder };
 
     private static (InteropModule, ExternalTypeProjection) Create()

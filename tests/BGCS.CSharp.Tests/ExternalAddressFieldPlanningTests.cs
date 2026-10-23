@@ -52,20 +52,27 @@ public sealed class ExternalAddressFieldPlanningTests
             case "byte-order": fact = fact with { probe = fact.probe with { isLittleEndian = false } }; break;
             case "unknown-byte-order": module = Rebuild(module, module.types, NativeByteOrder.Unknown); break;
             case "native-width": module = Rebuild(module, module.types.SetItem(1, module.types[1] with { size = 4 })); break;
-            case "function-pointer": module = Rebuild(module, module.types.SetItem(0,
+            case "function-pointer":
+                module = Rebuild(module, module.types.SetItem(0,
                 module.types[0] with { category = NativeTypeCategory.Function, returnType = module.types[0].id })); break;
             case "unknown-pointee": module = Rebuild(module, module.types.SetItem(1, module.types[1] with { elementType = null })); break;
             case "managed-overflow": fact = fact with { fields = [fact.fields[0] with { offset = long.MaxValue - 1 }] }; break;
-            case "native-overflow": module = Rebuild(module, module.types.SetItem(2,
+            case "native-overflow":
+                module = Rebuild(module, module.types.SetItem(2,
                 module.types[2] with { fields = [module.types[2].fields[0] with { offset = long.MaxValue - 1 }] })); break;
-            case "native-overrun": module = Rebuild(module, module.types.SetItem(2,
+            case "native-overrun":
+                module = Rebuild(module, module.types.SetItem(2,
                 module.types[2] with { fields = [module.types[2].fields[0] with { offset = 1 }] })); break;
         }
         projection = projection with { managedStorage = fact };
         Assert.ThrowsAny<Exception>(() => new ExternalTypeContractValidator().ValidateProjection(module, projection));
     }
 
-    private static InteropModule Rebuild(InteropModule module, ImmutableArray<InteropType> types, NativeByteOrder? byteOrder = null)
+    private static InteropModule Rebuild(
+        InteropModule module,
+        ImmutableArray<InteropType> types,
+        NativeByteOrder? byteOrder = null
+    )
         => new(module.libraryId, module.targetId, module.pointerSize, types, [], []) { byteOrder = byteOrder ?? module.byteOrder };
 
     private static (InteropModule, ExternalTypeProjection) Create(string representation)

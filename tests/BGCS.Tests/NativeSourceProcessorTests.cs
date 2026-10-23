@@ -18,8 +18,11 @@ public sealed class NativeSourceProcessorTests
     [InlineData(BindingImportMode.FunctionTable, true, true)]
     [InlineData(BindingImportMode.DllImport, false, true)]
     [InlineData(BindingImportMode.LibraryImport, true, false)]
-    public async Task ConfiguredCandidatesComposePartialApiAndInvokeNativeWithoutPublishingAbiTampering(BindingImportMode mode, bool sourceRuntime, bool singleFile)
-    {
+    public async Task ConfiguredCandidatesComposePartialApiAndInvokeNativeWithoutPublishingAbiTampering(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        bool singleFile
+    ) {
         using Scratch scratch = new();
         BindingConfiguration configuration = Configuration(mode, sourceRuntime, singleFile) with { };
         await using BindingHost host = Builder().Build();
@@ -54,8 +57,15 @@ public sealed class NativeSourceProcessorTests
         if (mode == BindingImportMode.FunctionTable && !sourceRuntime && !singleFile)
         {
             string[] before = Files(result.outputRoot);
-            SourceProcessorConfiguration tamper = new() { id = "reject.abi", priority = -1, kind = SourceProcessorKind.ReplaceText,
-                paths = ["**/*.cs"], match = "Cdecl", replacement = "Stdcall" };
+            SourceProcessorConfiguration tamper = new()
+            {
+                id = "reject.abi",
+                priority = -1,
+                kind = SourceProcessorKind.ReplaceText,
+                paths = ["**/*.cs"],
+                match = "Cdecl",
+                replacement = "Stdcall"
+            };
             GenerationResult rejected = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration with
             { output = configuration.output with { processors = configuration.output.processors.Add(tamper) } }, scratch.root));
             Assert.False(rejected.success);
@@ -69,7 +79,7 @@ public sealed class NativeSourceProcessorTests
     {
         using Scratch scratch = new();
         BindingConfiguration configuration = Configuration(BindingImportMode.FunctionTable, false, false) with
-        { output = Configuration(BindingImportMode.FunctionTable, false, false).output with { root = "CacheOutput" }};
+        { output = Configuration(BindingImportMode.FunctionTable, false, false).output with { root = "CacheOutput" } };
         await using BindingHost host = Builder().Build();
         GenerationResult cold = await host.GenerateAsync(new(configuration, scratch.root));
         Assert.True(cold.success, cold.GetDiagnosticSummary());
@@ -96,14 +106,28 @@ public sealed class NativeSourceProcessorTests
         Assert.Equal(preserved, Files(edited.outputRoot));
     }
 
-    private static BindingConfiguration Configuration(BindingImportMode mode, bool sourceRuntime, bool singleFile) => new()
+    private static BindingConfiguration Configuration(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        bool singleFile
+    ) => new()
     {
-        schemaVersion = 2, library = new() { id = "processors", nativeName = "processor_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "processors", nativeName = "processor_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["native.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-        api = new() { @namespace = "Generated.Processors", name = "ProcessorApi", importMode = mode,
-            names = ImmutableDictionary<string, string>.Empty.Add("native_add", "AddNative") },
+        api = new()
+        {
+            @namespace = "Generated.Processors",
+            name = "ProcessorApi",
+            importMode = mode,
+            names = ImmutableDictionary<string, string>.Empty.Add("native_add", "AddNative")
+        },
         runtime = new() { mode = sourceRuntime ? "source" : "package" },
-        output = new() { layout = singleFile ? "singleFile" : "split", singleFileName = "Complete.cs", processors =
+        output = new()
+        {
+            layout = singleFile ? "singleFile" : "split",
+            singleFileName = "Complete.cs",
+            processors =
         [new() { id = "source.add", priority = 30, kind = SourceProcessorKind.AddSource, path = "Extras/ProcessorApi.Part.cs",
             content = "namespace Generated.Processors; public unsafe partial class ProcessorApi { public int Additional(int value) => Raw.AddNative(value, 15); public static int Marker() { return 10; } }" },
          new() { id = "source.literal", priority = 20, paths = ["Extras/ProcessorApi.Part.cs"], match = "return 10;", replacement = "return 20;" },

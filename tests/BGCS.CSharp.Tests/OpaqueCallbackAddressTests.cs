@@ -22,14 +22,18 @@ public sealed class OpaqueCallbackAddressTests
     [InlineData(false, false, BindingImportMode.FunctionTable)]
     [InlineData(false, false, BindingImportMode.DllImport)]
     [InlineData(false, false, BindingImportMode.LibraryImport)]
-    public async Task AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress(bool variadic, bool prototype, BindingImportMode mode)
-    {
+    public async Task AnUnsupportedCallbackInvocationRetainsOnlyAnOpaqueAddress(
+        bool variadic,
+        bool prototype,
+        BindingImportMode mode
+    ) {
         InteropType integer = new(new("integer"), "int", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Int", isSigned = true };
         InteropType signature = new(new("callback-signature"), "int(int, ...)", NativeTypeCategory.Function, null, null)
         { returnType = integer.id, parameterTypes = [integer.id], isVariadic = variadic, hasPrototype = prototype, callingConvention = "C" };
         InteropType pointer = new(new("callback-address"), "native_callback", NativeTypeCategory.Pointer, 8, 8) { elementType = signature.id };
         InteropModule module = new("fixture", "windows-x64-msvc", 8, [integer, signature, pointer],
-            [new(new("get"), "get_callback", pointer.id, [], "C"), new(new("use"), "use_callback", integer.id, [new(new("callback"), "callback", pointer.id)], "C")], []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            [new(new("get"), "get_callback", pointer.id, [], "C"), new(new("use"), "use_callback", integer.id, [new(new("callback"), "callback", pointer.id)], "C")], [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Callbacks", "CallbackApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("fixture", sink) { importMode = mode };

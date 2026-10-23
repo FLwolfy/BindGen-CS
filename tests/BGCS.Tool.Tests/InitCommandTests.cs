@@ -82,8 +82,10 @@ public sealed class InitCommandTests
     [Theory]
     [InlineData("c", "bindgen.json")]
     [InlineData("cpp", "bindgen.json")]
-    public void Run_LanguageOption_OverridesHeaderHeuristics(string language, string expectedConfig)
-    {
+    public void Run_LanguageOption_OverridesHeaderHeuristics(
+        string language,
+        string expectedConfig
+    ) {
         using TestDirectory directory = new();
         directory.Write("api.h", "class NativeApi {};\n");
 
@@ -120,15 +122,21 @@ public sealed class InitCommandTests
         Assert.False(File.Exists(directory.Resolve("bindgen.json")));
     }
 
-    private static CommandResult Run(TestDirectory directory, params string[] args)
-    {
+    private static CommandResult Run(
+        TestDirectory directory,
+        params string[] args
+    ) {
         using StringWriter output = new();
         using StringWriter error = new();
         int exitCode = CliInvocation.Run(["init", .. args], directory.Path, output, error);
         return new(exitCode, output.ToString(), error.ToString());
     }
 
-    private sealed record CommandResult(int ExitCode, string Output, string Error);
+    private sealed record CommandResult(
+        int ExitCode,
+        string Output,
+        string Error
+    );
 
     private sealed class TestDirectory : IDisposable
     {
@@ -142,8 +150,10 @@ public sealed class InitCommandTests
 
         public string Resolve(string relativePath) => System.IO.Path.Combine(Path, relativePath);
 
-        public void Write(string relativePath, string contents)
-        {
+        public void Write(
+            string relativePath,
+            string contents
+        ) {
             string path = Resolve(relativePath);
             string? parent = System.IO.Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(parent))

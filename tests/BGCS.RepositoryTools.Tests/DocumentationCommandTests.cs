@@ -64,13 +64,13 @@ public sealed class DocumentationCommandTests
                 output,
                 error
             ) => {
-                string generated = Path.Combine(sourceRoot, "Generated");
-                Directory.CreateDirectory(generated);
-                File.WriteAllText(Path.Combine(generated, "Bindings.cs"), "public sealed class GeneratedApi { }");
-                Assert.Equal(0, CliInvocation.Run(["validate", "documentation", sourceRoot], sourceRoot, output, error));
-                Assert.Equal(string.Empty, error.ToString());
-                Assert.Contains("0 violations", output.ToString());
-            });
+            string generated = Path.Combine(sourceRoot, "Generated");
+            Directory.CreateDirectory(generated);
+            File.WriteAllText(Path.Combine(generated, "Bindings.cs"), "public sealed class GeneratedApi { }");
+            Assert.Equal(0, CliInvocation.Run(["validate", "documentation", sourceRoot], sourceRoot, output, error));
+            Assert.Equal(string.Empty, error.ToString());
+            Assert.Contains("0 violations", output.ToString());
+        });
     }
 
     private static void WithSource(

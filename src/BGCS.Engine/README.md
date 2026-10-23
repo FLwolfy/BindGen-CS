@@ -1,44 +1,20 @@
-# BGCS
+# BGCS.Engine
 
-`BGCS` is the complete .NET 10 / C# 14 BindGen-CS generator SDK. Call it as an
-ordinary library when an application or build script needs C/C++ binding source.
-The CLI product `BindGen-CS` calls the same pipeline. `BindingHost` is a request
-coordinator, not a network service.
+This internal assembly coordinates configuration, sessions, analysis, bridge
+planning, C# generation, caches and transactional source publication. It is
+distributed inside the complete `BGCS` product, not as a separately installed
+NuGet product.
 
-After the matching version is published:
+Engine depends on neutral Core contracts and generation algorithms. It has no
+reference to a concrete host, target, frontend or optional platform extension.
+An independent composition registers its required implementations through
+`BindingHost.CreateBuilder()`; missing or conflicting providers fail explicitly.
 
-```bash
-dotnet add package BGCS --version 3.0.0
-```
+For the standard ready-to-use composition, reference `BGCS` version `4.1.0` and
+call `BindingGenerator.CreateDefault()` from your own C# generation tool. See
+the [C# API](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/api.md) and
+[getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md).
 
-```csharp
-using BGCS;
-
-await using BindingHost host = BindingHost.CreateDefault();
-GenerationResult result = await host.GenerateAsync(
-    GenerationRequest.FromFile("bindgen.json"));
-if (!result.success)
-    throw new InvalidOperationException(result.GetDiagnosticSummary());
-```
-
-The package includes analysis, C++ lowering, C# emission, isolated Clang worker
-resources and schema support. Internal implementation assemblies are not separate
-feature packages to assemble. Restored content supplies the host worker for local
-first-use provisioning; no BGCS build targets are required.
-
-Inputs are local configuration, headers, explicit SDK/target settings and plugins.
-Outputs are C#, optional C ABI bridge source, manifests and diagnostics. The consumer
-compiles, links, packages and deploys them externally. The SDK does not build consumer
-projects or native libraries and does not run native layout probes.
-
-Generated applications normally reference only `BGCS.Runtime`, or request an emitted
-Runtime source closure. They do not need the generator/parser. Ordinary extension
-projects can reference only `BGCS.Core`; parser-specific contributors use the
-advanced frontend surface and execute in the worker.
-
-- [Getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md)
-- [Public API](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/api.md)
-- [Configuration](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/configuration-guide.md)
-- [Architecture](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/architecture.md)
-
-BindGen-CS is licensed under MIT. Retained third-party components preserve their notices.
+The product emits source, manifests and diagnostics. Consumer compilation,
+linking, packaging, deployment and execution are external. Running generated
+bindings requires only their Runtime support and native module, not Engine.

@@ -107,8 +107,12 @@ public sealed class CallbackStateRegistrationTests
         InteropModule module = Pair(RetainedCallbackTests.Model().interop);
         InteropFunction register = module.functions[0];
         CallbackContract callback = register.parameters[0].callback!;
-        register = register with { returnType = new("void"), parameters = register.parameters.SetItem(0, register.parameters[0] with
-        { callback = callback with { registration = callback.registration! with { successfulReturn = null, failureResultQuiescence = NativeQuiescenceKind.Unknown } } }) };
+        register = register with
+        {
+            returnType = new("void"),
+            parameters = register.parameters.SetItem(0, register.parameters[0] with
+            { callback = callback with { registration = callback.registration! with { successfulReturn = null, failureResultQuiescence = NativeQuiescenceKind.Unknown } } })
+        };
         module = new(module.libraryId, module.targetId, module.pointerSize, module.types, module.functions.SetItem(0, register), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Retained", "CallbackApi"), CancellationToken.None);
         NeutralBackendTests.MemorySink sink = new();
@@ -128,7 +132,8 @@ public sealed class CallbackStateRegistrationTests
         CallbackRegistrationContract registration = new(null, NativeQuiescenceKind.Unknown, "any", evidence)
         {
             kind = NativeCallbackRegistrationKind.CallbackAndUserData,
-            unregisterCallbackParameter = new("unregister-callback"), unregisterUserDataParameter = new("unregister-state"),
+            unregisterCallbackParameter = new("unregister-callback"),
+            unregisterUserDataParameter = new("unregister-state"),
             successfulReturn = new(NativeScalarConstantKind.Integer, "1", 4, true, evidence),
             failureResultQuiescence = NativeQuiescenceKind.NoActiveNativeInvocations
         };

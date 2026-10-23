@@ -10,4 +10,4 @@ BGCS aims for a stable, tested core, not a promise that only .NET upgrades can r
 
 New SDK paths, macros, existing-model ABI rules, library protocols and symbol providers normally belong in interface implementations. A new language mechanism, physical call mechanism or previously unmodeled lifetime protocol can need a core change.
 
-Support claims distinguish parsed, generated, compiled by a repository consumer and actually invoked. An installed resource or a declared capability is not runtime certification. Current evidence and unresolved issues belong to `records/acceptance`, not marketing claims.
+Support claims distinguish parsed, generated, compiled by a repository consumer and actually invoked. An installed resource or a declared capability is not runtime certification. Support is established by exact-revision receipts linked from [release history](releases/README.md). Maintain source invariants in [architecture review](architecture-review.md); historical development notes are not current support claims.

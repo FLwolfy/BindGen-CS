@@ -40,6 +40,14 @@ First use verifies and prepares resources in an owned user-local directory, keye
 
 An ordinary application build/publish output, moved to a clean location, must contain enough deployed resources to generate. Special application publishing forms need explicit resource deployment and are not assumed supported automatically.
 
+`BGCS.ParserRuntime.osx-x64` is a technical resource package for running the parser
+on an Intel Mac. The locked upstream package set supplies the other five host
+resource closures; this package supplies the missing Intel macOS closure with
+its actual build provenance and licenses. It is not a binding-target SDK or an
+additional generation feature, and applications that only run generated bindings
+do not need it. `distribution/` defines these BGCS product packages; `eng/` holds
+repository-only verification and packaging tools.
+
 ## Runtime
 
 Applications normally reference BGCS.Runtime only. It has no Core, Clang, Roslyn, MSBuild or generator dependencies. `runtime.mode = "source"` emits the required source closure in an API-local namespace; single-file output can include it. Both forms have the same lifecycle contracts.

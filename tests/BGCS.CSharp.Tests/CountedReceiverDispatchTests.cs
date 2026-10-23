@@ -27,8 +27,10 @@ public sealed class CountedReceiverDispatchTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task DirectAndCallbackOwnedHelpersComputeCountsInsideTheirCheckedTextBoundary(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task DirectAndCallbackOwnedHelpersComputeCountsInsideTheirCheckedTextBoundary(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel callbacks = OwnedInstanceCallbackTests.Model(userData: true);
         InteropModule callbackModule = AddText(callbacks.interop, function => function.id.value is "run" or "spawn" or "clone");
         ManagedApiModel callbackModel = new DefaultManagedProjection().Project(callbackModule, new(callbacks.@namespace, callbacks.name), CancellationToken.None);
@@ -36,8 +38,11 @@ public sealed class CountedReceiverDispatchTests
         InteropModule direct = AddText(DirectCOwnershipTests.Module(), function => function.id.value == "get");
         await Verify(new DefaultManagedProjection().Project(direct, DirectCOwnershipTests.Request(), CancellationToken.None), 1, callbacks: false);
 
-        async Task Verify(ManagedApiModel model, int textMethods, bool callbacks)
-        {
+        async Task Verify(
+            ManagedApiModel model,
+            int textMethods,
+            bool callbacks
+        ) {
             NeutralBackendTests.MemorySink sink = new();
             EmissionRequest request = new("counted_receivers", sink)
             { importMode = mode, includeRuntimeSource = sourceRuntime, runtimeNamespace = sourceRuntime ? model.@namespace + ".Runtime" : "BGCS.Runtime" };
@@ -62,8 +67,10 @@ public sealed class CountedReceiverDispatchTests
         }
     }
 
-    private static InteropModule AddText(InteropModule module, Func<InteropFunction, bool> selected)
-    {
+    private static InteropModule AddText(
+        InteropModule module,
+        Func<InteropFunction, bool> selected
+    ) {
         Evidence evidence = new(EvidenceLevel.UserAsserted, "fixture:counted-owned-receiver-text");
         InteropType unit = new(new("counted-unit"), "unsigned char", NativeTypeCategory.Primitive, 1, 1) { primitiveKind = "UnsignedChar", isSigned = false };
         InteropType pointer = new(new("counted-pointer"), "unsigned char*", NativeTypeCategory.Pointer, 8, 8) { elementType = unit.id };
@@ -73,8 +80,10 @@ public sealed class CountedReceiverDispatchTests
             if (!selected(function)) return function;
             StableId length = new(function.id.value + "-text-length");
             InteropParameter text = new(new(function.id.value + "-text"), "text", pointer.id)
-            { text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
-                { lengthParameter = length, lengthDirection = NativeParameterDirection.Input, zeroTerminated = false, retainsPointer = false, allowsNull = false } };
+            {
+                text = new(NativeTextEncoding.Utf8, 1, NativeLengthUnit.CodeUnits, NativeParameterDirection.Input, new(NativeLifetimeKind.Call, null, evidence), evidence)
+                { lengthParameter = length, lengthDirection = NativeParameterDirection.Input, zeroTerminated = false, retainsPointer = false, allowsNull = false }
+            };
             return function with { parameters = function.parameters.Add(text).Add(new(length, "textLength", count.id)) };
         }).ToImmutableArray();
         return new(module.libraryId, module.targetId, module.pointerSize, module.types.AddRange(ImmutableArray.Create(unit, pointer, count)), functions, module.diagnostics)

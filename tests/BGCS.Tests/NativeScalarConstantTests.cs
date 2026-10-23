@@ -19,8 +19,10 @@ public sealed class NativeScalarConstantTests
     [InlineData(SourceLanguage.Cpp, BindingImportMode.FunctionTable)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.DllImport)]
     [InlineData(SourceLanguage.Cpp, BindingImportMode.LibraryImport)]
-    public async Task GeneratedConstantsMatchIndependentNativeEvaluationAcrossAllImports(SourceLanguage language, BindingImportMode mode)
-    {
+    public async Task GeneratedConstantsMatchIndependentNativeEvaluationAcrossAllImports(
+        SourceLanguage language,
+        BindingImportMode mode
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs native constants " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -61,13 +63,20 @@ public sealed class NativeScalarConstantTests
             bool sourceRuntime = mode == BindingImportMode.LibraryImport;
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "constant_fixture", nativeName = "constant_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "constant_fixture", nativeName = "constant_fixture" },
                 source = new() { language = language, headers = ["constants.h"], parseMacros = true, includeTransitivelyReferencedHeaders = false },
-                api = new() { @namespace = "Generated.ConstantFixture", name = "ConstantApi", importMode = mode,
+                api = new()
+                {
+                    @namespace = "Generated.ConstantFixture",
+                    name = "ConstantApi",
+                    importMode = mode,
                     names = ImmutableDictionary<string, string>.Empty.Add("MAXIMUM", "Maximum").Add("SHIFTED", "Shifted").Add("MINIMUM", "Minimum")
-                        .Add("NEGATIVE_ZERO", "NegativeZero").Add("HALF", "Half").Add("FIELD_VALUE", "FieldValue") },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                        .Add("NEGATIVE_ZERO", "NegativeZero").Add("HALF", "Half").Add("FIELD_VALUE", "FieldValue")
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

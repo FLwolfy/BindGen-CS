@@ -31,8 +31,10 @@ public sealed class SingleFileEmissionParityTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task DirectSingleFileMatchesComposedSplitBytesAndPreservesDocumentationAndRawLiteralValues(bool runtimeSource, bool metadata)
-    {
+    public async Task DirectSingleFileMatchesComposedSplitBytesAndPreservesDocumentationAndRawLiteralValues(
+        bool runtimeSource,
+        bool metadata
+    ) {
         ManagedApiModel source = NeutralBackendTests.ModelWithStorage();
         InteropModule module = new(source.interop.libraryId, source.interop.targetId, source.interop.pointerSize,
             source.interop.types.Select(type => type with

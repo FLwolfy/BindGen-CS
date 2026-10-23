@@ -43,8 +43,12 @@ public sealed class NativeStringConstantTests
     [InlineData(NativeStringLiteralKind.Utf8, 1, 255U, "byte")]
     [InlineData(NativeStringLiteralKind.Wide, 2, 55357U, "ushort")]
     [InlineData(NativeStringLiteralKind.Utf32, 4, 4294967295U, "uint")]
-    public void OpaqueOrNonUnicodeUnitsRemainExactReadonlyDataIncludingTheFinalZero(NativeStringLiteralKind kind, int width, uint unit, string carrier)
-    {
+    public void OpaqueOrNonUnicodeUnitsRemainExactReadonlyDataIncludingTheFinalZero(
+        NativeStringLiteralKind kind,
+        int width,
+        uint unit,
+        string carrier
+    ) {
         CSharpStringConstantPlan plan = Assert.Single(new CSharpStringConstantPlanner().Plan(Model(Value(kind, width, [unit, 0]))));
         Assert.False(plan.isUnicodeString);
         Assert.Equal("global::System.ReadOnlySpan<" + carrier + ">", plan.type);
@@ -93,7 +97,11 @@ public sealed class NativeStringConstantTests
     }
 
     private static Evidence Evidence => new(EvidenceLevel.Declared, "native:literal-facts");
-    private static NativeStringConstant Value(NativeStringLiteralKind kind, int width, ImmutableArray<uint> units) => new(kind, units, width, Evidence);
+    private static NativeStringConstant Value(
+        NativeStringLiteralKind kind,
+        int width,
+        ImmutableArray<uint> units
+    ) => new(kind, units, width, Evidence);
     private static ManagedApiModel Model(NativeStringConstant value)
     {
         InteropModule source = new("literals", "windows-x64-msvc", 8, [], [], [])

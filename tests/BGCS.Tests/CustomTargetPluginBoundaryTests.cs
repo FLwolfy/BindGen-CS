@@ -73,12 +73,12 @@ public sealed class CustomTargetPluginBoundaryTests
         await using BindingHost host = fixture.Builder().Build();
         GenerationRequest request = TestInputs.LoadRequest(fixture.configuration);
         GenerationResult missing = await host.GenerateAsync(new(request.configuration with
-            { api = request.configuration.api with { runtime = null } }, fixture.root));
+        { api = request.configuration.api with { runtime = null } }, fixture.root));
         Assert.False(missing.success);
         Assert.False(missing.published);
         Assert.Contains("api.runtime", missing.GetDiagnosticSummary());
         GenerationResult browser = await host.GenerateAsync(new(request.configuration with
-            { api = request.configuration.api with { runtime = new ManagedRuntimeId("fixture.unsupported") } }, fixture.root));
+        { api = request.configuration.api with { runtime = new ManagedRuntimeId("fixture.unsupported") } }, fixture.root));
         Assert.False(browser.success);
         Assert.False(browser.published);
         Assert.Contains("runtime", browser.GetDiagnosticSummary(), StringComparison.OrdinalIgnoreCase);
@@ -106,9 +106,14 @@ public sealed class CustomTargetPluginBoundaryTests
     {
         public string id => "private-target-late-change";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        { mutate(); return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty); }
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) { mutate(); return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty); }
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new(Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("private-target-late-input-check:1")))), []);
     }
 
@@ -130,8 +135,14 @@ public sealed class CustomTargetPluginBoundaryTests
             File.Copy(Path.Combine(example, "bindgen.json"), configuration);
             byte[] plugin = File.ReadAllBytes(typeof(ExamplePlugin).Assembly.Location);
             File.WriteAllBytes(Path.Combine(root, "target-plugin.dll"), plugin);
-            PluginManifest manifest = new() { schemaVersion = 1, assembly = "target-plugin.dll", entryType = typeof(ExamplePlugin).FullName!,
-                plugin = new ExamplePlugin().descriptor, assets = [new("target-plugin.dll", new(Convert.ToHexStringLower(SHA256.HashData(plugin))))] };
+            PluginManifest manifest = new()
+            {
+                schemaVersion = 1,
+                assembly = "target-plugin.dll",
+                entryType = typeof(ExamplePlugin).FullName!,
+                plugin = new ExamplePlugin().descriptor,
+                assets = [new("target-plugin.dll", new(Convert.ToHexStringLower(SHA256.HashData(plugin))))]
+            };
             File.WriteAllText(Path.Combine(root, "plugin.json"), JsonSerializer.Serialize(manifest,
                 new JsonSerializerOptions { Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } }));
             WriteProfile(1);
@@ -163,15 +174,24 @@ public sealed class CustomTargetPluginBoundaryTests
             return worker;
         }
         internal void WriteHeader(int value) => File.WriteAllText(Path.Combine(root, "sdk", "include", "private_sdk.h"), "#define EXAMPLE_SDK_VALUE " + value + "\n");
-        internal void WriteProfile(int revision, bool unknown = false)
-        {
+        internal void WriteProfile(
+            int revision,
+            bool unknown = false
+        ) {
             Assert.True(new DesktopTargetProvider().TryResolve(new(new("host"), new(compilerPath: "uninstalled-parser-location")), out NativeTargetDescriptor? host));
             File.WriteAllText(Path.Combine(root, "target-sdk.json"), JsonSerializer.Serialize(new
             {
-                platformId = unknown ? "private-desktop" : host.platformId, host.architectureId, host.abiId, host.triple,
-                byteOrder = "littleEndian", requiresExplicitSdk = true, supportsDynamicModules = true,
-                host.sourceConventions, headerSearchPaths = host.headerSearchPaths,
-                systemIncludeDirectories = new[] { "sdk/include" }, defines = new[] { "PROFILE_VERSION=" + revision }
+                platformId = unknown ? "private-desktop" : host.platformId,
+                host.architectureId,
+                host.abiId,
+                host.triple,
+                byteOrder = "littleEndian",
+                requiresExplicitSdk = true,
+                supportsDynamicModules = true,
+                host.sourceConventions,
+                headerSearchPaths = host.headerSearchPaths,
+                systemIncludeDirectories = new[] { "sdk/include" },
+                defines = new[] { "PROFILE_VERSION=" + revision }
             }));
         }
         public void Dispose() => Directory.Delete(root, recursive: true);

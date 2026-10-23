@@ -209,7 +209,10 @@ public sealed class WorkerAssetProvisioningTests : WorkerTestHost
             edit(archive);
         }
 
-        private static ArtifactDescriptor Describe(string path, byte[] bytes)
+        private static ArtifactDescriptor Describe(
+            string path,
+            byte[] bytes
+        )
             => new(path, "application/octet-stream", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(bytes))));
 
         public void Dispose() => Directory.Delete(root, recursive: true);

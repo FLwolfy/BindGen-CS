@@ -59,7 +59,8 @@ public sealed class LegacyConfigurationStorageParityTests
         InteropType array = new(new("url-bytes"), "unsigned char[4]", NativeTypeCategory.Array, 4, 1) { elementType = octet.id, arrayLength = 4 };
         InteropType record = new(new("sample"), "sample_type", NativeTypeCategory.Record, 12, 4)
         {
-            declarationName = "sample_type", recordKind = "Struct",
+            declarationName = "sample_type",
+            recordKind = "Struct",
             fields = [new(new("id-field"), "id", integer.id, 0, 0, null), new(new("url-field"), "url", array.id, 4, 32, null), new(new("cpu-field"), "cpu", integer.id, 8, 64, null)]
         };
         InteropModule native = new("record_copy", "windows-x64-msvc", 8, [integer, octet, array, record], [], []) { byteOrder = NativeByteOrder.LittleEndian };

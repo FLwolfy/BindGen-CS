@@ -72,8 +72,10 @@ switch (envelope.request.headers[0])
 }
 await output.FlushAsync();
 
-static void PublishProcessId(string path, int processId)
-{
+static void PublishProcessId(
+    string path,
+    int processId
+) {
     File.WriteAllText(path + ".tmp", processId.ToString());
     File.Move(path + ".tmp", path);
 }

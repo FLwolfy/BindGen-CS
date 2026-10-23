@@ -15,6 +15,9 @@ public sealed class GroupedConfigurationConvenienceEntryTests : GroupedConfigura
     [InlineData("GenerateConstructorsForStructs", "config.alt")]
     [InlineData("GenerateSizeOfStructs", "config")]
     [InlineData("GenerateSizeOfStructs", "config.alt")]
-    public Task CompositionNamesDefaultsAndRecordConveniencesRetainTheirMeaning(string fixture, string variant)
+    public Task CompositionNamesDefaultsAndRecordConveniencesRetainTheirMeaning(
+        string fixture,
+        string variant
+    )
         => VerifyAsync(fixture, variant);
 }

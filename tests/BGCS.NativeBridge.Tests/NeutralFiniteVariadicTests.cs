@@ -51,10 +51,12 @@ public sealed class NeutralFiniteVariadicTests
         NativeModule source = Source(SourceLanguage.C);
         NativeDeclaration original = source.GetDeclaration(new("function"));
         NativeModule ordinary = new(source.targetId, source.triple, source.pointerSize, source.types,
-            [source.GetDeclaration(new("parameter")), original with { isVariadic = false }], []) { language = source.language };
+            [source.GetDeclaration(new("parameter")), original with { isVariadic = false }], [])
+        { language = source.language };
         Assert.Throws<NotSupportedException>(() => new NativeVariadicAdapterPlanner().Plan(ordinary, [Request()]));
         NativeModule ambiguous = new(source.targetId, source.triple, source.pointerSize, source.types,
-            [source.GetDeclaration(new("parameter")), original, original with { id = new("overload") }], []) { language = source.language };
+            [source.GetDeclaration(new("parameter")), original, original with { id = new("overload") }], [])
+        { language = source.language };
         Assert.Throws<ArgumentException>(() => new NativeVariadicAdapterPlanner().Plan(ambiguous, [Request()]));
     }
 
@@ -63,7 +65,8 @@ public sealed class NeutralFiniteVariadicTests
     {
         NativeModule source = Source(SourceLanguage.C);
         NativeModule missing = new(source.targetId, source.triple, source.pointerSize, source.types,
-            source.declarations.Where(declaration => declaration.kind != "Typedef").ToImmutableArray(), []) { language = source.language };
+            source.declarations.Where(declaration => declaration.kind != "Typedef").ToImmutableArray(), [])
+        { language = source.language };
         Assert.Throws<InvalidOperationException>(() => new NativeVariadicAdapterPlanner().Plan(missing, [Request()]));
     }
 
@@ -73,7 +76,8 @@ public sealed class NeutralFiniteVariadicTests
         NativeModule source = Source(SourceLanguage.C);
         NativeType narrow = source.GetType(new("narrow"));
         NativeModule objects = new(source.targetId, source.triple, source.pointerSize,
-            source.types.Replace(narrow, narrow with { category = NativeTypeCategory.Record }), source.declarations, []) { language = source.language };
+            source.types.Replace(narrow, narrow with { category = NativeTypeCategory.Record }), source.declarations, [])
+        { language = source.language };
         Assert.Throws<NotSupportedException>(() => new NativeVariadicAdapterPlanner().Plan(objects, [Request()]));
     }
 
@@ -90,11 +94,19 @@ public sealed class NeutralFiniteVariadicTests
         NativeType narrow = new(new("narrow"), NativeTypeCategory.Primitive, "signed char", 1, 1) { primitiveKind = "SChar", isSigned = true };
         string probeSource = new NativeVariadicAdapterPlanner().TypeProbePostamble([Request()], language);
         string[] names = Regex.Matches(probeSource, @"BGCSFiniteType_[A-Za-z0-9_]+").Select(match => match.Value).ToArray();
-        NativeDeclaration[] probes = names.Select((name, index) => new NativeDeclaration(new("probe-declaration:" + index), "Typedef", name,
+        NativeDeclaration[] probes = names.Select((
+            name,
+            index
+        ) => new NativeDeclaration(new("probe-declaration:" + index), "Typedef", name,
             (language == SourceLanguage.Cpp ? "BGCSGeneratedVariadicTypes::" : "") + name, new("probe-type:" + index), new("fixture.h", index + 2, 1))).ToArray();
-        NativeType[] probeTypes = probes.Select((probe, index) => new NativeType(probe.type!.Value, NativeTypeCategory.Alias, probe.qualifiedName,
-            index == 0 ? 1 : 4, index == 0 ? 1 : 4) { declaration = probe.id, elementType = index == 0 ? narrow.id : real.id }).ToArray();
+        NativeType[] probeTypes = probes.Select((
+            probe,
+            index
+        ) => new NativeType(probe.type!.Value, NativeTypeCategory.Alias, probe.qualifiedName,
+            index == 0 ? 1 : 4, index == 0 ? 1 : 4)
+        { declaration = probe.id, elementType = index == 0 ? narrow.id : real.id }).ToArray();
         return new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8, ImmutableArray.Create(integer, real, narrow).AddRange(probeTypes),
-            ImmutableArray.Create(function, parameter).AddRange(probes), []) { language = language };
+            ImmutableArray.Create(function, parameter).AddRange(probes), [])
+        { language = language };
     }
 }

@@ -13,8 +13,10 @@ public class FileNameHelperTests
     [InlineData("a:b", "aColonb")]
     [InlineData("a?b", "aQuestionMarkb")]
     [InlineData("a\"b", "aQuoteb")]
-    public void SanitizeFileName_ShouldReplaceKnownCharacters(string input, string expected)
-    {
+    public void SanitizeFileName_ShouldReplaceKnownCharacters(
+        string input,
+        string expected
+    ) {
         string actual = FileNameHelper.SanitizeFileName(input);
         Assert.Equal(expected, actual);
     }
@@ -23,8 +25,10 @@ public class FileNameHelperTests
     [InlineData("CON", "_CON")]
     [InlineData("prn", "_prn")]
     [InlineData("LPT1", "_LPT1")]
-    public void SanitizeFileName_ReservedNames_ShouldPrefixUnderscore(string input, string expected)
-    {
+    public void SanitizeFileName_ReservedNames_ShouldPrefixUnderscore(
+        string input,
+        string expected
+    ) {
         string actual = FileNameHelper.SanitizeFileName(input);
         Assert.Equal(expected, actual);
     }

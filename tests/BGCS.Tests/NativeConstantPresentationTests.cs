@@ -20,8 +20,10 @@ public sealed class NativeConstantPresentationTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ManagedAssertionsAndRealNativeEnumCallsRetainIndependentValues(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task ManagedAssertionsAndRealNativeEnumCallsRetainIndependentValues(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-native-constant-presentation-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -47,11 +49,14 @@ public sealed class NativeConstantPresentationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "presentation", nativeName = "presentation_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "presentation", nativeName = "presentation_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["values.h"], includeTransitivelyReferencedHeaders = false },
                 api = new()
                 {
-                    @namespace = "Generated.Presentation", name = "PresentationApi", importMode = mode,
+                    @namespace = "Generated.Presentation",
+                    name = "PresentationApi",
+                    importMode = mode,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
                     constants = [new("NATIVE_VALUE") { name = "PresentedValue", managedType = "long", expression = "6L * 7L + 1L", documentation = "Managed value <asserted> && separate." },
                         new("NATIVE_TEXT") { name = "PresentedText", value = new(ManagedDefaultValueKind.String, "managed😀") }],

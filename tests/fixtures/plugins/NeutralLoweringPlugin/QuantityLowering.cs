@@ -18,10 +18,16 @@ public sealed class QuantityLowering : INativeTypeLowering, IDisposable
     /// <summary>Gets whether the session service has released.</summary>
     public bool disposed { get; private set; }
     /// <inheritdoc/>
-    public bool CanLower(NativeTypeView type, LoweringContext context) => type.type.category == NativeTypeCategory.Record && type.declaration?.qualifiedName == "Sample::Quantity";
+    public bool CanLower(
+        NativeTypeView type,
+        LoweringContext context
+    ) => type.type.category == NativeTypeCategory.Record && type.declaration?.qualifiedName == "Sample::Quantity";
     /// <inheritdoc/>
-    public NativeTypeLoweringPlan Lower(NativeTypeView type, LoweringContext context, CancellationToken cancellationToken)
-    {
+    public NativeTypeLoweringPlan Lower(
+        NativeTypeView type,
+        LoweringContext context,
+        CancellationToken cancellationToken
+    ) {
         cancellationToken.ThrowIfCancellationRequested();
         BridgeType scalar = new(new StableId("fixture-quantity-int"), BridgeTypeKind.Scalar, "int32_t") { nativeType = type.id };
         return new(scalar.id, [scalar], BridgeConversionKind.ScalarCast, BridgeConversionKind.ScalarCast);

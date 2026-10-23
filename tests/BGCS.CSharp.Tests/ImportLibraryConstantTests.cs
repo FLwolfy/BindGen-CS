@@ -25,14 +25,21 @@ public sealed class ImportLibraryConstantTests
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task FrozenConsumerConstantRemainsADeclarativeImportReference(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task FrozenConsumerConstantRemainsADeclarativeImportReference(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         ManagedApiModel model = Model("Vendor.LibraryNames.Native") with
         { emitLibraryNameConstant = false, style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance };
         NeutralBackendTests.MemorySink sink = new();
-        EmissionRequest request = new("native", sink) { importMode = mode, managedProjection = Inputs(ConsumerSource),
-            includeRuntimeSource = sourceRuntime, singleFile = sourceRuntime,
-            runtimeNamespace = sourceRuntime ? "Generated.LibraryConstant.Runtime" : "BGCS.Runtime" };
+        EmissionRequest request = new("native", sink)
+        {
+            importMode = mode,
+            managedProjection = Inputs(ConsumerSource),
+            includeRuntimeSource = sourceRuntime,
+            singleFile = sourceRuntime,
+            runtimeNamespace = sourceRuntime ? "Generated.LibraryConstant.Runtime" : "BGCS.Runtime"
+        };
         CSharpEmissionPlan plan = new CSharpTestPlanner().Plan(model, request);
         Assert.Equal("global::Vendor.LibraryNames.Native", plan.importLibraryName!.reference);
         await new CSharpTestBackend().EmitAsync(model, request, CancellationToken.None);
@@ -64,8 +71,11 @@ public sealed class ImportLibraryConstantTests
     [InlineData("property", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public static string Native=>\"native\";} }")]
     [InlineData("null", "Vendor.LibraryNames.Native", "namespace Vendor {public static class LibraryNames {public const string? Native=null;} }")]
     [InlineData("generated", "Generated.LibraryConstant.LibraryNames.Native", "namespace Generated.LibraryConstant {public static class LibraryNames {public const string Native=\"native\";} }")]
-    public void MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission(string caseId, string reference, string source)
-    {
+    public void MissingMutableMismatchedOrInjectedReferencesFailBeforeEmission(
+        string caseId,
+        string reference,
+        string source
+    ) {
         Assert.NotEmpty(caseId);
         NeutralBackendTests.MemorySink sink = new();
         Assert.Throws<ArgumentException>(() => new CSharpTestPlanner().Plan(Model(reference),
@@ -83,8 +93,11 @@ public sealed class ImportLibraryConstantTests
     private static ManagedProjectionInputs Inputs(string source)
     {
         byte[] image = Encoding.UTF8.GetBytes(source);
-        return new() { sources = [new(Path.Combine(Path.GetTempPath(), "bgcs-import-constant.cs"),
-            new(Convert.ToHexStringLower(SHA256.HashData(image))), image.ToImmutableArray(), source)] };
+        return new()
+        {
+            sources = [new(Path.Combine(Path.GetTempPath(), "bgcs-import-constant.cs"),
+            new(Convert.ToHexStringLower(SHA256.HashData(image))), image.ToImmutableArray(), source)]
+        };
     }
 
     private static ManagedApiModel Model(string reference)

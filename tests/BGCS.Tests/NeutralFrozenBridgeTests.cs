@@ -25,9 +25,11 @@ public sealed class NeutralFrozenBridgeTests
             await File.WriteAllTextAsync(header, "class Counter { int m_value; public: explicit Counter(int value) : m_value(value) {} int Add(int value) const { return value + m_value; } };");
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "frozen", nativeName = "frozen_bridge" },
+                schemaVersion = 2,
+                library = new() { id = "frozen", nativeName = "frozen_bridge" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["counter.hpp"], parseMacros = false },
-                api = new() { @namespace = "Generated.Frozen", name = "FrozenApi" }, cache = new() { enabled = false }
+                api = new() { @namespace = "Generated.Frozen", name = "FrozenApi" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult generated = await host.GenerateAsync(new(configuration, root));

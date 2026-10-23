@@ -19,7 +19,10 @@ public sealed class NativeCBooleanTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task CBooleanValuesNormalizeAtFriendlyBoundaryAndPreserveByteStorage(BindingImportMode mode, bool sourceRuntime)
+    public async Task CBooleanValuesNormalizeAtFriendlyBoundaryAndPreserveByteStorage(
+        BindingImportMode mode,
+        bool sourceRuntime
+    )
         => await ExerciseAsync(mode, sourceRuntime, false);
 
     [Theory]
@@ -29,11 +32,17 @@ public sealed class NativeCBooleanTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NestedCarriersPreserveRealNativeCallsAcrossImportRuntimeAndApiStyles(BindingImportMode mode, bool sourceRuntime)
+    public async Task NestedCarriersPreserveRealNativeCallsAcrossImportRuntimeAndApiStyles(
+        BindingImportMode mode,
+        bool sourceRuntime
+    )
         => await ExerciseAsync(mode, sourceRuntime, true);
 
-    private static async Task ExerciseAsync(BindingImportMode mode, bool sourceRuntime, bool nested)
-    {
+    private static async Task ExerciseAsync(
+        BindingImportMode mode,
+        bool sourceRuntime,
+        bool nested
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-c-boolean-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -62,12 +71,18 @@ public sealed class NativeCBooleanTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "c_boolean", nativeName = "c_boolean_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "c_boolean", nativeName = "c_boolean_fixture" },
                 source = new() { headers = ["boolean.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                api = new() { @namespace = "Generated.CBoolean", name = "BooleanApi", importMode = mode,
+                api = new()
+                {
+                    @namespace = "Generated.CBoolean",
+                    name = "BooleanApi",
+                    importMode = mode,
                     nestGeneratedTypesInApi = nested,
                     style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance,
-                    functionAliases = [new("negate", "Invert")], functionContainers = [new("Flags", [new("negate", "Not")])],
+                    functionAliases = [new("negate", "Invert")],
+                    functionContainers = [new("Flags", [new("negate", "Not")])],
                     records = [new("FlagRecord") { name = "FlagCarrier", documentation = "The exact native flag carrier < 3 bytes.",
                         fields = [new("enabled") { name = "Enabled" }, new("marker") { name = "Marker" }],
                         emitSizeConstant = true, constructorFields = ["enabled", "marker"],
@@ -81,12 +96,16 @@ public sealed class NativeCBooleanTests
                         new("scalar_vector") { parameters = [new("value", new("Vector2", "{value}.X + {value}.Y", requiredNamespace: "System.Numerics"))],
                             returns = new("Vector2", null, "new Vector2({value}, -{value})", "System.Numerics"),
                             inputVariations = [new([new("value", new("Vector3", "new global::System.Numerics.Vector2({value}.X, {value}.Y)", requiredNamespace: "System.Numerics"))])] }
-                    ] },
+                    ]
+                },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
                 output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                semantics = new() { valueParameters = [new() { function = "store_flag", parameter = "record",
-                    direction = NativeParameterDirection.InputOutput, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }] },
-                 cache = new() { enabled = false }
+                semantics = new()
+                {
+                    valueParameters = [new() { function = "store_flag", parameter = "record",
+                    direction = NativeParameterDirection.InputOutput, lifetime = NativeLifetimeKind.Call, retainsPointer = false, allowsNull = false }]
+                },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

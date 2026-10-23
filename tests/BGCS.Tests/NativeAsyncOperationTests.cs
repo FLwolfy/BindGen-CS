@@ -21,8 +21,10 @@ public sealed class NativeAsyncOperationTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task NativeTerminalJoinRetainsMemoryThroughCompletionTailAndCancellationAcknowledgement(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task NativeTerminalJoinRetainsMemoryThroughCompletionTailAndCancellationAcknowledgement(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string root = Path.Combine(Path.GetTempPath(), "bgcs-async-operation-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -96,7 +98,8 @@ public sealed class NativeAsyncOperationTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "operations", nativeName = "operation_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "operations", nativeName = "operation_fixture" },
                 source = new() { language = SourceLanguage.C, headers = ["operation.h"], parseMacros = false, includeTransitivelyReferencedHeaders = false },
                 semantics = new()
                 {
@@ -119,10 +122,16 @@ public sealed class NativeAsyncOperationTests
                         cancelFunction = "Cancel", cancelHandleParameter = "handle", retainedParameters = ["values"]
                     }]
                 },
-                api = new() { @namespace = "Generated.Operations", name = "OperationApi", importMode = mode,
-                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance },
-                runtime = new() { mode = sourceRuntime ? "source" : "package" }, output = new() { layout = sourceRuntime ? "singleFile" : "split" },
-                 cache = new() { enabled = false }
+                api = new()
+                {
+                    @namespace = "Generated.Operations",
+                    name = "OperationApi",
+                    importMode = mode,
+                    style = sourceRuntime ? ManagedApiStyle.Static : ManagedApiStyle.Instance
+                },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                output = new() { layout = sourceRuntime ? "singleFile" : "split" },
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));

@@ -15,9 +15,14 @@ public sealed class ValueReceiverConfigurationTests
     {
         BindingConfiguration configuration = new()
         {
-            schemaVersion = 2, library = new() { id = "values", nativeName = "values" }, source = new() { headers = ["value.h"] },
-            api = new() { memberFunctions = [new("increment", "NativeValue", "self")
-                { kind = ManagedReceiverKind.Value, objectName = objectName ? "OwnedValue" : null, releaseDomain = objectName ? null : "free" }] }
+            schemaVersion = 2,
+            library = new() { id = "values", nativeName = "values" },
+            source = new() { headers = ["value.h"] },
+            api = new()
+            {
+                memberFunctions = [new("increment", "NativeValue", "self")
+                { kind = ManagedReceiverKind.Value, objectName = objectName ? "OwnedValue" : null, releaseDomain = objectName ? null : "free" }]
+            }
         };
         Assert.Throws<ArgumentException>(() => new GenerationRequest(configuration, Path.GetTempPath()));
     }

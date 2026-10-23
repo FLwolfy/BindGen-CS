@@ -42,9 +42,14 @@ public sealed class NeutralGenerationHostTests
     {
         public string id => "formal-input";
         public int priority => 0;
-        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(ExternalInputContext context, CancellationToken cancellationToken) => [new(input, ExternalInputKind.File)];
-        public ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public ImmutableArray<DeclaredExternalInput> GetExternalInputs(
+            ExternalInputContext context,
+            CancellationToken cancellationToken
+        ) => [new(input, ExternalInputKind.File)];
+        public ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             _ = File.ReadAllBytes(input);
             return ValueTask.CompletedTask;
         }
@@ -76,10 +81,15 @@ public sealed class NeutralGenerationHostTests
     {
         public string id => "external";
         public int priority => 0;
-        public CacheFingerprintContribution CaptureFingerprint(CacheFingerprintContext context, CancellationToken cancellationToken)
+        public CacheFingerprintContribution CaptureFingerprint(
+            CacheFingerprintContext context,
+            CancellationToken cancellationToken
+        )
             => new(new ContentDigest(new string('a', 64)), [new(input, ExternalInputKind.File, allowMissing: true)]);
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             ArtifactDescriptor artifact = request.artifacts.First(candidate => candidate.mediaType == "text/x-csharp");
             string text = await request.content.ReadTextAsync(artifact.relativePath, cancellationToken);
             await request.content.ReplaceTextAsync(artifact.relativePath, text + "\n// external state: " + (File.Exists(input) ? File.ReadAllText(input) : "absent") + "\n", cancellationToken);
@@ -90,8 +100,10 @@ public sealed class NeutralGenerationHostTests
     {
         public string id => "mutate-input";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        ) {
             File.WriteAllText(input, "after");
             return ValueTask.FromResult(ImmutableArray<BindingDiagnostic>.Empty);
         }
@@ -114,7 +126,10 @@ public sealed class NeutralGenerationHostTests
     {
         public string id => "fatal";
         public int priority => 0;
-        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(ValidationRequest request, CancellationToken cancellationToken)
+        public ValueTask<ImmutableArray<BindingDiagnostic>> ValidateAsync(
+            ValidationRequest request,
+            CancellationToken cancellationToken
+        )
             => ValueTask.FromResult(ImmutableArray.Create(new BindingDiagnostic(BindingDiagnosticSeverity.Critical, "A mandatory gate failed critically.", "BGCS-TEST-CRITICAL")));
     }
 
@@ -186,7 +201,13 @@ public sealed class NeutralGenerationHostTests
         await Assert.ThrowsAsync<ObjectDisposedException>(() => processor!.retained!.ReplaceTextAsync(processor.path!, "late", CancellationToken.None).AsTask());
     }
 
-    private sealed class ProbeProcessor(string identity, int order, bool changeAbi = false, bool releaseFailure = false, bool addHelper = false) : IArtifactProcessor, IDisposable
+    private sealed class ProbeProcessor(
+        string identity,
+        int order,
+        bool changeAbi = false,
+        bool releaseFailure = false,
+        bool addHelper = false
+    ) : IArtifactProcessor, IDisposable
     {
         public string id => identity;
         public int priority => order;
@@ -194,8 +215,10 @@ public sealed class NeutralGenerationHostTests
         public bool changedAbi { get; private set; }
         public IArtifactEditor? retained { get; private set; }
         public string? path { get; private set; }
-        public async ValueTask ProcessAsync(ArtifactProcessingRequest request, CancellationToken cancellationToken)
-        {
+        public async ValueTask ProcessAsync(
+            ArtifactProcessingRequest request,
+            CancellationToken cancellationToken
+        ) {
             retained = request.content;
             foreach (ArtifactDescriptor artifact in request.artifacts)
             {
@@ -252,12 +275,20 @@ public sealed class NeutralGenerationHostTests
         Assert.False(Directory.Exists(result.outputRoot));
     }
 
-    private sealed class ProbeInterop(string identity, int ordering, System.Collections.Generic.List<string> trace, bool rewriteAbi = false) : IInteropTransform, IDisposable
+    private sealed class ProbeInterop(
+        string identity,
+        int ordering,
+        System.Collections.Generic.List<string> trace,
+        bool rewriteAbi = false
+    ) : IInteropTransform, IDisposable
     {
         public string id => identity;
         public int priority => ordering;
-        public BGCS.Core.Interop.InteropModule Transform(BGCS.Core.Interop.InteropModule module, AnalysisContext context, CancellationToken cancellationToken)
-        {
+        public BGCS.Core.Interop.InteropModule Transform(
+            BGCS.Core.Interop.InteropModule module,
+            AnalysisContext context,
+            CancellationToken cancellationToken
+        ) {
             Assert.Equal(module.targetId, context.target.targetId.value);
             trace.Add(identity);
             var functions = module.functions.Select(function => function with { exportName = rewriteAbi ? "changed" : function.exportName, documentation = identity }).ToImmutableArray();
@@ -275,10 +306,13 @@ public sealed class NeutralGenerationHostTests
         BindingConfiguration configuration = Configuration() with
         {
             runtime = new() { mode = "source" },
-            semantics = new() { stringParameters = [new() { function = "echo", parameter = "value",
+            semantics = new()
+            {
+                stringParameters = [new() { function = "echo", parameter = "value",
                 encoding = BGCS.Core.Interop.NativeTextEncoding.Utf8, codeUnitWidth = 1, lengthUnit = BGCS.Core.Interop.NativeLengthUnit.CodeUnits,
                 direction = BGCS.Core.Interop.NativeParameterDirection.Input, lifetime = BGCS.Core.Interop.NativeLifetimeKind.Call,
-                zeroTerminated = true, retainsPointer = retains, allowsNull = false }] }
+                zeroTerminated = true, retainsPointer = retains, allowsNull = false }]
+            }
         };
         await using BindingHost host = BindingGenerator.CreateBuilder().UseDetachedFrontend(() => new ScalarFrontend(text: true)).Build();
         GenerationRequest request = new(configuration, scratch.root);
@@ -382,21 +416,31 @@ public sealed class NeutralGenerationHostTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "example", nativeName = "example" },
-        source = new() { headers = ["native.h"] }, targets = [new() { id = "host" }],
-        api = new() { @namespace = "Generated.Example", name = "NativeApi" }, cache = new() { enabled = false }
+        schemaVersion = 2,
+        library = new() { id = "example", nativeName = "example" },
+        source = new() { headers = ["native.h"] },
+        targets = [new() { id = "host" }],
+        api = new() { @namespace = "Generated.Example", name = "NativeApi" },
+        cache = new() { enabled = false }
     };
 
-    private sealed class ScalarFrontend(bool forceTarget = false, bool text = false) : IFrontend
+    private sealed class ScalarFrontend(
+        bool forceTarget = false,
+        bool text = false
+    ) : IFrontend
     {
-        public ValueTask<FrontendPreparation> PrepareAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendPreparation> PrepareAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new FrontendPreparation(request, new([], []), []));
         }
 
-        public ValueTask<FrontendResult> ParseAsync(FrontendRequest request, CancellationToken cancellationToken)
-        {
+        public ValueTask<FrontendResult> ParseAsync(
+            FrontendRequest request,
+            CancellationToken cancellationToken
+        ) {
             NativeType integer = new(new("int"), NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true };
             NativeType octet = new(new("char"), NativeTypeCategory.Primitive, "char", 1, 1) { primitiveKind = "Char", isSigned = true };
             NativeType pointer = new(new("text-pointer"), NativeTypeCategory.Pointer, "char*", TestComposition.PointerSize(request.target), TestComposition.PointerSize(request.target)) { elementType = octet.id };
@@ -412,7 +456,11 @@ public sealed class NeutralGenerationHostTests
 
     private sealed class ReleaseFailureBackend : IBindingBackend, IDisposable
     {
-        public ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(BGCS.Core.Managed.ManagedApiModel model, EmissionRequest request, CancellationToken cancellationToken)
+        public ValueTask<ImmutableArray<ArtifactDescriptor>> EmitAsync(
+            BGCS.Core.Managed.ManagedApiModel model,
+            EmissionRequest request,
+            CancellationToken cancellationToken
+        )
             => new BGCS.CSharp.CSharpBackend().EmitAsync(model, request, cancellationToken);
         public void Dispose() => throw new IOException("backend release failed");
     }

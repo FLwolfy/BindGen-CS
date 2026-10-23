@@ -67,16 +67,27 @@ public sealed class NativeWideTextTests
             foreach ((string export, int bytes) in new[] { ("first16", 2), ("next16", 2), ("first32", 4), ("next32", 4), ("first_wchar", width), ("next_wchar", width) })
                 rules.Add(new()
                 {
-                    function = export, parameter = "text", encoding = bytes == 2 ? NativeTextEncoding.Utf16 : NativeTextEncoding.Utf32,
-                    codeUnitWidth = bytes, byteOrder = NativeTextByteOrder.Native, lengthUnit = NativeLengthUnit.CodeUnits,
-                    direction = NativeParameterDirection.Input, lifetime = NativeLifetimeKind.Call, retainsPointer = false, zeroTerminated = true, allowsNull = false
+                    function = export,
+                    parameter = "text",
+                    encoding = bytes == 2 ? NativeTextEncoding.Utf16 : NativeTextEncoding.Utf32,
+                    codeUnitWidth = bytes,
+                    byteOrder = NativeTextByteOrder.Native,
+                    lengthUnit = NativeLengthUnit.CodeUnits,
+                    direction = NativeParameterDirection.Input,
+                    lifetime = NativeLifetimeKind.Call,
+                    retainsPointer = false,
+                    zeroTerminated = true,
+                    allowsNull = false
                 });
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "wide", nativeName = "wide_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "wide", nativeName = "wide_fixture" },
                 source = new() { headers = ["wide.h"], language = SourceLanguage.C, parseMacros = false, includeTransitivelyReferencedHeaders = false },
-                api = new() { @namespace = "Generated.NativeWide", name = "WideApi" }, runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                semantics = new() { stringParameters = rules.ToImmutable() },  cache = new() { enabled = false }
+                api = new() { @namespace = "Generated.NativeWide", name = "WideApi" },
+                runtime = new() { mode = sourceRuntime ? "source" : "package" },
+                semantics = new() { stringParameters = rules.ToImmutable() },
+                cache = new() { enabled = false }
             };
             GenerationResult result = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, root));
             Assert.True(result.success, result.GetDiagnosticSummary());
@@ -87,8 +98,11 @@ public sealed class NativeWideTextTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
-    private static void Invoke(string sources, string binary, int width)
-    {
+    private static void Invoke(
+        string sources,
+        string binary,
+        int width
+    ) {
         string[] references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator);
         CSharpCompilation compilation = CSharpCompilation.Create("NativeWide_" + Guid.NewGuid().ToString("N"),
             Directory.EnumerateFiles(sources, "*.cs", SearchOption.AllDirectories).Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), new(LanguageVersion.CSharp14), path)),
@@ -104,7 +118,10 @@ public sealed class NativeWideTextTests
             Assembly assembly = load.LoadFromStream(image);
             Type type = assembly.GetType("Generated.NativeWide.WideApi", true)!;
             using IDisposable api = (IDisposable)type.GetMethod("Load")!.InvokeFactory([binary])!;
-            uint Call(string method, string text) => (uint)type.GetMethod(method)!.Invoke(api, [text])!;
+            uint Call(
+                string method,
+                string text
+            ) => (uint)type.GetMethod(method)!.Invoke(api, [text])!;
             Assert.Equal((uint)width, type.GetMethod("WcharWidth")!.Invoke(api, []));
             Assert.Equal((uint)65, Call("First16", "AB"));
             Assert.Equal((uint)65, Call("First32", "AB"));

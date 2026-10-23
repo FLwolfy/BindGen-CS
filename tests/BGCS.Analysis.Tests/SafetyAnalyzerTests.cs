@@ -24,8 +24,10 @@ public sealed class SafetyAnalyzerTests
     [InlineData("qualified-callback", false)]
     [InlineData("callback-storage", true)]
     [InlineData("misleading-spelling", true)]
-    public void ActualTypeShapeSeparatesDataAddressesFromFunctionAddresses(string resultType, bool warning)
-    {
+    public void ActualTypeShapeSeparatesDataAddressesFromFunctionAddresses(
+        string resultType,
+        bool warning
+    ) {
         SourceLocation location = new("include/library.h", 37, 9);
         InteropFunction function = Function(resultType) with { source = location, documentation = "Create UTF8 string" };
         InteropModule module = Module(function);
@@ -55,8 +57,10 @@ public sealed class SafetyAnalyzerTests
     [InlineData(NativeOwnershipKind.Borrowed, EvidenceLevel.Declared)]
     [InlineData(NativeOwnershipKind.Borrowed, EvidenceLevel.UserAsserted)]
     [InlineData(NativeOwnershipKind.Borrowed, EvidenceLevel.Verified)]
-    public void ExplicitEvidenceIsPreservedWithoutChangingItsStrength(NativeOwnershipKind kind, EvidenceLevel level)
-    {
+    public void ExplicitEvidenceIsPreservedWithoutChangingItsStrength(
+        NativeOwnershipKind kind,
+        EvidenceLevel level
+    ) {
         Evidence evidence = new(level, "fixture:actual-evidence-origin");
         OwnershipContract facts = new(kind, new(kind == NativeOwnershipKind.Owned ? NativeLifetimeKind.Owner : NativeLifetimeKind.Module,
             kind == NativeOwnershipKind.Owned ? new("get") : null, evidence), evidence);

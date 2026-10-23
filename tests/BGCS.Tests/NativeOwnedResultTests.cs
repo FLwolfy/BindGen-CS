@@ -24,8 +24,10 @@ public sealed class NativeOwnedResultTests
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, false)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task GeneratedOwnedResult_KeepsItsReleaseAliveAfterContextDisposal(BindingImportMode mode, bool sourceRuntime)
-    {
+    public async Task GeneratedOwnedResult_KeepsItsReleaseAliveAfterContextDisposal(
+        BindingImportMode mode,
+        bool sourceRuntime
+    ) {
         string temporary = Path.Combine(Path.GetTempPath(), "bgcs-owned-result-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
@@ -45,13 +47,19 @@ public sealed class NativeOwnedResultTests
                 """);
             BindingConfiguration configuration = new()
             {
-                schemaVersion = 2, library = new() { id = "owned", nativeName = "owned_fixture" },
+                schemaVersion = 2,
+                library = new() { id = "owned", nativeName = "owned_fixture" },
                 source = new() { language = SourceLanguage.Cpp, headers = ["widget.hpp"], parseMacros = false },
-                api = new() { @namespace = "Generated.Owned", name = "WidgetApi", importMode = mode,
-                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Live", "Live").Add("Widget::Add", "Add").Add("Widget::Set", "Set") },
+                api = new()
+                {
+                    @namespace = "Generated.Owned",
+                    name = "WidgetApi",
+                    importMode = mode,
+                    names = ImmutableDictionary<string, string>.Empty.Add("Widget::Widget", "CreateWidget").Add("Widget::Live", "Live").Add("Widget::Add", "Add").Add("Widget::Set", "Set")
+                },
                 semantics = new() { ownedResults = [new() { function = "Widget::Widget", releaseThreadDomain = "any" }] },
                 runtime = new() { mode = sourceRuntime ? "source" : "package" },
-                 cache = new() { enabled = false }
+                cache = new() { enabled = false }
             };
             await using BindingHost host = BindingGenerator.CreateBuilder().UseWorkerDirectory(WorkerRoot()).Build();
             GenerationResult built = await NativeConsumerHarness.GenerateAndCompileAsync(host, new(configuration, temporary));
@@ -127,8 +135,10 @@ public sealed class NativeOwnedResultTests
         finally { Directory.Delete(temporary, recursive: true); }
     }
 
-    private static async Task<string> RunAsync(string directory, params string[] arguments)
-    {
+    private static async Task<string> RunAsync(
+        string directory,
+        params string[] arguments
+    ) {
         string? root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         string executable = string.IsNullOrEmpty(root) ? "dotnet" : Path.Combine(root, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
         ProcessStartInfo start = new(executable) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };

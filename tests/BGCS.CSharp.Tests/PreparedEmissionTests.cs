@@ -26,8 +26,11 @@ public sealed class PreparedEmissionTests
     [InlineData(BindingImportMode.LibraryImport, false, true)]
     [InlineData(BindingImportMode.LibraryImport, true, false)]
     [InlineData(BindingImportMode.LibraryImport, true, true)]
-    public async Task PreparationKeepsTheExactPlanAndChoicesWhileOnlyTheDestinationChanges(BindingImportMode importMode, bool runtimeSource, bool singleFile)
-    {
+    public async Task PreparationKeepsTheExactPlanAndChoicesWhileOnlyTheDestinationChanges(
+        BindingImportMode importMode,
+        bool runtimeSource,
+        bool singleFile
+    ) {
         ManagedApiModel model = NeutralBackendTests.ModelWithStorage() with { emitNativeMetadata = true };
         NeverWritten originalSink = new();
         EmissionRequest request = PlanningFixture.Prepare(model, new("prepared_fixture", originalSink)
@@ -95,8 +98,10 @@ public sealed class PreparedEmissionTests
     private sealed class NeverWritten : IArtifactSink
     {
         internal bool written { get; private set; }
-        public string WriteText(string relativePath, string content)
-        {
+        public string WriteText(
+            string relativePath,
+            string content
+        ) {
             written = true;
             throw new InvalidOperationException("The preparation's original sink must never receive an emission.");
         }

@@ -108,7 +108,7 @@ builtin headers 所需的搜索位置，并通过该编译器的 SDK 接入方�
 
 `.cpp` 可以作为分析输入，但翻译单元未必适合充当公开 include。生成 bridge 应包含公开、
 自洽的声明头。实现 `.cpp` 保留在消费者构建中；项目 shim 则通过
-`cpp.nativeShims[].sourceFiles` 声明实现，并单独配置 `publicHeaders`。如果 bridge 包含了实现文件，
+`bridge.nativeShims[].sourceFiles` 声明实现，并单独配置 `publicHeaders`。如果 bridge 包含了实现文件，
 消费者又独立编译它，就可能产生重复定义。BGCS 不改写用户源码来制造公开接口。
 
 ## 相关 3.0.1 修复

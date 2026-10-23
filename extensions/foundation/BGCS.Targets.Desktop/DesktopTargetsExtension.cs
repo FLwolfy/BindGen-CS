@@ -21,7 +21,7 @@ namespace BGCS.Targets.Desktop;
 public sealed class DesktopTargetsExtension : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc/>
-    public PluginDescriptor descriptor => new("bgcs.targets.desktop", "4.0.0", [new("bgcs.targets.desktop.standard", ExtensionPort.NativeTargetProvider)]);
+    public PluginDescriptor descriptor => new("bgcs.targets.desktop", "4.1.0", [new("bgcs.targets.desktop.standard", ExtensionPort.NativeTargetProvider)]);
 
     /// <inheritdoc/>
     public void Configure(

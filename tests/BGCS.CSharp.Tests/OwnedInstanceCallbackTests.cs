@@ -27,8 +27,10 @@ public sealed class OwnedInstanceCallbackTests
     [InlineData(BindingImportMode.FunctionTable, true)]
     [InlineData(BindingImportMode.DllImport, true)]
     [InlineData(BindingImportMode.LibraryImport, true)]
-    public async Task ExactOwnedReceiverUsesOneRootedAddressAndCommonOwnedResultCleanup(BindingImportMode mode, bool userData)
-    {
+    public async Task ExactOwnedReceiverUsesOneRootedAddressAndCommonOwnedResultCleanup(
+        BindingImportMode mode,
+        bool userData
+    ) {
         ManagedApiModel model = Model(userData);
         NeutralBackendTests.MemorySink sink = new();
         EmissionRequest request = new("native", sink) { importMode = mode };
@@ -91,11 +93,17 @@ public sealed class OwnedInstanceCallbackTests
         InteropParameter self = run.parameters[0];
         if (fault == "wrong-owner") run = run with { sourceOwnerType = new("different-owner") };
         else if (fault != "const-factory")
-            run = run with { parameters = run.parameters.SetItem(0, self with { ownership = self.ownership! with
+            run = run with
             {
-                retainsPointer = fault == "retained-self" ? true : null,
-                lifetime = fault == "unknown-call" ? self.ownership.lifetime with { kind = NativeLifetimeKind.Unknown } : self.ownership.lifetime
-            } }) };
+                parameters = run.parameters.SetItem(0, self with
+                {
+                    ownership = self.ownership! with
+                    {
+                        retainsPointer = fault == "retained-self" ? true : null,
+                        lifetime = fault == "unknown-call" ? self.ownership.lifetime with { kind = NativeLifetimeKind.Unknown } : self.ownership.lifetime
+                    }
+                })
+            };
         ImmutableArray<InteropType> types = original.types;
         var functions = original.functions.SetItem(original.functions.IndexOf(original.functions.Single(function => function.id == run.id)), run);
         if (fault == "const-factory")
@@ -129,7 +137,8 @@ public sealed class OwnedInstanceCallbackTests
             {
                 interop = new(model.interop.libraryId, model.interop.targetId, 4,
                     model.interop.types.Select(type => type.category == NativeTypeCategory.Pointer ? type with { size = 4, alignment = 4 } : type).ToImmutableArray(),
-                    model.interop.functions, []) { byteOrder = NativeByteOrder.LittleEndian }
+                    model.interop.functions, [])
+                { byteOrder = NativeByteOrder.LittleEndian }
             };
         }
         ManagedApiModel initial = Prepare(false);
@@ -178,22 +187,33 @@ public sealed class OwnedInstanceCallbackTests
         InteropType callbackPointer = new(new("callback-pointer"), "callback*", NativeTypeCategory.Pointer, 8, 8) { elementType = callable.id };
         InteropType integerOutput = new(new("integer-output"), "int*", NativeTypeCategory.Pointer, 8, 8) { elementType = new("int") };
         InteropFunction create = original.functions[0];
-        InteropFunction Member(string name, bool owned, bool hasCallback)
-        {
+        InteropFunction Member(
+            string name,
+            bool owned,
+            bool hasCallback
+        ) {
             StableId resultId = new(name + "-result"), errorId = new(name + "-error");
             OwnershipContract errorOwner = create.parameters[2].ownership! with { lifetime = create.parameters[2].ownership!.lifetime with { owner = errorId } };
             InteropParameter error = create.parameters[2] with { id = errorId, ownership = errorOwner };
-            InteropParameter result = create.parameters[1] with { id = resultId, type = owned ? create.parameters[1].type : integerOutput.id,
-                ownership = owned ? create.parameters[1].ownership! with { lifetime = create.parameters[1].ownership!.lifetime with { owner = resultId } } : null };
+            InteropParameter result = create.parameters[1] with
+            {
+                id = resultId,
+                type = owned ? create.parameters[1].type : integerOutput.id,
+                ownership = owned ? create.parameters[1].ownership! with { lifetime = create.parameters[1].ownership!.lifetime with { owner = resultId } } : null
+            };
             var inputs = ImmutableArray.CreateBuilder<InteropParameter>();
             inputs.Add(new(new(name + "-self"), "self", new("widget-pointer"))
             { ownership = new(NativeOwnershipKind.Borrowed, new(NativeLifetimeKind.Call, null, evidence), evidence) });
             if (hasCallback) inputs.Add(new(new(name + "-callback"), "callback", callbackPointer.id)
             {
                 callback = new(callable.id, new(NativeLifetimeKind.Call, null, evidence), evidence)
-                { retained = false, threading = NativeCallbackThreading.CallerThread,
-                    userDataParameter = userData ? new(name + "-userdata") : null, callableUserDataIndex = userData ? 1 : null,
-                    failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence) }
+                {
+                    retained = false,
+                    threading = NativeCallbackThreading.CallerThread,
+                    userDataParameter = userData ? new(name + "-userdata") : null,
+                    callableUserDataIndex = userData ? 1 : null,
+                    failureReturn = new(NativeScalarConstantKind.Integer, "-7", 4, true, evidence)
+                }
             });
             inputs.Add(new(new(name + "-value"), "value", new("int")));
             if (hasCallback && userData) inputs.Add(new(new(name + "-userdata"), "userdata", state.id));
@@ -203,7 +223,8 @@ public sealed class OwnedInstanceCallbackTests
         }
         InteropModule module = new(original.libraryId, original.targetId, original.pointerSize,
             original.types.AddRange(ImmutableArray.Create(state, callable, callbackPointer, integerOutput)),
-            original.functions.AddRange(ImmutableArray.Create(Member("run", false, true), Member("spawn", true, true), Member("clone", true, false))), []) { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
+            original.functions.AddRange(ImmutableArray.Create(Member("run", false, true), Member("spawn", true, true), Member("clone", true, false))), [])
+        { byteOrder = global::BGCS.Core.Native.NativeByteOrder.LittleEndian };
         return new DefaultManagedProjection().Project(module, new("Generated.OwnedCallbacks", "WidgetApi"), CancellationToken.None);
     }
 }

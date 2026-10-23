@@ -21,8 +21,10 @@ public sealed class AggregateAbiPlanningTests
     [Theory]
     [InlineData("dotnet.windows-x64", "Integer")]
     [InlineData("dotnet.system-v-amd64", "Sse")]
-    public void CallingClassificationUsesRealFieldsAndRuntimeAlgorithm(string family, string classification)
-    {
+    public void CallingClassificationUsesRealFieldsAndRuntimeAlgorithm(
+        string family,
+        string classification
+    ) {
         InteropType floating = new(new("float"), "float", NativeTypeCategory.Primitive, 4, 4) { primitiveKind = "Float" };
         InteropType pair = new(new("pair"), "Pair", NativeTypeCategory.Record, 8, 4)
         { declarationName = "Pair", recordKind = "Struct", fields = [new(new("a"), "a", floating.id, 0, 0, null), new(new("b"), "b", floating.id, 4, 32, null)] };
@@ -69,7 +71,8 @@ public sealed class AggregateAbiPlanningTests
         if (mutation == "special-scalar") integer = integer with { primitiveKind = "Float16" };
         InteropType record = new(new("record"), "Record", NativeTypeCategory.Record, 8, mutation == "over-alignment" ? 8 : 4)
         {
-            declarationName = "Record", recordKind = "Struct",
+            declarationName = "Record",
+            recordKind = "Struct",
             fields = [new(new("a"), "a", mutation == "incomplete-array" ? array.id : integer.id, 0, 0, mutation == "bitfield" ? 4 : null),
                 new(new("b"), "b", integer.id, mutation == "overlap" ? 0 : 4, mutation == "overlap" ? 0 : 32, null)]
         };
@@ -88,11 +91,15 @@ public sealed class AggregateAbiPlanningTests
         { managedRuntime = Runtime("dotnet.system-v-amd64") }));
     }
 
-    private static CSharpEmissionPlan Plan(ImmutableArray<InteropType> types, InteropType record, string family)
-    {
+    private static CSharpEmissionPlan Plan(
+        ImmutableArray<InteropType> types,
+        InteropType record,
+        string family
+    ) {
         ManagedRuntimeProfile runtime = Runtime(family);
         InteropModule module = new("fixture", runtime.nativeTargetId, 8, types,
-            [new(new("echo"), "echo", record.id, [new(new("value"), "value", record.id)], "C")], []) { byteOrder = NativeByteOrder.LittleEndian };
+            [new(new("echo"), "echo", record.id, [new(new("value"), "value", record.id)], "C")], [])
+        { byteOrder = NativeByteOrder.LittleEndian };
         var model = new DefaultManagedProjection().Project(module, new("Generated.Aggregates", "AggregateApi"), CancellationToken.None);
         NativeTargetDescriptor target = Target(family);
         CallAbiAssessment assessment = new DotNetCallAbiProvider().Assess(new(module, target, runtime, NativeCallSignature.FromFunction(module.functions[0])));
@@ -113,6 +120,9 @@ public sealed class AggregateAbiPlanningTests
 
     private sealed class NullSink : IArtifactSink
     {
-        public string WriteText(string relativePath, string content) => relativePath;
+        public string WriteText(
+            string relativePath,
+            string content
+        ) => relativePath;
     }
 }

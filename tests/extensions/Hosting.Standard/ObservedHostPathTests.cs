@@ -203,8 +203,10 @@ public sealed class ObservedHostPathTests : IDisposable
         }
     }
 
-    private static void SetCaseSensitivity(string directory, bool enabled)
-    {
+    private static void SetCaseSensitivity(
+        string directory,
+        bool enabled
+    ) {
         using SafeFileHandle handle = CreateFileW(directory, 0x180, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero);
         if (handle.IsInvalid) throw new IOException("Cannot open the owned case-policy fixture.", new Win32Exception(Marshal.GetLastPInvokeError()));
         uint flags = enabled ? 1u : 0u;
@@ -228,19 +230,42 @@ public sealed class ObservedHostPathTests : IDisposable
         public HostPathIdentity GetIdentity(string path) => m_paths.GetIdentity(path);
         public HostPathSemantics GetSemantics(string directory) => m_paths.GetSemantics(directory);
         public string GetIdentityKey(string path) => m_paths.GetIdentityKey(path);
-        public bool Equals(string left, string right) => m_paths.Equals(left, right);
-        public bool IsWithin(string candidate, string root, bool includeRoot = true) => m_paths.IsWithin(candidate, root, includeRoot);
-        public string GetRelativePath(string baseDirectory, string path) => m_paths.GetRelativePath(baseDirectory, path);
+        public bool Equals(
+            string left,
+            string right
+        ) => m_paths.Equals(left, right);
+        public bool IsWithin(
+            string candidate,
+            string root,
+            bool includeRoot = true
+        ) => m_paths.IsWithin(candidate, root, includeRoot);
+        public string GetRelativePath(
+            string baseDirectory,
+            string path
+        ) => m_paths.GetRelativePath(baseDirectory, path);
         public HostIoFailureKind ClassifyIoFailure(Exception failure) => m_paths.ClassifyIoFailure(failure);
         public void Verify() => m_paths.Verify();
         public ValueTask DisposeAsync() { disposals++; return ValueTask.CompletedTask; }
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern SafeFileHandle CreateFileW(string path, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+    private static extern SafeFileHandle CreateFileW(
+        string path,
+        uint access,
+        uint share,
+        IntPtr security,
+        uint creation,
+        uint flags,
+        IntPtr template
+    );
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int informationClass, ref uint information, uint size);
+    private static extern bool SetFileInformationByHandle(
+        SafeFileHandle handle,
+        int informationClass,
+        ref uint information,
+        uint size
+    );
 
     public void Dispose() => Directory.Delete(m_root, recursive: true);
 }

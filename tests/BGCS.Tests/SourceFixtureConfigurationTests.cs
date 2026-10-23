@@ -27,8 +27,11 @@ public sealed class SourceFixtureConfigurationTests
     [InlineData(SourceLanguage.Cpp, 12, false)]
     [InlineData(SourceLanguage.Cpp, 13, false)]
     [InlineData(SourceLanguage.Cpp, 13, true)]
-    public async Task InstalledFixtureSettingsControlEveryContributionAndBothCompleteFingerprints(SourceLanguage language, int increment, bool invalidManaged)
-    {
+    public async Task InstalledFixtureSettingsControlEveryContributionAndBothCompleteFingerprints(
+        SourceLanguage language,
+        int increment,
+        bool invalidManaged
+    ) {
         using SourceFixturePlugin plugin = new();
         string pathBase = Path.GetFullPath(Path.GetTempPath());
         JsonElement settings = JsonSerializer.SerializeToElement(new { increment, invalidManaged });
@@ -60,7 +63,10 @@ public sealed class SourceFixtureConfigurationTests
     private sealed class Registry : IExtensionRegistryBuilder
     {
         internal object? service;
-        public void RegisterFactory<TService>(string id, Func<ExtensionActivationContext, TService> factory) where TService : class
+        public void RegisterFactory<TService>(
+            string id,
+            Func<ExtensionActivationContext, TService> factory
+        ) where TService : class
         {
             Assert.Equal("fixture.source/helpers", id);
             Assert.Null(service);

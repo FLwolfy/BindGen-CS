@@ -124,7 +124,10 @@ public sealed class NativeArgumentFinalFenceTests : WorkerTestHost
         Assert.Contains(response, SourceSnapshotVerifier.GetMismatch(result.snapshot, host.paths)!, StringComparison.Ordinal);
     }
 
-    private static void Write(string path, string text) => File.WriteAllText(path, text, new UTF8Encoding(false));
+    private static void Write(
+        string path,
+        string text
+    ) => File.WriteAllText(path, text, new UTF8Encoding(false));
 
     public override void Dispose() => Directory.Delete(m_root, recursive: true);
 }

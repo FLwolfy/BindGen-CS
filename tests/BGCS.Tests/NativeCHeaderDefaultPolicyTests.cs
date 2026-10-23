@@ -85,10 +85,11 @@ public sealed class NativeCHeaderDefaultPolicyTests
 
     private static BindingConfiguration Configuration() => new()
     {
-        schemaVersion = 2, library = new() { id = "original", nativeName = "original_fixture" },
+        schemaVersion = 2,
+        library = new() { id = "original", nativeName = "original_fixture" },
         source = new() { language = SourceLanguage.C, headers = ["library.h"], includeTransitivelyReferencedHeaders = false },
         api = new() { @namespace = "Generated.Original", name = "OriginalApi", names = ImmutableDictionary<string, string>.Empty.Add("EXTERNAL_ALIAS", "ExternalAlias") },
-         cache = new() { enabled = false }
+        cache = new() { enabled = false }
     };
 
     private static string WorkerRoot()

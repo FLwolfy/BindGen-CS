@@ -90,8 +90,10 @@ public sealed class EmittedInteropIndexTests
 
     [Theory]
     [MemberData(nameof(ReservedBodyAttributes))]
-    public async Task ReservedAttributesInsideEveryBodyFormRemainRejected(bool metadata, string source)
-    {
+    public async Task ReservedAttributesInsideEveryBodyFormRemainRejected(
+        bool metadata,
+        string source
+    ) {
         Candidate candidate = await CreateAsync(metadata);
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Verify(candidate, source));
         Assert.Contains("Native name attributes", failure.Message);
@@ -118,8 +120,10 @@ public sealed class EmittedInteropIndexTests
 
     [Theory]
     [MemberData(nameof(BodyImports))]
-    public async Task BodyAndInitializerImportsRetainConservativeSuffixChecks(bool metadata, string source)
-    {
+    public async Task BodyAndInitializerImportsRetainConservativeSuffixChecks(
+        bool metadata,
+        string source
+    ) {
         Candidate candidate = await CreateAsync(metadata);
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Verify(candidate, source));
         Assert.Contains("undeclared runtime imports", failure.Message);
@@ -142,8 +146,11 @@ public sealed class EmittedInteropIndexTests
 
     [Theory]
     [MemberData(nameof(EscapedImports))]
-    public async Task CompilerRecognizedEscapedImportsCannotEscapeTheGlobalGuard(bool metadata, string spelling, bool libraryImport)
-    {
+    public async Task CompilerRecognizedEscapedImportsCannotEscapeTheGlobalGuard(
+        bool metadata,
+        string spelling,
+        bool libraryImport
+    ) {
         Candidate candidate = await CreateAsync(metadata);
         string source = "partial class Extra { [global::System.Runtime.InteropServices." + spelling
             + "(\"hidden\")] public static " + (libraryImport ? "partial" : "extern") + " int Hidden(); }";
@@ -309,9 +316,15 @@ public sealed class EmittedInteropIndexTests
         return new(plan, sink.sources.Select(source => (source.Key, source.Value)).ToArray());
     }
 
-    private static void Verify(Candidate candidate, string extra)
+    private static void Verify(
+        Candidate candidate,
+        string extra
+    )
         => new EmittedInteropContractReader().Verify(candidate.plan,
             candidate.sources.Append(("Extra.cs", extra)), "native_fixture");
 
-    private sealed record Candidate(CSharpEmissionPlan plan, (string Path, string Text)[] sources);
+    private sealed record Candidate(
+        CSharpEmissionPlan plan,
+        (string Path, string Text)[] sources
+    );
 }
