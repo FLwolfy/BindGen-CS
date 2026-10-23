@@ -664,11 +664,11 @@
           "project": "BGCS.Tests",
           "match": "^BGCS\\.Tests\\.SourceDiagnosticTests\\.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode$",
           "requiredCases": [
-            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: DllImport, alignment: 16, expectedCode: \"BGCS-CSHARP-ABI-PLAN\")",
+            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: DllImport, alignment: 16, expectedCode: \"BGCS-CALL-ABI\")",
             "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: DllImport, alignment: 32, expectedCode: \"BGCS-C-ABI\")",
-            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: FunctionTable, alignment: 16, expectedCode: \"BGCS-CSHARP-ABI-PLAN\")",
+            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: FunctionTable, alignment: 16, expectedCode: \"BGCS-CALL-ABI\")",
             "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: FunctionTable, alignment: 32, expectedCode: \"BGCS-C-ABI\")",
-            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: LibraryImport, alignment: 16, expectedCode: \"BGCS-CSHARP-ABI-PLAN\")",
+            "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: LibraryImport, alignment: 16, expectedCode: \"BGCS-CALL-ABI\")",
             "BGCS.Tests.SourceDiagnosticTests.RejectedByValueAbiReportsTheOriginalHeaderAndStageCode(importMode: LibraryImport, alignment: 32, expectedCode: \"BGCS-C-ABI\")"
           ]
         },
@@ -7021,10 +7021,10 @@
           "project": "BGCS.Tests",
           "match": "^BGCS\\.Tests\\.PluginRegistryRetirementParityTests\\.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory$",
           "requiredCases": [
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 0)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: -1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 5, minimumMinor: 0)"
           ]
         },
         {
@@ -7460,10 +7460,10 @@
           "project": "BGCS.Tests",
           "match": "^BGCS\\.Tests\\.PluginRegistryRetirementParityTests\\.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory$",
           "requiredCases": [
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 2, minimumMinor: 0)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: -1)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 2)",
-            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 0)"
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 3, minimumMinor: 0)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: -1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 4, minimumMinor: 1)",
+            "BGCS.Tests.PluginRegistryRetirementParityTests.IncompatibleContractDescriptorsAreRejectedBeforeExecutingTheFactory(major: 5, minimumMinor: 0)"
           ]
         },
         {
@@ -8920,7 +8920,7 @@
           "project": "BGCS.RepositoryTools.Tests",
           "match": "^BGCS\\.RepositoryTools\\.Tests\\.ArchitectureCommandTests\\.Validate_RejectsDependencyOwnershipAndExecutableViolations$",
           "requiredCases": [
-            "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_RejectsDependencyOwnershipAndExecutableViolations(project: \"BGCS\", content: \"<ItemGroup><ProjectReference Include='../BGCS.Fron\"···)",
+            "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_RejectsDependencyOwnershipAndExecutableViolations(project: \"BGCS.Engine\", content: \"<ItemGroup><ProjectReference Include='../BGCS.Fron\"···)",
             "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_RejectsDependencyOwnershipAndExecutableViolations(project: \"BGCS.CSharp\", content: \"<ItemGroup><ProjectReference Include='../BGCS.Nati\"···)",
             "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_RejectsDependencyOwnershipAndExecutableViolations(project: \"BGCS.Core\", content: \"<ItemGroup><Compile Include='../BGCS/BindingModule\"···)",
             "BGCS.RepositoryTools.Tests.ArchitectureCommandTests.Validate_RejectsDependencyOwnershipAndExecutableViolations(project: \"BGCS.NativeBridge\", content: \"<ItemGroup><ProjectReference Include='../BGCS.Fron\"···)",
@@ -9461,7 +9461,7 @@
           "project": "BGCS.Tool.Tests",
           "match": "^BGCS\\.Tool\\.Tests\\.BridgeCommandTests\\.ManagedProjectionUsesTheParsedTargetAbi$",
           "requiredCases": [
-            "BGCS.Tool.Tests.BridgeCommandTests.ManagedProjectionUsesTheParsedTargetAbi(target: \"emscripten-wasm32-emscripten\", expectedCarrier: \"uint\")",
+            "BGCS.Tool.Tests.BridgeCommandTests.ManagedProjectionUsesTheParsedTargetAbi(target: \"windows-x86-msvc\", expectedCarrier: \"uint\")",
             "BGCS.Tool.Tests.BridgeCommandTests.ManagedProjectionUsesTheParsedTargetAbi(target: \"windows-x64-msvc\", expectedCarrier: \"ulong\")"
           ]
         },

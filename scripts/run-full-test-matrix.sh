@@ -197,5 +197,7 @@ touch "${GATE_DIR}/supply-chain"
 
 log "Layer 8: Machine-readable acceptance report"
 bash "${ROOT_DIR}/scripts/write-acceptance-report.sh"
+"${PYTHON_CMD}" "${ROOT_DIR}/scripts/verify-feature-release-evidence.py" \
+  --check-executed-cases "${ROOT_DIR}/artifacts/acceptance/report.json"
 
 log "All layers passed."

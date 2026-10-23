@@ -136,6 +136,43 @@ def validate_readiness(inventory: dict, implementation: dict, root: Path, requir
     return features
 
 
+def validate_test_mapping(mapping: dict, report: dict, identity: str) -> dict:
+    """Match every reviewed literal case against its unique actual executed test suite."""
+    project, pattern = mapping.get("project", ""), mapping.get("match", "")
+    if not project or not pattern or len(pattern) > 1024:
+        raise RuntimeError("A feature test mapping requires an exact project and bounded method pattern: " + identity)
+    expression = re.compile(pattern)
+    suites = [suite for suite in report.get("executedTests", [])
+              if Path(suite.get("trx", "").replace("\\", "/")).name == project + ".trx"]
+    if len(suites) != 1:
+        raise RuntimeError("A feature has no unique executed test project: " + identity + "/" + project)
+    if not isinstance(suites[0].get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", suites[0]["sha256"]):
+        raise RuntimeError("A feature test proof lacks the actual TRX content digest: " + identity)
+    matched = [row for row in suites[0].get("results", []) if expression.search(row.get("name", ""))]
+    if not matched or any(row.get("outcome") != "Passed" for row in matched):
+        raise RuntimeError("A required feature test is missing, failed or not executed: " + identity)
+    names = [row.get("displayName") for row in matched]
+    required = mapping["requiredCases"]
+    if (any(not isinstance(name, str) or not name for name in names)
+            or len(set(names)) != len(names) or set(names) != set(required)):
+        raise RuntimeError("The executed test cases differ from the reviewed exact display names or repeat a case: " + identity)
+    return {"host": mapping["host"], "kind": "test", "project": project, "match": pattern,
+            "executedPassed": len(matched), "requiredCases": required, "trxSha256": suites[0]["sha256"]}
+
+
+def review_executed_cases(features: list[dict], report: dict) -> int:
+    """Check this host's exact case declarations without claiming full release certification."""
+    reviewed = 0
+    for feature in features:
+        for mapping in feature["releaseEvidence"]:
+            if mapping["host"] == report["platform"] and mapping["kind"] == "test":
+                validate_test_mapping(mapping, report, feature["featureId"])
+                reviewed += 1
+    if not reviewed:
+        raise RuntimeError("The host has no reviewed exact executed-case mappings.")
+    return reviewed
+
+
 def validate(inventory: dict, implementation: dict, reports: list[dict], revision: str, content: str,
              root: Path, required_hosts: set[str], global_proofs: dict | None = None) -> dict:
     features = validate_readiness(inventory, implementation, root, required_hosts)
@@ -169,27 +206,8 @@ def validate(inventory: dict, implementation: dict, reports: list[dict], revisio
             host, kind = mapping.get("host"), mapping.get("kind")
             report = indexed[host]
             if kind == "test":
-                project, pattern = mapping.get("project", ""), mapping.get("match", "")
-                if not project or not pattern or len(pattern) > 1024:
-                    raise RuntimeError("A feature test mapping requires an exact project and bounded method pattern: " + identity)
-                expression = re.compile(pattern)
-                suites = [suite for suite in report.get("executedTests", [])
-                          if Path(suite.get("trx", "").replace("\\", "/")).name == project + ".trx"]
-                if len(suites) != 1:
-                    raise RuntimeError("A feature has no unique executed test project: " + identity + "/" + project)
-                if not isinstance(suites[0].get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", suites[0]["sha256"]):
-                    raise RuntimeError("A feature test proof lacks the actual TRX content digest: " + identity)
-                matched = [row for row in suites[0].get("results", []) if expression.search(row.get("name", ""))]
-                if not matched or any(row.get("outcome") != "Passed" for row in matched):
-                    raise RuntimeError("A required feature test is missing, failed or not executed: " + identity)
-                names = [row.get("displayName") for row in matched]
-                required = mapping["requiredCases"]
-                if (any(not isinstance(name, str) or not name for name in names)
-                        or len(set(names)) != len(names) or set(names) != set(required)):
-                    raise RuntimeError("The executed test cases differ from the reviewed exact display names or repeat a case: " + identity)
-                proof = {"host": host, "kind": kind, "project": project, "match": pattern, "executedPassed": len(matched),
-                         "requiredCases": required, "trxSha256": suites[0].get("sha256")}
-                key = (host, kind, project, pattern)
+                proof = validate_test_mapping(mapping, report, identity)
+                key = (host, kind, mapping["project"], mapping["match"])
             elif kind == "category":
                 category = mapping.get("category", "")
                 if category == "installed-host-products":
@@ -282,6 +300,7 @@ def main() -> None:
     parser.add_argument("--archive", action="append", type=Path)
     parser.add_argument("--revision")
     parser.add_argument("--check-readiness", action="store_true", help="Review source declarations only; never certify a release.")
+    parser.add_argument("--check-executed-cases", type=Path, help="Review this current host report's exact cases; never certify a release.")
     parser.add_argument("--workflow-evidence", type=Path, help="Authenticated workflow/run observations created by release preflight.")
     parser.add_argument("--product-archive", action="append", help="Exact required artifact name=downloaded ZIP path.")
     parser.add_argument("--output", type=Path)
@@ -294,6 +313,23 @@ def main() -> None:
     hosts = {entry["host"] for entry in gates["requiredFeatureEvidence"]}
     configurations = json.loads((ROOT / inventory["configurationInventory"]).read_text(encoding="utf-8"))
     baseline = json.loads((ROOT / gates["configurationBaseline"]).read_text(encoding="utf-8"))
+    if args.check_executed_cases:
+        if args.check_readiness or args.archive or args.revision or args.output or args.workflow_evidence or args.product_archive:
+            parser.error("Executed-case review accepts only its current host report, without release certification inputs.")
+        if args.check_executed_cases.stat().st_size > 16 * 1024 ** 2:
+            raise RuntimeError("The host report exceeds its bounded input size.")
+        report = json.loads(args.check_executed_cases.read_text(encoding="utf-8"))
+        source = source_identity(ROOT)
+        if (report.get("source") != source or report.get("schemaVersion") != 3
+                or report.get("status") != "passed" or type(report.get("usesPrebuiltOutputs")) is not bool
+                or report.get("platform") not in hosts or report.get("scope") != "one-host-maintenance-candidate"):
+            raise RuntimeError("Executed-case review requires this exact current-source host report.")
+        features = validate_readiness(inventory, implementation, ROOT, hosts)
+        projected, _ = configuration_declarations(configurations, baseline)
+        validate_readiness({"features": projected}, implementation, ROOT, hosts)
+        count = review_executed_cases([*features, *projected], report)
+        print("Reviewed exact executed-case mappings: " + str(count) + "; no complete release certification was performed.")
+        return
     if args.check_readiness:
         if args.archive or args.revision or args.output or args.workflow_evidence or args.product_archive:
             parser.error("--check-readiness cannot accept certification inputs or emit a release receipt.")

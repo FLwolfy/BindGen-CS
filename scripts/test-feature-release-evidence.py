@@ -47,6 +47,42 @@ class FeatureReleaseEvidenceTests(unittest.TestCase):
         self.assertIs(True, result["featureAcceptanceVerified"])
         self.assertIs(False, result["releaseReady"])
 
+    def test_host_case_review_reuses_the_exact_release_match_without_certifying_other_hosts(self):
+        self.assertEqual(1, VERIFIER.review_executed_cases([self.feature], self.reports[0]))
+        for fault in ("missing", "duplicate", "renamed", "failed"):
+            report = copy.deepcopy(self.reports[0])
+            results = report["executedTests"][0]["results"]
+            if fault == "missing": results.clear()
+            elif fault == "duplicate": results.append(copy.deepcopy(results[0]))
+            elif fault == "renamed": results[0]["displayName"] += " changed"
+            else: results[0]["outcome"] = "Failed"
+            with self.subTest(fault=fault), self.assertRaises(RuntimeError):
+                VERIFIER.review_executed_cases([self.feature], report)
+        with self.assertRaisesRegex(RuntimeError, "no reviewed"):
+            VERIFIER.review_executed_cases([], self.reports[0])
+
+    def test_unicode_case_names_are_literal_and_mojibake_is_not_normalized(self):
+        report = self.reports[0]
+        mapping = next(row for row in self.feature["releaseEvidence"] if row["host"] == report["platform"])
+        display = 'BGCS.Tests.FeatureTests.ProvesNativeCall(value: "Hello \u4e16\u754c"\u00b7\u00b7\u00b7)'
+        report["executedTests"][0]["results"][0]["displayName"] = display
+        mapping["requiredCases"] = [display]
+        self.assertEqual(1, VERIFIER.review_executed_cases([self.feature], report))
+        self.verify()
+        mapping["requiredCases"] = [display.encode("utf-8").decode("gbk")]
+        with self.assertRaisesRegex(RuntimeError, "display names"):
+            VERIFIER.review_executed_cases([self.feature], report)
+        with self.assertRaisesRegex(RuntimeError, "display names"):
+            self.verify()
+
+    def test_case_review_cannot_promote_dirty_or_prebuilt_execution_to_release_certification(self):
+        report = self.reports[0]
+        report["source"]["workingTreeDirty"] = True
+        report["usesPrebuiltOutputs"] = True
+        self.assertEqual(1, VERIFIER.review_executed_cases([self.feature], report))
+        with self.assertRaisesRegex(RuntimeError, "fresh clean"):
+            self.verify()
+
     def test_readiness_review_does_not_need_prior_same_commit_receipts_or_certify_release(self):
         rows = VERIFIER.validate_readiness({"features": [self.feature]},
             {"implementationReady": True, "releaseReady": False}, self.root, self.hosts)

@@ -189,6 +189,29 @@ dirty, so its existing partial-preflight mode records completeProductSet=false;
 the clean complete-certification guard was not weakened. The final clean commit
 still requires all four remote gates and public payload/consumption verification.
 
+The clean `be50249` candidate passed all four required jobs on their first
+attempt: generator run `39962653107` and complete product run `39971586999`.
+Windows again passed 3,600 cases; its original cold/warm measurements were
+19.345 and 7.558 seconds, with cimguizmo at 14.438. The full product collector
+accepted all 24 archives and completed the clean installed-consumer checks.
+
+Publication then correctly stopped before tagging or pushing packages because
+the feature verifier found obsolete literal case declarations. Review identified
+13 mappings across four current contracts: ABI diagnostic ownership, Core4
+version-rejection arguments, the neutral Engine's frontend dependency boundary,
+and the CLI's explicitly supported 32-bit target. Every mapped method and case
+count is retained; only those reviewed argument literals change. UTF-8 and Unicode
+case names remain literal, without normalization or wildcard matching.
+
+The proposed declarations pass a complete local join against the original
+accepted execution archives: 61 features, 238 configuration entries and 3,259
+Windows exact-method mappings. This is declaration review of historical execution,
+not certification of a new source revision. The same exact matcher now also runs
+inside the existing Windows job after its fresh report, so a mismatch blocks
+that baseline instead of first appearing during publication. All 32 feature-proof
+controls pass, including duplicate/missing/renamed/failed and Unicode rejection.
+The final clean source still requires fresh same-revision jobs and public checks.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after
