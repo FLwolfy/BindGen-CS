@@ -44,7 +44,8 @@ def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browse
     native = ET.SubElement(project.getroot(), "ItemGroup")
     receipts = []
     for mode in fixture.MODES:
-        config = {"schemaVersion": 2, "library": {"id": "typed_" + mode.lower(), "nativeName": "__Internal",
+        # The WebAssembly SDK registers P/Invoke modules by NativeFileReference's file stem.
+        config = {"schemaVersion": 2, "library": {"id": "typed_" + mode.lower(), "nativeName": "native",
             "bridgeExportPrefix": "typed_" + mode.lower()},
             "source": {"language": "c", "languageStandard": "c17", "headers": ["Native/native.h"],
                 "includeDirectories": ["Native"], "parseMacros": False, "includeTransitivelyReferencedHeaders": False},

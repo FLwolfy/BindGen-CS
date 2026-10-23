@@ -2,6 +2,7 @@
 """Verify public-feed evidence logic without a publish, download or installation."""
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -65,6 +66,25 @@ class PublishedProductEvidenceTests(unittest.TestCase):
     def test_no_indexed_version_fails_within_its_declared_deadline(self):
         with self.assertRaisesRegex(RuntimeError, "indexing did not complete"):
             VERIFIER.wait_for_index(["BGCS"], "3.0.0", 0.001, query=lambda identity, timeout: set(), pause=lambda seconds: None)
+
+    def test_public_consumer_uses_the_current_contract_schema_instead_of_a_package_version(self):
+        schema = self.root / "extension.schema.json"
+        for major in (4, 9):
+            schema.write_text(json.dumps({"properties": {"plugin": {"properties": {
+                "contractsMajor": {"const": major}}}}}), encoding="utf-8")
+            self.assertEqual(major, VERIFIER.expected_contract_major(schema))
+
+    def test_public_consumer_rejects_missing_or_invalid_contract_identity(self):
+        schema = self.root / "extension.schema.json"
+        for value in (None, True, 0, -1, 4.5, "4"):
+            with self.subTest(value=value):
+                schema.write_text(json.dumps({"properties": {"plugin": {"properties": {
+                    "contractsMajor": {"const": value}}}}}), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "positive Core contract major"):
+                    VERIFIER.expected_contract_major(schema)
+        schema.write_text("{}", encoding="utf-8")
+        with self.assertRaises(KeyError):
+            VERIFIER.expected_contract_major(schema)
 
 
 if __name__ == "__main__":

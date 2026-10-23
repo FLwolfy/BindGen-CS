@@ -132,6 +132,31 @@ class FailedPerformanceProfileTests(unittest.TestCase):
         self.assertLessEqual(metrics.wait_procs.call_args.kwargs["timeout"], 30)
         self.assertLessEqual(process.wait.call_args.kwargs["timeout"], 30)
 
+    def test_reap_caps_floating_point_roundoff_without_relaxing_the_deadline(self):
+        metrics = Mock()
+        metrics.wait_procs.return_value = ([], [])
+        process = Mock(pid=123)
+        process.poll.return_value = None
+        # This exact float reproduces the CI allowance of 30.00000000000003.
+        self.assertGreater((240.1 + PROFILE.REAP_SECONDS) - 240.1, PROFILE.REAP_SECONDS)
+        with patch.object(PROFILE.time, "monotonic", side_effect=[240.1, 240.1, 240.1]):
+            PROFILE.reap_owned([(process, None, {})], metrics)
+        self.assertEqual(PROFILE.REAP_SECONDS, metrics.wait_procs.call_args.kwargs["timeout"])
+        process.wait.assert_called_once_with(timeout=PROFILE.REAP_SECONDS)
+
+    def test_reap_does_not_restart_the_shared_budget_after_it_expires(self):
+        metrics = Mock()
+        metrics.wait_procs.return_value = ([], [])
+        processes = [Mock(pid=123), Mock(pid=456)]
+        for process in processes:
+            process.poll.return_value = None
+        with patch.object(PROFILE.time, "monotonic", side_effect=[1000, 1029.5, 1031, 1032]):
+            PROFILE.reap_owned([(process, None, {}) for process in processes], metrics)
+        self.assertEqual(0.5, metrics.wait_procs.call_args.kwargs["timeout"])
+        for process in processes:
+            process.kill.assert_called_once()
+            process.wait.assert_called_once_with(timeout=0)
+
     def test_disk_floor_stops_before_any_diagnostic_child(self):
         with patch.object(PROFILE.shutil, "disk_usage", return_value=Mock(free=50 * 1024**3 - 1)):
             with self.assertRaisesRegex(RuntimeError, "50 GiB"):

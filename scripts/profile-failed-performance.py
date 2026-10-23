@@ -101,6 +101,13 @@ def wait_owned(entry, work, timeout, psutil):
 
 def reap_owned(children, psutil):
     deadline = time.monotonic() + REAP_SECONDS
+
+    def remaining():
+        # Deadline subtraction can round a fresh allowance slightly above its
+        # cap. All owned children still share this one deadline, including zero
+        # remaining time; never grant a new minimum wait after it expires.
+        return min(REAP_SECONDS, max(0, deadline - time.monotonic()))
+
     known = {}
     for process, parent, observed in children:
         known.update(observed)
@@ -117,11 +124,11 @@ def reap_owned(children, psutil):
                 child.kill()
         except psutil.NoSuchProcess:
             pass
-    _, alive = psutil.wait_procs(list(known.values()), timeout=max(0, deadline - time.monotonic()))
+    _, alive = psutil.wait_procs(list(known.values()), timeout=remaining())
     for process, _, _ in children:
         if process.poll() is None:
             process.kill()
-        process.wait(timeout=max(0.001, deadline - time.monotonic()))
+        process.wait(timeout=remaining())
     if alive:
         raise RuntimeError("An owned diagnostic process did not exit during the bounded reap: " + str([item.pid for item in alive]))
 

@@ -78,6 +78,30 @@ Current same-commit three-platform CI, complete installed-product acceptance and
 public 4.0 package consumption are still required. In particular, the macOS
 inspection and Browser corrections need their actual remote environments.
 
+The next CI at `03cc1d8` exposed three distinct failures. Windows stopped in a
+repository diagnostic-control test before generator execution: floating-point
+deadline subtraction yielded 30.00000000000003 seconds. Cleanup now caps every
+wait to the unchanged 30-second shared deadline and grants zero additional time
+after expiry. Deterministic roundoff and expired-budget controls pass; the
+original assertions remain intact.
+
+Linux passed its generator and isolated installed-product checks. Its Browser
+consumer compiled, then failed to resolve `__Internal`: the fixture had not
+registered that P/Invoke module. The locked SDK derives module names from declared
+native source filenames, so the fixture now selects its existing `native` module.
+The generator does not rewrite the user's library name. All three import modes,
+aggregate callbacks and Mono/AOT requirements remain mandatory. Public-consumption
+verification also now reads the Core major from the current extension schema
+instead of retaining a stale hardcoded major.
+
+macOS passed all 25 smoke cases and its 73.023-second cold generation, but warm
+restoration exceeded 30 seconds. Its preserved trace identifies Unix group
+permission queries inside complete attribute reads as a substantial cost. The
+five relevant path/cache source files are byte-identical across these candidates;
+this does not establish that environmental variance explains the whole failure.
+No safe equivalent small replacement was established. Path and link observations
+remain complete, and the next required CI must still satisfy the original budget.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after

@@ -2,6 +2,7 @@
 """Pure locked-archive bootstrap controls; no SDK downloads or builds run."""
 from __future__ import annotations
 
+import ast
 import hashlib
 import copy
 from importlib.util import module_from_spec, spec_from_file_location
@@ -220,6 +221,28 @@ class LockedDotnetBootstrapTests(unittest.TestCase):
                           (ROOT / 'tests/BGCS.Tests' / (class_name + '.cs')).read_text(encoding='utf-8'))
         gates = json.loads((ROOT / 'eng/acceptance/required-release-gates.json').read_text(encoding='utf-8'))
         self.assertTrue(gates['requireAllObservedJobsSuccessful'])
+
+    def test_browser_import_modules_match_the_declared_native_sources(self):
+        # The locked SDK derives its P/Invoke module names from NativeFileReference.FileName.
+        project = ET.parse(ROOT / 'tests/wasm/TypedBridge/Consumer.project.xml')
+        linked_modules = {Path(item.attrib['Include']).stem for item in project.iter('NativeFileReference')}
+        tree = ast.parse((ROOT / 'scripts/wasm_typed_bridge.py').read_text(encoding='utf-8'))
+        configured_modules = [value.value for node in ast.walk(tree) if isinstance(node, ast.Dict)
+                              for key, value in zip(node.keys, node.values)
+                              if isinstance(key, ast.Constant) and key.value == 'nativeName'
+                              and isinstance(value, ast.Constant)]
+        self.assertEqual(1, len(configured_modules))
+        self.assertTrue(configured_modules[0])
+        self.assertTrue(set(configured_modules).issubset(linked_modules))
+        import cpp_acceptance_fixture
+        project = ET.parse(ROOT / 'tests/wasm/Consumer.project.xml')
+        linked_modules = {Path(item.attrib['Include']).stem for item in project.iter('NativeFileReference')}
+        bridge = {'header': self.root / 'bridge.h', 'names': {}, 'plugin': self.root / 'plugin.json'}
+        for mode in cpp_acceptance_fixture.MODES:
+            with self.subTest(mode=mode):
+                configuration = cpp_acceptance_fixture.binding_configuration(
+                    mode, 'BrowserFixture', self.root / 'clang', bridge, self.root / 'sysroot')
+                self.assertIn(configuration['library']['nativeName'], linked_modules)
 
     def test_generator_scope_keeps_the_complete_acceptance_runner(self):
         runner = (ROOT / 'scripts/run-full-test-matrix.sh').read_text(encoding='utf-8')

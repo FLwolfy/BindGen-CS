@@ -30,6 +30,13 @@ def payload(path: Path) -> dict[str, str]:
         return {entry.filename: hashlib.sha256(archive.read(entry)).hexdigest() for entry in files}
 
 
+def expected_contract_major(schema: Path) -> int:
+    value = json.loads(schema.read_text(encoding="utf-8-sig"))["properties"]["plugin"]["properties"]["contractsMajor"]["const"]
+    if type(value) is not int or value <= 0:
+        raise RuntimeError("The current extension schema must declare a positive Core contract major.")
+    return value
+
+
 def index_versions(identity: str, timeout: float) -> set[str]:
     with urllib.request.urlopen(FLAT + "/" + identity.lower() + "/index.json", timeout=timeout) as response:
         data = response.read(1024 * 1024 + 1)
@@ -144,6 +151,9 @@ def main() -> None:
             if tool is None:
                 raise RuntimeError("The public tool installation has no launcher.")
             version = json.loads(run([str(tool), "version", "--json"], work, "public-tool-version"))
+            contract_major = expected_contract_major(ROOT / "schemas/extension.schema.json")
+            if version.get("contracts", {}).get("major") != contract_major:
+                raise RuntimeError("The public tool differs from the current Core contract major.")
             if version.get("parser", {}).get("assetDigestsVerified") is not True:
                 raise RuntimeError("The public tool did not deploy its verified parser closure.")
             report["checks"].append("public-tool-clean-install-and-parser-identity")
@@ -175,10 +185,10 @@ foreach(string path in new[]{"c.json","cpp.json"}) {
             report["checks"].append("public-sdk-and-tool-c-cpp-generation")
             contracts = work / "contracts"
             helper.write_project(contracts, args.version, ["BGCS.Core"])
-            (contracts / "Program.cs").write_text('''using System;
+            (contracts / "Program.cs").write_text(f'''using System;
 using BGCS.Core.Versioning;
 int major=ContractVersion.C_MAJOR;
-if(major!=3)throw new InvalidOperationException("Wrong public contract major.");
+if(major!={contract_major})throw new InvalidOperationException("Wrong public contract major.");
 Console.WriteLine(typeof(BGCS.Core.Native.NativeModule).FullName);
 ''', encoding="utf-8")
             run([dotnet, "build", "Consumer.csproj", "-c", "Release", "-m:1", "-nr:false"], contracts, "public-contracts-build")
