@@ -102,6 +102,32 @@ this does not establish that environmental variance explains the whole failure.
 No safe equivalent small replacement was established. Path and link observations
 remain complete, and the next required CI must still satisfy the original budget.
 
+The next run at `9b5fa4e` completed successfully on Linux and macOS. Linux
+also passed its real Mono Wasm and Wasm AOT consumers, including all three
+import modes and aggregate callbacks. macOS passed all 25 smoke cases, isolated
+SDK/CLI consumption, and the original performance budgets (48.844 seconds cold,
+18.837 warm). These are same-revision host receipts, not complete product
+certification. Windows passed the 10,000-declaration budget but stopped at
+cimguizmo, measuring 15.375 seconds against the unchanged 15-second limit.
+
+A finite C# planning correction reuses a successful conversion only within one
+planning call and only for equal immutable projection, exact carrier and pointer
+width inputs. Per-parameter, error-channel, ABI and final-source checks remain.
+The current local build has zero warnings/errors; C# tests pass 1,064/1,064 and
+the 35 selected Host cache/processor-related cases match the original discovery
+set exactly. Architecture, source ownership, style, documentation and all 17 API
+snapshots pass. A current strict 10,000-declaration run passes at 18.544 seconds
+cold and 8.024 warm, with memory and complete-byte restoration checks intact.
+
+This does not close the corpus performance issue. Five alternating comparisons
+show a modest median reduction from 15.344 to 15.062 seconds with identical
+managed/native source bytes. The subsequent formal local corpus still exceeds
+the cimguizmo limit at 15.469 seconds; the other five libraries pass. Preserve
+that failed receipt. Bounded parallel formatting and executable GC/JIT experiments
+were rejected for insufficient measured benefit and are absent from production.
+No budget, selected declaration, input fence or validation was relaxed. The next
+controlled CI must still pass every original gate before release.
+
 ## Certification policy
 
 - Run the full retained local baseline with explicit Release configuration after

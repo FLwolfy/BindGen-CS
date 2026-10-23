@@ -114,6 +114,7 @@ public sealed class CSharpEmissionPlanner
         ImmutableArray<CSharpValueParameterOmissionPlan>.Builder valueOmissions = ImmutableArray.CreateBuilder<CSharpValueParameterOmissionPlan>();
         Dictionary<StableId, CSharpStoragePlan> valueStorage = storage.ToDictionary(item => item.nativeType);
         ManagedRecipeProjectionValidator projectionValidator = new();
+        Dictionary<(ManagedRecipeProjection Projection, string Carrier, int PointerSize), CSharpRecipeProjectionPlan> checkedProjections = [];
         Dictionary<string, CSharpRecipeProjectionPlan> recipeProjections = new(StringComparer.Ordinal);
         ImmutableArray<CSharpRecipeAliasPlan>.Builder recipeAliases = ImmutableArray.CreateBuilder<CSharpRecipeAliasPlan>();
         HashSet<string> recipeNames = new(StringComparer.Ordinal);
@@ -121,7 +122,7 @@ public sealed class CSharpEmissionPlanner
         {
             ArgumentNullException.ThrowIfNull(helper);
             ArgumentException.ThrowIfNullOrWhiteSpace(helper.id);
-            CSharpRecipeProjectionPlan projection = projectionValidator.Plan(helper.projection, helper.cAbiType, model.interop.pointerSize);
+            CSharpRecipeProjectionPlan projection = PlanProjection(helper.projection, helper.cAbiType);
             recipeProjections[projection.id] = projection;
             string name = System.Text.RegularExpressions.Regex.Replace(helper.id, "[^A-Za-z0-9_]", "_", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
             if (name.Length == 0) throw new InvalidOperationException("A configured managed recipe helper identity has no portable characters.");
@@ -187,12 +188,12 @@ public sealed class CSharpEmissionPlanner
                     if (!carrier.EndsWith('*')) throw new InvalidOperationException("A managed recipe original-result channel is not pointer storage.");
                     carrier = carrier[..^1].TrimEnd();
                 }
-                CSharpRecipeProjectionPlan projection = projectionValidator.Plan(conversion.projection, carrier, model.interop.pointerSize);
+                CSharpRecipeProjectionPlan projection = PlanProjection(conversion.projection, carrier);
                 recipeProjections[projection.id] = projection;
                 valueProjections.Add(parameterIndex, projection);
             }
             CSharpRecipeProjectionPlan? returnProjection = member.returnProjection is null ? null
-                : projectionValidator.Plan(member.returnProjection, Resolve(function.returnType), model.interop.pointerSize);
+                : PlanProjection(member.returnProjection, Resolve(function.returnType));
             if (returnProjection is not null)
             {
                 if (function.error is not null || Resolve(function.returnType) == "void") throw new InvalidOperationException("A direct managed return projection cannot convert a status code or void value.");
@@ -282,6 +283,22 @@ public sealed class CSharpEmissionPlanner
         result = ImportLibraryNamePlanner.Apply(result, request, cancellationToken);
         result = result with { capabilities = CapabilityReportPlanner.Plan(result, request) };
         return result;
+
+        CSharpRecipeProjectionPlan PlanProjection(
+            ManagedRecipeProjection projection,
+            string carrier
+        ) {
+            cancellationToken.ThrowIfCancellationRequested();
+            var key = (projection, carrier, model.interop.pointerSize);
+            if (!checkedProjections.TryGetValue(key, out CSharpRecipeProjectionPlan? planned))
+            {
+                // Only equal immutable inputs share this pure syntax conversion.
+                // Parameter identity, channel and ABI checks remain at each use.
+                planned = projectionValidator.Plan(projection, carrier, model.interop.pointerSize);
+                checkedProjections.Add(key, planned);
+            }
+            return planned;
+        }
 
         string Resolve(StableId id)
         {

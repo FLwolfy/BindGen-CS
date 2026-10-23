@@ -66,3 +66,11 @@ from bridge verification would change real written-array facts and contributor
 input; skipping fresh link observations would weaken replacement detection.
 Neither was implemented. Function-pointer formatting now uses Roslyn's output
 directly instead of rewriting arbitrary string literal contents.
+
+Repeated managed recipe syntax planning now shares a successful immutable result
+only inside one emission-planning call. The key includes the complete projection,
+exact carrier spelling and pointer width. Failed conversions are not retained;
+parameter identity, channel, ABI and processed-source checks still run at each
+original boundary. No shared service, cross-session cache, unchecked plan entry
+point or public contract was added. A proposed parallel formatter was removed
+after controlled comparisons failed to establish a useful gain.
