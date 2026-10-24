@@ -21,7 +21,7 @@ internal class EnumDeclVisitor : DeclContainerVisitor
         CXCursor parent
     ) {
         var parentContainer = this.context.GetOrCreateDeclContainer(cursor.SemanticParent).declarationContainer;
-        CppEnum cppEnum = new(cursor, CXUtil.GetCursorSpelling(cursor))
+        CppEnum cppEnum = new(cursor, CXUtil.GetDeclarationName(cursor))
         {
             isAnonymous = cursor.IsAnonymous,
             visibility = cursor.GetVisibility()

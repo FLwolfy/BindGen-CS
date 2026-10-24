@@ -28,7 +28,7 @@ FunctionTable imports and separate files.
 ### 1. Describe the input
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.0
+dotnet tool install --global BindGen-CS --version 4.1.1
 bindgen-cs init native.h --language c
 ```
 
@@ -71,7 +71,7 @@ output channels; a direct import requires an applicable ABI plan.
 Add `managed/` sources to your .NET project, enable `AllowUnsafeBlocks`, and reference:
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="4.1.0" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.1" />
 ```
 
 After your project builds the native module:

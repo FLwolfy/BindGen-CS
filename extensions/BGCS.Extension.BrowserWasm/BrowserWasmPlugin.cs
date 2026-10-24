@@ -136,7 +136,7 @@ public sealed class BrowserWasmCallAbiProvider : ICallAbiProvider, ICacheFingerp
 public sealed class BrowserWasmPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.extension.browser-wasm", "4.1.0", [
+    public PluginDescriptor descriptor => new("bgcs.extension.browser-wasm", "4.1.1", [
         new("browser-wasm.target", ExtensionPort.NativeTargetProvider), new("browser-wasm.execution", ExtensionPort.ManagedRuntimeProvider),
         new("browser-wasm.call-abi", ExtensionPort.CallAbiProvider)]);
     /// <inheritdoc />

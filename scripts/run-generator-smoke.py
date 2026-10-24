@@ -8,6 +8,7 @@ from compiler_test_environment import isolated_native_test_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = (
+    'BGCS.Tests.NativeAnonymousStorageProofTests.CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof',
     'BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt',
     'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend',
     'BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse',
@@ -24,6 +25,14 @@ def required_cases(host):
         cases[name] = name
     def theory(method, arguments):
         for argument in arguments: cases[method + '(' + argument + ')'] = method
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.SourceNamesRespectTagAliasAndQualifiedScopes',
+           ['language: C', 'language: Cpp'])
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.AnonymousMembersUseStructuralProofsWithRealLeafIdentity',
+           ['language: ' + language + ', system: ' + system for language in ('C', 'Cpp') for system in ('False', 'True')])
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.StructuralProofRejectsEqualSizeTypeExtentQualifierOffsetAndPackingDrift',
+           ['change: ' + str(change) for change in range(1, 7)])
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.AnonymousDtoArgumentsResultsAndCallbacksInvokeWithoutNamingTheirStorage',
+           ['mode: FunctionTable, sourceRuntime: False', 'mode: DllImport, sourceRuntime: False', 'mode: LibraryImport, sourceRuntime: True'])
     theory('BGCS.Tests.PortableNativeSourceTests.RelocatedSourcesCompileAndInvokeAfterOriginalInputsAreHidden',
            ['language: C, staticAdapter: False', 'language: Cpp, staticAdapter: False', 'language: Cpp, staticAdapter: True'])
     theory('BGCS.Tests.SiblingHeaderRelocationTests.RealWorkerGeneratesIdenticalArraysAndLayoutGuardsAfterCheckoutRelocation',

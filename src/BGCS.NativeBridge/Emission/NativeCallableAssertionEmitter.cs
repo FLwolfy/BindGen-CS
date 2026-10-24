@@ -8,6 +8,7 @@ using BGCS.Core.Common;
 using BGCS.Core.Inputs;
 using BGCS.Core.Native;
 using BGCS.Core.Targets;
+using BGCS.Analysis.Types;
 
 namespace BGCS.NativeBridge.Emission;
 
@@ -17,6 +18,7 @@ internal sealed class NativeCallableAssertionEmitter(
 )
 {
     private readonly HashSet<string> m_conventions = new(StringComparer.Ordinal);
+    private readonly NativeTypeFormatter m_types = new();
 
     internal string RenderStorageType(
         StableId identity,
@@ -33,7 +35,9 @@ internal sealed class NativeCallableAssertionEmitter(
             && declaration.templateKind != "FunctionTemplate" && Accessible(declaration) && HasConcreteAncestors(declaration)))
         {
             NativeDeclaration? owner = function.parent is StableId parent ? module.GetDeclaration(parent) : null;
-            string callableName = owner?.kind == "Class" ? owner.qualifiedName + "::" + function.name : function.qualifiedName;
+            string? ownerName = owner?.kind == "Class" && owner.name.Length == 0 && owner.type is { } ownerType
+                ? m_types.FormatDeclaration(module, ownerType, string.Empty) : owner?.qualifiedName;
+            string callableName = owner?.kind == "Class" ? ownerName + "::" + function.name : function.qualifiedName;
             if (!ControlledCallableName(callableName)) continue;
             if (function.returnType is not StableId result) throw new InvalidOperationException("A native callable omitted its parsed return type.");
             if (function.addressability == NativeCallableAddressability.DirectCallOnly)
@@ -53,7 +57,7 @@ internal sealed class NativeCallableAssertionEmitter(
                 continue;
             }
             string alias = "bgcs_verified_callable_" + (index++).ToString(CultureInfo.InvariantCulture);
-            string pointer = "(" + Convention(function.callingConvention) + (cpp && owner?.kind == "Class" && !function.isStatic ? " " + owner.qualifiedName + "::*" : " *") + alias + ")";
+            string pointer = "(" + Convention(function.callingConvention) + (cpp && owner?.kind == "Class" && !function.isStatic ? " " + ownerName + "::*" : " *") + alias + ")";
             string parameters = string.Join(", ", function.children.Select(module.GetDeclaration).Where(child => child.kind == "Parameter")
                 .Select(parameter => parameter.type is StableId type ? Render(type, string.Empty) : throw new InvalidOperationException("A native callable parameter omitted its parsed type.")));
             if (function.isVariadic) parameters += parameters.Length == 0 ? "..." : ", ...";
@@ -121,12 +125,7 @@ internal sealed class NativeCallableAssertionEmitter(
             case NativeTypeCategory.Primitive:
             case NativeTypeCategory.Record:
             case NativeTypeCategory.Enumeration:
-                string spelling = module.language == SourceLanguage.C && type.primitiveKind == "Bool" ? "_Bool" : type.spelling;
-                // Storage spelling comes from the compiler type, whereas the
-                // declaration name may be a typedef assigned to an anonymous
-                // record. Inventing a tag from that display name changes C's
-                // separate tag and typedef namespaces.
-                if (spelling.Any(character => character is ';' or '{' or '}' or '\r' or '\n' or '\0')) throw new ArgumentException("The native callable type cannot be represented by a controlled declarator.");
+                string spelling = m_types.FormatDeclaration(module, identity, string.Empty, preserveAliases: false);
                 return (qualifiers + " " + spelling + " " + declarator).Trim();
             default:
                 throw new NotSupportedException("The native callable type has no independent exact signature assertion: " + type.spelling);

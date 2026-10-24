@@ -26,7 +26,7 @@ public sealed record InteropType(
     public StableId? sourceNativeType { get; init; }
     /// <summary>Gets an explicit bridge-owned generated type identity, separate from original native type facts.</summary>
     public StableId? sourceGeneratedType { get; init; }
-    /// <summary>Gets the qualified source-language name preserved through a bridge reparse.</summary>
+    /// <summary>Gets source qualification preserved through a bridge reparse; unnamed storage may retain only its logical owning scope, which is not a usable type declaration name.</summary>
     public string? sourceQualifiedName { get; init; }
     /// <summary>Gets finite checked value operations without changing this raw C storage carrier.</summary>
     public NativeValueProtocol? valueProtocol { get; init; }

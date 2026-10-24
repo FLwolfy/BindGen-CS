@@ -50,7 +50,8 @@ internal sealed class FrontendGenerationCache(
                 byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(new
                 {
                     stage = "BGCS.PrimaryFrontend",
-                    revision = 3,
+                    revision = 4,
+                    modelRevision = BGCS.Core.Versioning.ModelRevision.C_NATIVE,
                     execution.digest,
                     hostImplementation = FileDigest(typeof(BindingHost).Assembly.Location),
                     request = request with { snapshotExcludedDirectories = [] },
@@ -73,6 +74,12 @@ internal sealed class FrontendGenerationCache(
             {
                 if (artifacts.Length != 1 || artifacts[0].descriptor.relativePath != "frontend-result.json" || artifacts[0].descriptor.mediaType != "application/json")
                     throw new InvalidDataException("The frontend cache does not contain exactly one detached result.");
+                using (JsonDocument document = JsonDocument.Parse(artifacts[0].content))
+                    if (document.RootElement.ValueKind != JsonValueKind.Object
+                        || !document.RootElement.TryGetProperty("module", out JsonElement module) || module.ValueKind != JsonValueKind.Object
+                        || !module.TryGetProperty("modelRevision", out JsonElement revision) || revision.ValueKind != JsonValueKind.Number
+                        || !revision.TryGetInt32(out int modelRevision) || modelRevision != BGCS.Core.Versioning.ModelRevision.C_NATIVE)
+                        throw new InvalidDataException("The frontend cache has a different native model revision.");
                 FrontendResult parsed = JsonSerializer.Deserialize<FrontendResult>(artifacts[0].content.Span, WorkerProtocol.jsonOptions)
                     ?? throw new InvalidDataException("The cached frontend result is empty.");
                 if (parsed.module is null || parsed.snapshot is null || parsed.module.targetId != request.target.targetId.value

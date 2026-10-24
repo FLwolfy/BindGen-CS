@@ -92,7 +92,7 @@ def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browse
         "-p:PublishTrimmed=" + str(args.aot).lower()], work, work / "publish.log", environment)
     result = helpers.invoke_browser(browser, work / "published/wwwroot", work)
     expected = {mode + ":" + case for mode in fixture.MODES for case in
-        ("scalar", "aggregate-input-output", "reverse-aggregate-callback-user-data")}
+        ("scalar", "aggregate-input-output", "reverse-aggregate-callback-user-data", "anonymous-storage")}
     checks = result.get("checks", [])
     if (not result.get("success") or result.get("pointerSize") != 4
             or len(checks) != len(expected) or set(checks) != expected):

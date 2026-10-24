@@ -21,13 +21,19 @@ public sealed class NativeTypeFormatter
     ) {
         NativeType type = BGCS.Analysis.Bridge.StandardLibraryFactReader.Resolve(module, owner);
         NativeDeclaration record = module.GetDeclaration(type.declaration ?? throw new ArgumentException("Default construction requires a declared record type.", nameof(owner)));
+        if (record.name.Length == 0)
+        {
+            string sourceName = FormatDeclaration(module, type.id, string.Empty).TrimStart(':');
+            NativeDeclaration alias = module.declarations.First(declaration => declaration.kind == "Typedef" && declaration.qualifiedName.TrimStart(':') == sourceName);
+            return sourceName + "::" + alias.name + "()";
+        }
         return record.qualifiedName.TrimStart(':') + "::" + record.name + "()";
     }
     /// <summary>Formats qualified source types while preserving every pointer, reference and array level.</summary>
     /// <param name="module">The detached type graph.</param>
     /// <param name="type">The type to format.</param>
     /// <param name="preserveAliases">Whether named aliases remain visible rather than using their underlying types.</param>
-    /// <param name="absoluteNames">Whether named types receive a leading global scope qualifier for source emission.</param>
+    /// <param name="absoluteNames">Whether source emission requires accessible concrete names and gives them a leading global scope qualifier.</param>
     /// <returns>A deterministic source-language spelling.</returns>
     public string Format(
         NativeModule module,
@@ -35,7 +41,7 @@ public sealed class NativeTypeFormatter
         bool preserveAliases = true,
         bool absoluteNames = false
     )
-        => Render(module, type, string.Empty, preserveAliases, absoluteNames, sourceDeclaration: false);
+        => Render(module, type, string.Empty, preserveAliases, absoluteNames, sourceDeclaration: absoluteNames);
 
     /// <summary>Inserts an identifier or callable declarator into the exact native type shape, including pointer-to-function and pointer-to-array parentheses.</summary>
     /// <param name="module">The detached native type graph and source language.</param>
@@ -62,6 +68,7 @@ public sealed class NativeTypeFormatter
         bool sourceDeclaration
     ) {
         ArgumentNullException.ThrowIfNull(module);
+        HashSet<StableId> sourceAccessPending = [];
         return Type(type, initialDeclarator, string.Empty, []);
 
         static bool Identifier(string value)
@@ -77,6 +84,52 @@ public sealed class NativeTypeFormatter
             }
             return !first;
         }
+
+        bool AccessibleSource(NativeDeclaration declaration)
+        {
+            StableId identity = declaration.id;
+            if (!sourceAccessPending.Add(identity)) return false;
+            try
+            {
+                HashSet<StableId> owners = [];
+                while (true)
+                {
+                    if (!owners.Add(declaration.id)) throw new InvalidOperationException("A source declaration has a cyclic owner graph.");
+                    if (declaration.visibility is "Private" or "Protected" || !declaration.templateParameters.IsEmpty || declaration.kind == "Function") return false;
+                    if (declaration.parent is not { } parent) return true;
+                    declaration = module.GetDeclaration(parent);
+                    if (module.language == BGCS.Core.Inputs.SourceLanguage.Cpp && declaration is { kind: "Class", name.Length: 0 }
+                        && (declaration.type is not { } ownerType || !module.types.Any(candidate => candidate.category == NativeTypeCategory.Alias
+                            && References(candidate, ownerType) && candidate.declaration is { } alias
+                            && module.GetDeclaration(alias).name.Length != 0 && AccessibleSource(module.GetDeclaration(alias))))) return false;
+                }
+            }
+            finally { sourceAccessPending.Remove(identity); }
+        }
+
+        bool References(
+            NativeType candidate,
+            StableId target,
+            bool unqualified = false
+        ) {
+            HashSet<StableId> visited = [];
+            while (candidate.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified && candidate.elementType is { } element)
+            {
+                if (!visited.Add(candidate.id)) throw new InvalidOperationException("A source alias has a cyclic element graph.");
+                if (unqualified && candidate.category == NativeTypeCategory.Qualified) return false;
+                if (element == target) return true;
+                candidate = module.GetType(element);
+            }
+            return false;
+        }
+
+        NativeDeclaration? SourceAlias(NativeType storage)
+            => module.types.Where(candidate => candidate.category == NativeTypeCategory.Alias
+                    && References(candidate, storage.id, unqualified: true) && candidate.declaration is not null)
+                .Select(candidate => module.GetDeclaration(candidate.declaration!.Value))
+                .Where(alias => alias.kind == "Typedef" && Identifier(alias.name) && AccessibleSource(alias))
+                .OrderBy(alias => alias.qualifiedName.TrimStart(':') == storage.spelling.TrimStart(':') ? 0 : 1)
+                .ThenBy(alias => alias.qualifiedName, StringComparer.Ordinal).FirstOrDefault();
 
         string Type(
             StableId id,
@@ -129,17 +182,41 @@ public sealed class NativeTypeFormatter
                     case NativeTypeCategory.Alias:
                         string name = native.category == NativeTypeCategory.Record && native.spelling.Contains('<', StringComparison.Ordinal)
                             ? native.spelling : native.declaration is StableId declaration ? module.GetDeclaration(declaration).qualifiedName : native.spelling;
+                        if (sourceDeclaration && native.declaration is { } sourceIdentity)
+                        {
+                            if (!AccessibleSource(module.GetDeclaration(sourceIdentity)))
+                                throw new NotSupportedException("The native type has no accessible concrete source declaration: " + native.spelling);
+                            foreach (NativeTemplateArgument argument in module.GetDeclaration(sourceIdentity).templateArguments)
+                                if (argument.type is { } argumentType) _ = Type(argumentType, string.Empty, string.Empty, active);
+                        }
                         if (sourceDeclaration && module.language == BGCS.Core.Inputs.SourceLanguage.C && native.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration)
                         {
-                            // Compiler spelling distinguishes real tag names from typedef names for anonymous storage.
-                            // The display declaration name cannot establish which C namespace owns that identity.
-                            string[] words = native.spelling.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                            bool identifier = words.Length == 1 && Identifier(words[0]);
-                            bool tag = words.Length == 2 && words[0] is "struct" or "union" or "enum" && Identifier(words[1]);
-                            if (!identifier && !tag)
-                                throw new NotSupportedException("The native C storage has no usable compiler-established declaration spelling: '" + native.spelling
-                                    + "'. Give anonymous storage an explicit source typedef or supply a typed native lowering.");
-                            name = string.Join(" ", words);
+                            // C tags and typedefs inhabit different namespaces. A
+                            // plausible compiler display string is not a witness
+                            // for either namespace: use real declaration edges.
+                            NativeDeclaration? tag = native.declaration is { } tagIdentity ? module.GetDeclaration(tagIdentity) : null;
+                            string? prefix = native.category == NativeTypeCategory.Enumeration && tag?.kind == "Enum" ? "enum"
+                                : tag is { kind: "Class", role: "Struct" } ? "struct"
+                                : tag is { kind: "Class", role: "Union" } ? "union" : null;
+                            if (prefix is not null && tag is not null && Identifier(tag.name)) name = prefix + " " + tag.name;
+                            else
+                            {
+                                NativeDeclaration? alias = SourceAlias(native);
+                                if (alias is null)
+                                    throw new NotSupportedException("The native C storage has no compiler-established tag or typedef source declaration: '" + native.spelling
+                                        + "'. Give anonymous storage an explicit source typedef or supply a typed native lowering.");
+                                name = alias.name;
+                            }
+                        }
+                        else if (sourceDeclaration && native.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration
+                            && native.declaration is { } recordIdentity && module.GetDeclaration(recordIdentity).name.Length == 0)
+                        {
+                            // An unnamed declaration can have a real typedef, but
+                            // its compiler diagnostic spelling is never a name.
+                            NativeDeclaration? alias = SourceAlias(native);
+                            if (alias is null)
+                                throw new NotSupportedException("The native type has no nameable source declaration: " + native.spelling);
+                            name = alias.qualifiedName;
                         }
                         name = absoluteNames ? "::" + name.TrimStart(':') : name.TrimStart(':');
                         return Finish(name);
@@ -154,8 +231,13 @@ public sealed class NativeTypeFormatter
                 string nextQualifiers
             ) => native.elementType is StableId element ? Type(element, nextDeclarator, nextQualifiers, active)
                 : throw new InvalidOperationException("An element-bearing source type omitted its element identity.");
-            string Finish(string name) => (name + (qualifiers.Length == 0 ? string.Empty : " " + qualifiers)
-                + (declarator.Length == 0 ? string.Empty : " " + declarator)).Trim();
+            string Finish(string name)
+            {
+                if (sourceDeclaration && name.IndexOfAny([';', '{', '}', '\r', '\n', '\0']) >= 0)
+                    throw new NotSupportedException("The native type has no controlled source declaration: " + native.spelling);
+                return (name + (qualifiers.Length == 0 ? string.Empty : " " + qualifiers)
+                    + (declarator.Length == 0 ? string.Empty : " " + declarator)).Trim();
+            }
         }
     }
 
@@ -172,7 +254,7 @@ public sealed class NativeTypeFormatter
         if (callable.kind != "Function") throw new ArgumentException("An overload identity requires a native callable declaration.", nameof(callable));
         string[] parameters = callable.children.Select(module.GetDeclaration).Where(declaration => declaration.kind == "Parameter")
             .Select(parameter => Format(module, parameter.type ?? throw new InvalidOperationException("A native parameter omitted its type identity."))).ToArray();
-        string qualified = callable.parent is StableId owner && module.GetDeclaration(owner) is { kind: "Class" } record
+        string qualified = callable.parent is StableId owner && module.GetDeclaration(owner) is { kind: "Class", name.Length: > 0 } record
             ? record.qualifiedName + "::" + callable.name : callable.qualifiedName;
         return qualified.TrimStart(':') + "(" + string.Join(", ", parameters.Concat(callable.isVariadic ? ["..."] : [])) + ")"
             + (callable.isConst ? " const" : string.Empty) + (callable.isVolatile ? " volatile" : string.Empty)

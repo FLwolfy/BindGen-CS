@@ -32,7 +32,7 @@ internal class ClassStructDeclVisitor : DeclContainerVisitor
         if (cursor.CXXAccessSpecifier == CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier
             && cursor.DeclKind is CX_DeclKind.CX_DeclKind_ClassTemplateSpecialization or CX_DeclKind.CX_DeclKind_ClassTemplatePartialSpecialization)
             declaredAccess = cursor.SpecializedCursorTemplate.GetVisibility();
-        CppClass cppClass = new(cursor, CXUtil.GetCursorSpelling(cursor)) { visibility = declaredAccess };
+        CppClass cppClass = new(cursor, CXUtil.GetDeclarationName(cursor)) { visibility = declaredAccess };
         parentContainer.classes.Add(cppClass);
         cppClass.isAnonymous = cursor.IsAnonymous;
         switch (cursor.Kind)

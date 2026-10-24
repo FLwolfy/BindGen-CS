@@ -301,8 +301,12 @@ internal sealed class NativeModuleBuilder
                 isCompleteDefinition = record.isCompleteDefinition,
                 isAbstract = record.isAbstract,
                 isDefaultConstructible = m_compilation!.defaultConstructionFacts.TryGetValue(record, out bool? constructible) ? constructible : null,
-                isStandardLayout = m_compilation.recordStorageTraits.TryGetValue(record, out var traits) ? traits.StandardLayout : null,
-                isTriviallyCopyable = m_compilation.recordStorageTraits.TryGetValue(record, out traits) ? traits.TriviallyCopyable : null,
+                // Clang's POD classification establishes these positive traits
+                // even when an unnamed type cannot appear in a trait expression.
+                isStandardLayout = m_compilation.recordStorageTraits.TryGetValue(record, out var traits) && traits.StandardLayout is { } standard
+                    ? standard : record.isPODType ? true : null,
+                isTriviallyCopyable = m_compilation.recordStorageTraits.TryGetValue(record, out traits) && traits.TriviallyCopyable is { } trivial
+                    ? trivial : record.isPODType ? true : null,
                 attributes = record.attributes.Concat(record.tokenAttributes).Select(attribute => attribute.ToString()).ToImmutableArray(),
                 baseClasses = record.baseTypes.Select(baseType => new NativeBaseClass(AddType(baseType.type),
                     baseType.visibility.ToString(), baseType.isVirtual)).ToImmutableArray(),
@@ -452,6 +456,27 @@ internal sealed class NativeModuleBuilder
 
     private string RecordName(CppClass record)
     {
+        if (record.name.Length == 0)
+        {
+            // Retain the logical owning scope for projection and diagnostics,
+            // without giving the unnamed declaration a terminal type name.
+            // A real parent typedef can supply that scope even in C.
+            CXCursor owner = record.cursor.kind == 0 ? default : record.cursor.SemanticParent;
+            HashSet<CXCursor> visited = [];
+            while (owner.Kind is CXCursorKind.CXCursor_ClassDecl or CXCursorKind.CXCursor_StructDecl or CXCursorKind.CXCursor_UnionDecl)
+            {
+                if (!visited.Add(owner)) throw new InvalidOperationException("An unnamed record has a cyclic semantic owner graph.");
+                if (!owner.IsAnonymous || owner.TypedefNameForAnonDecl.Kind == CXCursorKind.CXCursor_TypedefDecl)
+                {
+                    string scope = CXUtil.GetTypeSpelling(owner.Type.CanonicalType);
+                    foreach (string prefix in new[] { "struct ", "class ", "union " })
+                        if (scope.StartsWith(prefix, StringComparison.Ordinal)) { scope = scope[prefix.Length..]; break; }
+                    if (scope.Length != 0 && !scope.Contains('(', StringComparison.Ordinal)) return m_sourcePaths.MapCompilerProvenance(scope + "::");
+                }
+                owner = owner.SemanticParent;
+            }
+            return m_sourcePaths.MapCompilerProvenance(record.fullName);
+        }
         if (m_request.language == SourceLanguage.Cpp && !record.isAnonymous && m_compilation!.storageFacts.TryGetValue(record, out NativeStorageFacts storage)
             && !string.IsNullOrWhiteSpace(storage.TypeSpelling) && !storage.TypeSpelling.Contains("(anonymous", StringComparison.Ordinal))
         {
@@ -459,6 +484,11 @@ internal sealed class NativeModuleBuilder
             foreach (string prefix in new[] { "struct ", "class ", "union " })
                 if (spelling.StartsWith(prefix, StringComparison.Ordinal)) return m_sourcePaths.MapCompilerProvenance(spelling[prefix.Length..]);
             return m_sourcePaths.MapCompilerProvenance(spelling);
+        }
+        if (m_request.language == SourceLanguage.Cpp && record.cursor.kind != 0 && record.cursor.Type.CanonicalType.kind == CXTypeKind.CXType_Record)
+        {
+            string sourceName = CXUtil.GetTypeSpelling(record.cursor.Type.CanonicalType);
+            if (!string.IsNullOrWhiteSpace(sourceName) && !sourceName.Contains('(', StringComparison.Ordinal)) return m_sourcePaths.MapCompilerProvenance(sourceName);
         }
         return m_sourcePaths.MapCompilerProvenance(record.fullName);
     }
@@ -486,7 +516,8 @@ internal sealed class NativeModuleBuilder
             owner = owner.SemanticParent;
         }
         if (owner.Kind is not (CXCursorKind.CXCursor_ClassDecl or CXCursorKind.CXCursor_StructDecl or CXCursorKind.CXCursor_UnionDecl)
-            || owner.IsAnonymous || owner.Type.kind == CXTypeKind.CXType_Invalid) return fallback;
+            || owner.Type.kind == CXTypeKind.CXType_Invalid
+            || owner.IsAnonymous && owner.TypedefNameForAnonDecl.Kind != CXCursorKind.CXCursor_TypedefDecl) return fallback;
         string spelling = CXUtil.GetTypeSpelling(owner.Type.CanonicalType);
         if (string.IsNullOrWhiteSpace(spelling) || spelling.Contains("(anonymous", StringComparison.Ordinal)) return fallback;
         foreach (string prefix in new[] { "struct ", "class ", "union " })

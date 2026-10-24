@@ -13,6 +13,68 @@ namespace BGCS.Frontend.Clang.Tests;
 
 public sealed class NativeDeclarationStorageIdentityTests : FrontendTestHost
 {
+    [Fact]
+    public async Task AnonymousTypedefsKeepRealConstructorTraitsWithoutInventingTagNames()
+    {
+        await WithModule(SourceLanguage.Cpp, "x86_64-unknown-linux-gnu", "typedef struct { int value; } Alias;", module =>
+        {
+            NativeDeclaration alias = Assert.Single(module.declarations, declaration => declaration.kind == "Typedef" && declaration.name == "Alias");
+            NativeType storage = module.GetType(module.GetType(alias.type!.Value).elementType!.Value);
+            NativeDeclaration record = module.GetDeclaration(storage.declaration!.Value);
+            Assert.Equal(string.Empty, record.name);
+            Assert.Equal(true, record.isDefaultConstructible);
+            Assert.Equal(true, record.isStandardLayout);
+            Assert.Equal(true, record.isTriviallyCopyable);
+            Assert.Equal("Alias::Alias()", new BGCS.Analysis.Types.NativeTypeFormatter().DefaultConstructionSignature(module, storage.id));
+        });
+    }
+
+    [Theory]
+    [InlineData(SourceLanguage.C, "x86_64-pc-windows-msvc", false)]
+    [InlineData(SourceLanguage.C, "x86_64-pc-windows-msvc", true)]
+    [InlineData(SourceLanguage.C, "wasm32-unknown-emscripten", true)]
+    [InlineData(SourceLanguage.Cpp, "x86_64-unknown-linux-gnu", false)]
+    [InlineData(SourceLanguage.Cpp, "x86_64-unknown-linux-gnu", true)]
+    public async Task UnnamedRecordFactsDoNotAcquireDiagnosticNamesOrEstimatedMemberOffsets(
+        SourceLanguage language,
+        string triple,
+        bool system
+    ) {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-unnamed-facts-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string header = Path.Combine(root, "input.h");
+            await File.WriteAllTextAsync(Path.Combine(root, "storage.h"), (system ? "#pragma clang system_header\n" : string.Empty) + """
+                typedef struct {
+                    union { int words[6]; volatile int flags[6]; volatile void* slots[6]; } storage;
+                } NestedStorage;
+                typedef struct { char prefix; union { long long aligned; int value; }; int suffix; } InjectedStorage;
+                typedef struct { NestedStorage nested; InjectedStorage injected; } Envelope;
+                """);
+            await File.WriteAllTextAsync(header, "#include \"storage.h\"\nEnvelope echo(Envelope value);\n");
+            NativeTargetDescriptor target = new(new("unnamed-facts"), "test", "test", "test", triple, new());
+            NativeModule module = (await new ClangFrontend(host).ParseAsync(new(target, language, [header])
+            { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
+            Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
+            NativeDeclaration field = Assert.Single(module.declarations, item => item.kind == "Field" && item.name == "storage");
+            NativeType storage = module.GetType(field.type!.Value);
+            NativeDeclaration record = module.GetDeclaration(storage.declaration!.Value);
+            Assert.Equal(string.Empty, record.name);
+            Assert.DoesNotContain("unnamed", record.qualifiedName, StringComparison.Ordinal);
+            Assert.Equal("NestedStorage::", record.qualifiedName);
+            Assert.Throws<NotSupportedException>(() => new BGCS.Analysis.Types.NativeTypeFormatter().FormatDeclaration(module, storage.id, "value"));
+            Assert.Equal(system, record.isSystemDeclaration);
+            Assert.Equal(3, record.children.Select(module.GetDeclaration).Count(item => item.kind == "Field"));
+            NativeDeclaration alias = Assert.Single(module.declarations, item => item.kind == "Typedef" && item.name == "InjectedStorage");
+            NativeType injected = module.GetType(module.GetType(alias.type!.Value).elementType!.Value);
+            NativeDeclaration anonymous = Assert.Single(module.GetDeclaration(injected.declaration!.Value).children.Select(module.GetDeclaration),
+                item => item.kind == "Field" && item.name.Length == 0);
+            Assert.Equal(8L, anonymous.offset);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Theory]
     [InlineData("x86_64-pc-windows-msvc")]
     [InlineData("x86_64-unknown-linux-gnu")]

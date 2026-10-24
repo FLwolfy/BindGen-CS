@@ -7,6 +7,15 @@ namespace BGCS.Frontend.Clang.Utilities;
 
 internal static unsafe class CXUtil
 {
+    internal static string GetDeclarationName(CXCursor cursor)
+    {
+        // A typedef can name an otherwise unnamed declaration. Preserve the
+        // declaration and its alias as separate facts rather than accepting
+        // the diagnostic name synthesized by libclang for that declaration.
+        return cursor.IsAnonymous || cursor.TypedefNameForAnonDecl.Kind == CXCursorKind.CXCursor_TypedefDecl
+            ? string.Empty : GetCursorSpelling(cursor);
+    }
+
     #region Cursor
     public static string GetCursorSpelling(CXCursor cursor)
     {

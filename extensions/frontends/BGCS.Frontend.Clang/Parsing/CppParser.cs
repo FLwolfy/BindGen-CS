@@ -293,17 +293,17 @@ internal static class CppParser
         CppCompilation compilation
     ) {
         CppClass[] candidates = Records(compilation).Where(record => record.classKind is CppClassKind.Class or CppClassKind.Struct or CppClassKind.Union
-            && record.isCompleteDefinition && !record.isAnonymous
+            && record.isCompleteDefinition
             && !record.cursor.Location.IsInSystemHeader && Accessible(record)
             && record.templateKind is CppTemplateKind.NormalClass or CppTemplateKind.TemplateSpecializedClass
-            && !record.fullName.Contains('?', StringComparison.Ordinal) && !record.fullName.Contains('(', StringComparison.Ordinal)).Distinct().ToArray();
+            && SourceName(record) is not null).Distinct().ToArray();
         if (candidates.Length == 0) return;
         string stem = "bgcs_record_traits_" + Guid.NewGuid().ToString("N");
         StringBuilder source = new(headers);
         source.Append("\nenum ").Append(stem).AppendLine(" {");
         for (int candidate = 0; candidate < candidates.Length; candidate++)
         {
-            string name = "::" + candidates[candidate].fullName.TrimStart(':');
+            string name = "::" + SourceName(candidates[candidate])!.TrimStart(':');
             source.Append(stem).Append('_').Append(candidate * 3).Append(" = __is_constructible(").Append(name).AppendLine(") ? 1 : 0,");
             source.Append(stem).Append('_').Append(candidate * 3 + 1).Append(" = __is_standard_layout(").Append(name).AppendLine(") ? 1 : 0,");
             source.Append(stem).Append('_').Append(candidate * 3 + 2).Append(" = __is_trivially_copyable(").Append(name).AppendLine(") ? 1 : 0,");
@@ -367,6 +367,17 @@ internal static class CppParser
             if (element is CppClass record && (record.visibility is CppVisibility.Private or CppVisibility.Protected
                 || record.templateKind is CppTemplateKind.TemplateClass or CppTemplateKind.PartialTemplateClass)) return false;
             return element.parent is not CppElement parent || Accessible(parent);
+        }
+        static string? SourceName(CppClass record)
+        {
+            string name = record.cursor.kind == 0 ? record.fullName : CXUtil.GetTypeSpelling(record.cursor.Type.CanonicalType);
+            if (record.name.Length == 0)
+            {
+                // A typedef supplies a real source name without turning the
+                // unnamed record itself into a fictitious named declaration.
+                if (record.cursor.TypedefNameForAnonDecl.Kind != CXCursorKind.CXCursor_TypedefDecl) return null;
+            }
+            return name.Length == 0 || name.Contains('?', StringComparison.Ordinal) || name.Contains('(', StringComparison.Ordinal) ? null : name;
         }
     }
 

@@ -579,7 +579,7 @@
     "dotnet.native-aot",
     "dotnet.mono-wasm"
   ],
-  "productVersion": "4.1.0",
+  "productVersion": "4.1.1",
   "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "targetedApplicationRegression": {
     "host": "linux-x64",

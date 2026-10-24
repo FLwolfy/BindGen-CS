@@ -165,6 +165,39 @@ public sealed class PrimaryFrontendCacheTests
         Assert.Equal("hit", Primary(warm).status);
     }
 
+    [Theory]
+    [InlineData("3")]
+    [InlineData("5")]
+    [InlineData("\"3\"")]
+    [InlineData("null")]
+    public async Task AContentVerifiedCacheEntryWithAnotherModelRevisionIsReparsed(string revision)
+    {
+        using Scratch scratch = new();
+        await using BindingHost host = scratch.Builder().Build();
+        GenerationRequest request = scratch.Request();
+        GenerationResult cold = await host.GenerateAsync(request);
+        Assert.True(cold.success, cold.GetDiagnosticSummary());
+        string[] original = Bytes(cold);
+        JsonNode stored = JsonNode.Parse(File.ReadAllText(scratch.FrontendEntry()))!;
+        JsonNode parsed = JsonNode.Parse(Convert.FromBase64String(stored["artifacts"]![0]!["content"]!.GetValue<string>()))!;
+        parsed["module"]!["modelRevision"] = JsonNode.Parse(revision);
+        byte[] content = JsonSerializer.SerializeToUtf8Bytes(parsed, WorkerProtocol.jsonOptions);
+        ContentDigest key = new(stored["key"]!.GetValue<string>());
+        ArtifactDescriptor descriptor = new("frontend-result.json", "application/json", new ContentDigest(Convert.ToHexStringLower(SHA256.HashData(content))));
+        using HostServices cacheHost = new HostServicesProvider().Create(new(scratch.source, JsonSerializer.SerializeToElement(new { })));
+        GenerationStageCache cache = new(Path.Combine(scratch.source, ".bgcs", "cache"), cacheHost.paths);
+        Assert.True(cache.Store(key, [new CachedStageArtifact(descriptor, content)]));
+        Assert.True(cache.TryRead(key, out _, out _));
+        GenerationResult repaired = await host.GenerateAsync(request);
+        Assert.True(repaired.success, repaired.GetDiagnosticSummary());
+        Assert.Equal("miss", Primary(repaired).status);
+        Assert.Contains("model revision", Primary(repaired).reason!, StringComparison.Ordinal);
+        Assert.Equal(original, Bytes(repaired));
+        GenerationResult warm = await host.GenerateAsync(request);
+        Assert.True(warm.success, warm.GetDiagnosticSummary());
+        Assert.Equal("hit", Primary(warm).status);
+    }
+
     [Fact]
     public async Task AProcessorChangingTheHeaderAfterWarmAdmissionCannotReplaceThePublication()
     {

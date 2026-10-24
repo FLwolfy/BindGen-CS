@@ -11,7 +11,7 @@ namespace BGCS.Extension.AppleMobile;
 public sealed class AppleMobilePlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc/>
-    public PluginDescriptor descriptor => new("bgcs.extension.applemobile", "4.1.0", [new("bgcs.target.applemobile", ExtensionPort.NativeTargetProvider)]);
+    public PluginDescriptor descriptor => new("bgcs.extension.applemobile", "4.1.1", [new("bgcs.target.applemobile", ExtensionPort.NativeTargetProvider)]);
     /// <inheritdoc/>
     public void Configure(
         IExtensionRegistryBuilder registry,

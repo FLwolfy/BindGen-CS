@@ -1,7 +1,6 @@
 namespace BGCS.Frontend.Clang.Parsing.Visitors.MemberVisitors;
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using BGCS.Frontend.Clang.Model;
 using BGCS.Frontend.Clang.Model.Declarations;
 using ClangSharp.Interop;
@@ -22,23 +21,27 @@ internal unsafe class ClassStructUnionVisitor : MemberVisitor
     ) {
         // The injected self name is represented by its existing semantic owner.
         if (cursor.IsInjectedClassName) return null;
-        bool isAnonymous = cursor.IsAnonymous;
+        bool isAnonymous = cursor.IsAnonymousStructOrUnion;
         var cppClass = this.builder.VisitClassDecl(cursor);
         var containerContext = this.context.GetOrCreateDeclContainer(parent);
-        // Empty struct/class/union declaration are considered as fields
+        // Only injected anonymous storage is an implicit field. An unnamed
+        // type used by a named field keeps its independent declaration.
         if (isAnonymous)
         {
             cppClass.name = string.Empty;
-            Debug.Assert(string.IsNullOrEmpty(cppClass.name));
-            // We try to recover the offset from the previous field
-            // Might not be always correct (with alignment rules),
-            // but not sure how to recover the offset without recalculating the entire offsets
-            var offset = 0;
-            if (containerContext.container is CppClass cppClassContainer && cppClassContainer.fields.Count > 0)
+            long bitOffset = -1;
+            for (uint index = 0; index < parent.NumDecls; index++)
             {
-                var lastField = cppClassContainer.fields[^1];
-                offset = (int)lastField.offset + lastField.type.sizeOf;
+                CXCursor field = parent.GetDecl(index);
+                if (field.Kind == CXCursorKind.CXCursor_FieldDecl && field.Type.CanonicalType.Declaration.CanonicalCursor == cursor.CanonicalCursor)
+                {
+                    bitOffset = field.OffsetOfField;
+                    break;
+                }
             }
+            // A dependent template legitimately has no layout yet. Preserve
+            // that unknown value; selected storage verification rejects it
+            // unless a concrete instantiation supplies a real field offset.
 
             // Create an anonymous field for the type
             CppVisibility declaredAccess = cursor.GetVisibility();
@@ -47,7 +50,7 @@ internal unsafe class ClassStructUnionVisitor : MemberVisitor
                 visibility = declaredAccess == CppVisibility.Default ? containerContext.currentVisibility : declaredAccess,
                 storageQualifier = cursor.GetStorageQualifier(),
                 isAnonymous = true,
-                bitOffset = offset * 8,
+                bitOffset = bitOffset,
             };
             this.builder.ParseAttributes(cursor, cppField, true);
             containerContext.declarationContainer.fields.Add(cppField);

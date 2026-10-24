@@ -36,10 +36,10 @@
       "size": 4,
       "alignment": null,
       "elementType": {
-        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+        "value": "type:df69851c36d4b3674f85c4d1140dba8c22464181faa32e1c33d5331bce2d0388"
       },
       "canonicalType": {
-        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+        "value": "type:df69851c36d4b3674f85c4d1140dba8c22464181faa32e1c33d5331bce2d0388"
       },
       "declaration": {
         "value": "declaration:75531a595c903f0ba5467cbcc408d91922cc1b4787e7a56a3dcc2249f110a308"
@@ -57,7 +57,7 @@
     },
     {
       "id": {
-        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+        "value": "type:df69851c36d4b3674f85c4d1140dba8c22464181faa32e1c33d5331bce2d0388"
       },
       "category": "Record",
       "spelling": "MyStruct",
@@ -66,7 +66,7 @@
       "elementType": null,
       "canonicalType": null,
       "declaration": {
-        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+        "value": "declaration:5d566e488de585aae299879625508d5c8095543d49069b22426880ee57f9d67d"
       },
       "primitiveKind": null,
       "isSigned": null,
@@ -83,13 +83,13 @@
   "declarations": [
     {
       "id": {
-        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+        "value": "declaration:5d566e488de585aae299879625508d5c8095543d49069b22426880ee57f9d67d"
       },
       "kind": "Class",
-      "name": "MyStruct",
-      "qualifiedName": "MyStruct",
+      "name": "",
+      "qualifiedName": "",
       "type": {
-        "value": "type:c647abc79c438fbe52a8b1f0f1e1db24f86d7c5aede25b29fb616336f8743d14"
+        "value": "type:df69851c36d4b3674f85c4d1140dba8c22464181faa32e1c33d5331bce2d0388"
       },
       "source": {
         "file": "TestTypedefs.TestSquash.hpp",
@@ -170,7 +170,7 @@
         "column": 5
       },
       "parent": {
-        "value": "declaration:0f4ab80b5c9e3a188be7120bca922a022d53554b88a91e8d28064999bb4d4d02"
+        "value": "declaration:5d566e488de585aae299879625508d5c8095543d49069b22426880ee57f9d67d"
       },
       "children": [],
       "documentation": null,

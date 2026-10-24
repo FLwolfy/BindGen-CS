@@ -15,14 +15,14 @@ namespace BGCS.NativeBridge.Emission;
 /// <summary>Produces independent compiler assertions for the native storage facts consumed by generation.</summary>
 public sealed class NativeStorageAssertionEmitter
 {
-    /// <summary>Checks primitive widths and visible named records against the actual native build compiler.</summary>
+    /// <summary>Emits independent storage checks for named types and addressable anonymous members.</summary>
     /// <param name="module">The detached source graph used during binding analysis.</param>
     /// <param name="headers">The validated include spellings for the original source headers.</param>
     /// <param name="conventions">The explicitly resolved target's source and callable-assertion facts.</param>
     /// <param name="preamble">Explicit source input placed before original headers.</param>
     /// <param name="postamble">Explicit source input placed after original headers.</param>
     /// <returns>A C or C++ compilation unit containing no exported symbols.</returns>
-    /// <exception cref="NotSupportedException">A publicly exposed native type contains a context-dependent template value that cannot be independently named from its frozen declaration evidence.</exception>
+    /// <exception cref="NotSupportedException">Selected storage has no independently expressible name or required structural proof, including context-dependent template values without frozen declaration evidence.</exception>
     public string Emit(
         NativeModule module,
         ImmutableArray<string> headers,
@@ -58,7 +58,7 @@ public sealed class NativeStorageAssertionEmitter
             "__builtin_offsetof", "BGCS_NATIVE_FIELD_OFFSET"];
         foreach (string token in commonProofTokens.Concat(module.language == SourceLanguage.C
             ? new[] { "_Static_assert", "_Generic", "_Alignof", "_Bool" }
-            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "using", "nullptr", "bool", "std", "is_same", "is_signed", "is_lvalue_reference", "is_rvalue_reference", "remove_cv", "underlying_type", "type" }))
+            : new[] { "static_assert", "alignof", "decltype", "static_cast", "typename", "using", "nullptr", "bool", "std", "is_same", "is_const", "is_volatile", "is_signed", "is_lvalue_reference", "is_rvalue_reference", "remove_cv", "underlying_type", "type" }))
             text.Append("#if defined(").Append(token).AppendLine(")\n#error BGCS native storage proof token is shadowed by a macro\n#endif");
         // The ordinary offsetof macro belongs to the source environment and may
         // legitimately be customized by a public header. Verification must use
@@ -111,9 +111,17 @@ public sealed class NativeStorageAssertionEmitter
             NativeDeclaration? declaration = type.declaration is { } declarationId ? module.GetDeclaration(declarationId) : null;
             if (type.category == NativeTypeCategory.Primitive) spelling = module.language == SourceLanguage.C && type.primitiveKind == "Bool" ? "_Bool" : type.spelling;
             else if (type.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration && declaration is not null
-                && declaration.name.Length != 0 && ConcreteOwners(declaration) && Accessible(declaration))
+                && ConcreteOwners(declaration) && Accessible(declaration) && Nameable(type.id))
                 spelling = callableAssertions.RenderStorageType(type.id, string.Empty);
-            if (spelling is null || !Regex.IsMatch(spelling, "^[A-Za-z_][A-Za-z0-9_: <>*,]*$", RegexOptions.CultureInvariant) || !emitted.Add(spelling)) continue;
+            if (spelling is null || !emitted.Add(spelling)) continue;
+            string offsetOwner = spelling;
+            if (module.language == SourceLanguage.Cpp && type.category == NativeTypeCategory.Record && spelling.Contains(',', StringComparison.Ordinal))
+            {
+                // A preprocessor macro cannot take a comma-containing template
+                // type as one argument. A source alias preserves its identity.
+                offsetOwner = "bgcs_verified_storage_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
+                text.Append("using ").Append(offsetOwner).Append(" = ").Append(spelling).AppendLine(";");
+            }
             Check("sizeof(" + spelling + ")", type.size.Value, "native storage size");
             Check(alignment + "(" + spelling + ")", type.alignment.Value, "native storage alignment");
             if (module.language == SourceLanguage.Cpp && declaration?.kind == "Class")
@@ -158,12 +166,20 @@ public sealed class NativeStorageAssertionEmitter
             if (type.category == NativeTypeCategory.Record && declaration is not null
                 && (module.language == SourceLanguage.C || declaration.isStandardLayout == true))
                 foreach (NativeDeclaration field in declaration.children.Select(module.GetDeclaration).Where(field => field.kind == "Field" && !field.isStatic && field.bitWidth is null
-                    && (module.language == SourceLanguage.C || Accessible(field)) && field.offset is not null && Regex.IsMatch(field.name, "^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)))
-                    Check("BGCS_NATIVE_FIELD_OFFSET(" + spelling + ", " + field.name + ")", field.offset!.Value, "native field offset");
+                    && (module.language == SourceLanguage.C || Accessible(field)) && field.offset is not null && MemberIdentifier(field.name)))
+                    Check("BGCS_NATIVE_FIELD_OFFSET(" + offsetOwner + ", " + field.name + ")", field.offset!.Value, "native field offset");
             if (type.category == NativeTypeCategory.Record && declaration is not null)
                 foreach (NativeDeclaration field in declaration.children.Select(module.GetDeclaration).Where(field => field.kind == "Field" && !field.isStatic && Accessible(field)
-                    && Regex.IsMatch(field.name, "^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)))
+                    && (field.name.Length == 0 || MemberIdentifier(field.name))))
                 {
+                    if (field.name.Length == 0)
+                    {
+                        if (field.type is not { } anonymousType || field.offset is not { } anonymousOffset)
+                            throw new NotSupportedException("Anonymous storage omitted its compiler-established field type or offset.");
+                        VerifyStructuralMembers(FieldShape(anonymousType), offsetOwner, string.Empty, anonymousOffset, [],
+                            module.language == SourceLanguage.C || declaration.isStandardLayout == true);
+                        continue;
+                    }
                     if (module.language == SourceLanguage.C && field.bitWidth is not null)
                     {
                         fieldChecks.AppendLine("/* C bitfields have no addressable exact-type assertion; parsed bit offsets and widths remain part of the binding contract. */");
@@ -189,12 +205,14 @@ public sealed class NativeStorageAssertionEmitter
                         fieldChecks.Append("static_assert(std::").Append(fieldShape.isRValueReference ? "is_rvalue_reference<" : "is_lvalue_reference<")
                             .Append(expression).AppendLine(">::value, \"BGCS native reference field category differs from parsed facts\");");
                     }
-                    if (ContainsAnonymousType(fieldType, []) || !Nameable(fieldType))
+                    if (!Nameable(fieldType))
                     {
-                        NativeType storage = module.GetType(fieldType);
-                        if (storage.size is > 0) Check("sizeof(((" + spelling + "*)0)->" + field.name + ")", storage.size.Value,
-                            fieldShape.category == NativeTypeCategory.Reference ? "native reference referent size" : "native anonymous field storage size");
-                        fieldChecks.AppendLine("/* An unnameable field retains size assertions; exact type identity cannot be asserted by name. */");
+                        if (field.offset is not { } offset)
+                            throw new NotSupportedException("Structural member storage omitted its compiler-established offset: " + field.qualifiedName);
+                        fieldChecks.AppendLine("/* Unnameable storage is verified structurally through its owner, without a fabricated nominal identity. */");
+                        if (module.language == SourceLanguage.Cpp && declaration.isStandardLayout != true)
+                            fieldChecks.AppendLine("/* Opaque non-standard-layout C++ owners retain member size/type checks; standard-layout offsets are not asserted. */");
+                        VerifyMember(fieldType, offsetOwner, field.name, offset, [], module.language == SourceLanguage.C || declaration.isStandardLayout == true);
                         continue;
                     }
                     string alias = "bgcs_verified_field_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
@@ -233,14 +251,164 @@ public sealed class NativeStorageAssertionEmitter
             return type;
         }
 
-        bool ContainsAnonymousType(
+        static bool MemberIdentifier(string name)
+        {
+            bool first = true;
+            foreach (Rune rune in name.EnumerateRunes())
+            {
+                UnicodeCategory category = Rune.GetUnicodeCategory(rune);
+                bool initial = rune.Value == '_' || Rune.IsLetter(rune) || category == UnicodeCategory.LetterNumber;
+                if (!(first ? initial : initial || Rune.IsDigit(rune) || category is UnicodeCategory.NonSpacingMark
+                    or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.ConnectorPunctuation)) return false;
+                first = false;
+            }
+            return !first;
+        }
+
+        void VerifyMember(
             BGCS.Core.Common.StableId identity,
-            HashSet<BGCS.Core.Common.StableId> visited
+            string owner,
+            string path,
+            long offset,
+            HashSet<BGCS.Core.Common.StableId> active,
+            bool checkOffsets,
+            string inheritedQualifiers = ""
         ) {
-            if (!visited.Add(identity)) return false;
+            NativeType storage = module.GetType(identity);
+            string qualifiers = StructuralQualifiers(identity, inheritedQualifiers);
+            if (storage.size is not > 0) throw new NotSupportedException("A structural native field has no complete storage size: " + path);
+            string expression = "((" + owner + "*)0)->" + path;
+            Check("sizeof(" + expression + ")", storage.size.Value, "native structural field size");
+            if (checkOffsets) CheckStructuralOffset(owner, path, offset);
+            if (Nameable(identity))
+            {
+                string alias = "bgcs_verified_field_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
+                fieldChecks.Append("typedef ").Append(callableAssertions.RenderStorageType(identity, alias)).AppendLine(";");
+                if (module.language == SourceLanguage.C)
+                    fieldChecks.Append("_Static_assert(_Generic(&(").Append(expression).Append("), ").Append(qualifiers).Append(alias)
+                        .AppendLine("*: 1, default: 0), \"BGCS native structural field type differs from parsed facts\");");
+                else
+                    fieldChecks.Append("static_assert(std::is_same<decltype(").Append(expression).Append("), ").Append(alias)
+                        .AppendLine(">::value, \"BGCS native structural field type differs from parsed facts\");");
+                return;
+            }
+            if (module.language == SourceLanguage.Cpp)
+            {
+                string ownQualifiers = StructuralQualifiers(identity, string.Empty);
+                // decltype of a member access preserves its declared cv-qualification;
+                // comparing the observed flags to frozen booleans is not a nominal
+                // comparison of a compiler-derived type with itself.
+                Check("std::is_const<decltype(" + expression + ")>::value", ownQualifiers.Contains("const", StringComparison.Ordinal) ? 1 : 0, "native structural const qualifier");
+                Check("std::is_volatile<decltype(" + expression + ")>::value", ownQualifiers.Contains("volatile", StringComparison.Ordinal) ? 1 : 0, "native structural volatile qualifier");
+            }
+            NativeType shape = FieldShape(identity);
+            if (shape.category == NativeTypeCategory.Array && shape.elementType is { } element && shape.arrayLength is > 0)
+            {
+                if (!active.Add(shape.id)) throw new InvalidOperationException("A structural native array has a cyclic element graph.");
+                Check("sizeof(" + expression + ") / sizeof((" + expression + ")[0])", shape.arrayLength.Value, "native structural array extent");
+                try { VerifyMember(element, owner, path + "[0]", offset, active, checkOffsets, qualifiers); }
+                finally { active.Remove(shape.id); }
+                return;
+            }
+            if (shape.category != NativeTypeCategory.Record)
+                throw new NotSupportedException("A native member has no independent source type or structural proof: " + path);
+            VerifyStructuralMembers(shape, owner, path, offset, active, checkOffsets, qualifiers);
+        }
+
+        void CheckStructuralOffset(
+            string owner,
+            string path,
+            long offset
+        ) {
+            string direct = "BGCS_NATIVE_FIELD_OFFSET(" + owner + ", " + path + ")";
+            if (module.language != SourceLanguage.C || !path.Contains("[0]", StringComparison.Ordinal))
+            {
+                Check(direct, offset, "native structural field offset");
+                return;
+            }
+            // MSVC's C constant evaluator cannot evaluate array member-designators
+            // in offsetof. Its documented C11/C17 __typeof__ extension (VS17.9+)
+            // names the observed element only to express relative offsets. Each
+            // offset still compares against independent, frozen numeric facts.
+            text.AppendLine("#if defined(_MSC_VER) && !defined(__clang__)\n#if _MSC_VER < 1939\n#error BGCS structural array offsets require MSVC 17.9 or newer __typeof__ support\n#endif\n#if defined(__typeof__)\n#error BGCS structural array proof token is shadowed by a macro\n#endif");
+            Check(RelativeOffset(owner, path), offset, "native structural field offset");
+            text.AppendLine("#else");
+            Check(direct, offset, "native structural field offset");
+            text.AppendLine("#endif");
+
+            string RelativeOffset(
+                string record,
+                string member
+            ) {
+                int index = member.IndexOf("[0]", StringComparison.Ordinal);
+                if (index < 0) return "BGCS_NATIVE_FIELD_OFFSET(" + record + ", " + member + ")";
+                string prefix = member[..index];
+                int end = index;
+                while (member.AsSpan(end).StartsWith("[0]", StringComparison.Ordinal)) end += 3;
+                string firstElementOffset = "BGCS_NATIVE_FIELD_OFFSET(" + record + ", " + prefix + ")";
+                if (end == member.Length) return firstElementOffset;
+                string alias = "bgcs_structural_element_" + (fieldIndex++).ToString(CultureInfo.InvariantCulture);
+                text.Append("typedef __typeof__(((").Append(record).Append("*)0)->").Append(member[..end]).Append(") ").Append(alias).AppendLine(";");
+                return "(" + firstElementOffset + " + " + RelativeOffset(alias, member[(end + 1)..]) + ")";
+            }
+        }
+
+        string StructuralQualifiers(
+            BGCS.Core.Common.StableId identity,
+            string inherited
+        ) {
             NativeType type = module.GetType(identity);
-            if (type.category == NativeTypeCategory.Record && type.declaration is { } nativeDeclaration && module.GetDeclaration(nativeDeclaration).name.Length == 0) return true;
-            return type.elementType is { } element && ContainsAnonymousType(element, visited);
+            HashSet<BGCS.Core.Common.StableId> visited = [];
+            bool constant = inherited.Contains("const", StringComparison.Ordinal), vol = inherited.Contains("volatile", StringComparison.Ordinal);
+            while (type.category is NativeTypeCategory.Alias or NativeTypeCategory.Qualified or NativeTypeCategory.Array)
+            {
+                if (!visited.Add(type.id)) throw new InvalidOperationException("Structural member qualification has a cyclic element graph.");
+                constant |= type.category == NativeTypeCategory.Qualified && type.qualifier?.Contains("Const", StringComparison.Ordinal) == true;
+                vol |= type.category == NativeTypeCategory.Qualified && type.qualifier?.Contains("Volatile", StringComparison.Ordinal) == true;
+                if (type.elementType is not { } element) break;
+                type = module.GetType(element);
+            }
+            return (constant ? "const " : string.Empty) + (vol ? "volatile " : string.Empty);
+        }
+
+        void VerifyStructuralMembers(
+            NativeType storage,
+            string owner,
+            string path,
+            long offset,
+            HashSet<BGCS.Core.Common.StableId> active,
+            bool checkOffsets,
+            string inheritedQualifiers = ""
+        ) {
+            if (storage.category != NativeTypeCategory.Record || storage.declaration is not { } identity
+                || !module.GetDeclaration(identity).isCompleteDefinition)
+                throw new NotSupportedException("Structural native storage requires a complete record declaration.");
+            if (!active.Add(storage.id)) throw new InvalidOperationException("Anonymous native storage has a cyclic by-value graph.");
+            try
+            {
+                NativeDeclaration[] members = module.GetDeclaration(identity).children.Select(module.GetDeclaration)
+                    .Where(member => member.kind == "Field" && !member.isStatic).ToArray();
+                if (members.Length == 0) throw new NotSupportedException("Anonymous native storage omitted its field graph.");
+                foreach (NativeDeclaration member in members)
+                {
+                    // A public member expression can be legal even when the
+                    // containing type cannot itself be named (C++ private type).
+                    if (member.visibility is "Private" or "Protected" || member.bitWidth is not null)
+                        throw new NotSupportedException("A structural anonymous member has no addressable public field proof: " + member.qualifiedName);
+                    if (member.type is not { } memberType || member.offset is not { } memberOffset)
+                        throw new NotSupportedException("An anonymous member omitted its compiler-established type or offset.");
+                    long absoluteOffset = checked(offset + memberOffset);
+                    if (member.name.Length == 0)
+                        VerifyStructuralMembers(FieldShape(memberType), owner, path, absoluteOffset, active, checkOffsets, StructuralQualifiers(memberType, inheritedQualifiers));
+                    else
+                    {
+                        if (!MemberIdentifier(member.name))
+                            throw new NotSupportedException("A structural field has no usable source member name: " + member.qualifiedName);
+                        VerifyMember(memberType, owner, path.Length == 0 ? member.name : path + "." + member.name, absoluteOffset, active, checkOffsets, inheritedQualifiers);
+                    }
+                }
+            }
+            finally { active.Remove(storage.id); }
         }
 
         bool Accessible(NativeDeclaration declaration)
@@ -272,6 +440,11 @@ public sealed class NativeStorageAssertionEmitter
                     && (type.elementType is not { } element || Nameable(element))
                     && (type.returnType is not { } result || Nameable(result))
                     && type.parameterTypes.All(Nameable);
+                if (nameable && type.category is NativeTypeCategory.Record or NativeTypeCategory.Enumeration)
+                {
+                    try { callableAssertions.RenderStorageType(identity, string.Empty); }
+                    catch (NotSupportedException) { nameable = false; }
+                }
                 nameableTypes.Add(identity, nameable);
                 return nameable;
             }

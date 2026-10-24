@@ -20,7 +20,7 @@ BGCS 不编译或运行你的项目。需要原生桥接时，由你的项目编
 ### 1. 准备输入
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.0
+dotnet tool install --global BindGen-CS --version 4.1.1
 bindgen-cs init native.h --language c
 ```
 
@@ -60,7 +60,7 @@ C++ 使用相同命令，将 `source.language` 设为 `cpp` 即可自动规划 C
 把 `managed/` 源码加入自己的 .NET 项目，启用 `AllowUnsafeBlocks`，并引用：
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="4.1.0" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.1" />
 ```
 
 由你的项目构建原生模块后：

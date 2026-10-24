@@ -82,7 +82,7 @@ workflow `publish-bgcs-runtime-nuget.yml` 及工作流 environment（当前为�
 
 上传后核对公共包内容并干净安装四产品。symbols 的独立 push 必须成功，但不宣称
 symbol-server 已完成索引。只有 release workflow、公共消费检查与 GitHub release
-全部成功才算发布完成；此前4.1.0安装示例以实际发布为前提。
+全部成功才算发布完成；此前4.1.1安装示例以实际发布为前提。
 
 NuGet 版本不可变。部分上传失败只能用相同已接受内容重试；公共接受后的源码或包内容
 变化需要新版本，不能以删除替换已发布版本恢复。

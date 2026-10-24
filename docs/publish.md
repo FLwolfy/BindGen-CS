@@ -99,7 +99,7 @@ uploads come only from the authorized job, not a locally generated provenance do
 The workflow verifies public package payloads and installs the four products after upload.
 Separate symbol pushes must succeed; that does not claim symbol-server indexing.
 Publication is complete only after the release workflow, public-consumption checks and
-GitHub release succeed. Before that, installation examples for 4.1.0 are conditional on
+GitHub release succeed. Before that, installation examples for 4.1.1 are conditional on
 actual publication.
 
 NuGet versions are immutable. Retry a partial upload with identical accepted contents;

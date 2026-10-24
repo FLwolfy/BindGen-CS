@@ -16,7 +16,7 @@ namespace BGCS.Examples.CustomLowering;
 public sealed class MeasurePlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.measure", "4.1.0", [new("example.measure", ExtensionPort.NativeTypeLowering, 100)]);
+    public PluginDescriptor descriptor => new("bgcs.examples.measure", "4.1.1", [new("example.measure", ExtensionPort.NativeTypeLowering, 100)]);
     /// <inheritdoc />
     public void Configure(
         IExtensionRegistryBuilder registry,

@@ -6,8 +6,8 @@ namespace BGCS.Core.Native;
 /// <summary>Stores a detached declaration and its immutable source-language facts.</summary>
 /// <param name="id">The stable declaration identity.</param>
 /// <param name="kind">The native declaration category.</param>
-/// <param name="name">The native unqualified name.</param>
-/// <param name="qualifiedName">The source-language qualified name.</param>
+/// <param name="name">The real native unqualified name, or an empty string for an unnamed declaration.</param>
+/// <param name="qualifiedName">The logical source qualification; an unnamed declaration may retain only its owning scope with an empty terminal component. This is not proof of source nameability.</param>
 /// <param name="type">The declared type, or null for typeless declarations.</param>
 /// <param name="source">The logical source location.</param>
 public sealed record NativeDeclaration(

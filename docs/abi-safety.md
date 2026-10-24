@@ -159,6 +159,22 @@ consumer. Its facts describe the declared Clang parse environment. Downstream bu
 must keep that environment and ABI compatible; independent repository fixtures
 compile and invoke generated bindings to test those assumptions.
 
+Unnamed records retain their declaration identity separately from typedefs and
+compiler diagnostic text. Generated declarations use only established source
+names. An unnamed member is checked structurally through a named owner: complete
+subobject sizes, standard-layout offsets, array extents and exact nameable leaf
+types and qualifiers. This is not a claim of nominal type equality. Opaque
+non-standard-layout C++ owners keep member size/type checks without claiming
+standard-layout offsets. A required proof that cannot be expressed is rejected;
+C17 output does not acquire an implicit dependency on C23 `typeof`.
+For anonymous array-element offsets, MSVC's C constant evaluator needs relative
+offsets through a compiler-derived element alias. That compiler branch explicitly
+requires the documented `__typeof__` extension available in every C mode since
+[Visual Studio 17.9](https://learn.microsoft.com/en-us/cpp/overview/cpp-conformance-improvements?view=msvc-170#c23-language).
+The alias only expresses the member path: offsets, sizes and leaf types still
+compare against frozen facts. Other C17 compilers retain their independent
+offset operation without a `typeof` requirement.
+
 Unsupported input or an unproved by-value calling ABI is rejected. Static field
 binding establishes scalar-copy compatibility only, never measured CLR layout or
 native calling equivalence. Use an explicit frontend or pointer/native shim where

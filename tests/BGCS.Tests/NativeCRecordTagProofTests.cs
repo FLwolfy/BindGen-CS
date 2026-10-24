@@ -38,12 +38,14 @@ public sealed class NativeCRecordTagProofTests
             await File.WriteAllTextAsync(header, declarationText + "int read_pair(" + storageType + "* value);\n");
             NativeTargetDescriptor target = new TargetResolver().Resolve(new(new NativeTargetId("host")));
             target = ToolchainResolver.ResolveToolchain(target, SourceLanguage.C);
-            StableId integer = new("int"), pair = new("pair"), pointer = new("pointer"), record = new("record"), field = new("field"), function = new("function"), parameter = new("parameter");
+            StableId integer = new("int"), pair = new("pair"), alias = new("alias"), typedef = new("typedef"), pointer = new("pointer"), record = new("record"), field = new("field"), function = new("function"), parameter = new("parameter");
             NativeModule module = new(target.targetId.value, target.triple, 8,
                 [new(integer, NativeTypeCategory.Primitive, "int", 4, 4) { primitiveKind = "Int", isSigned = true },
                  new(pair, NativeTypeCategory.Record, storageType, 4, 4) { declaration = record },
-                 new(pointer, NativeTypeCategory.Pointer, storageType + " *", 8, 8) { elementType = pair }],
-                [new(record, "Class", "Pair", "Pair", pair, new(header, 1, 1)) { role = role, isCompleteDefinition = true, children = [field] },
+                 .. anonymous ? new NativeType[] { new(alias, NativeTypeCategory.Alias, "Pair", 4, 4) { declaration = typedef, elementType = pair } } : [],
+                 new(pointer, NativeTypeCategory.Pointer, storageType + " *", 8, 8) { elementType = anonymous ? alias : pair }],
+                [new(record, "Class", anonymous ? string.Empty : "Pair", anonymous ? string.Empty : "Pair", pair, new(header, 1, 1)) { role = role, isCompleteDefinition = true, children = [field] },
+                 .. anonymous ? new NativeDeclaration[] { new(typedef, "Typedef", "Pair", "Pair", alias, new(header, 1, 1)) } : [],
                  new(field, "Field", "value", "Pair::value", integer, new(header, 1, 1)) { parent = record, visibility = "Public", offset = 0, bitOffset = 0 },
                  new(function, "Function", "read_pair", "read_pair", null, new(header, 3, 1)) { role = "Function", returnType = integer, children = [parameter], callingConvention = "C" },
                  new(parameter, "Parameter", "value", "value", pointer, new(header, 3, 1)) { parent = function }], [])

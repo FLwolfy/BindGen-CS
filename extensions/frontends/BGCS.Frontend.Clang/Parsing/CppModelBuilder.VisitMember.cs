@@ -29,7 +29,9 @@ internal unsafe partial class CppModelBuilder
                 // complete storage facts. Visit only layout-relevant children,
                 // preserving the policy that unrelated SDK APIs remain hidden.
                 bool requiredRecordFact = this.m_requiredSystemRecordDepth > 0
-                    && cursor.Kind is CXCursorKind.CXCursor_FieldDecl or CXCursorKind.CXCursor_CXXAccessSpecifier or CXCursorKind.CXCursor_CXXBaseSpecifier;
+                    && (cursor.Kind is CXCursorKind.CXCursor_FieldDecl or CXCursorKind.CXCursor_CXXAccessSpecifier or CXCursorKind.CXCursor_CXXBaseSpecifier
+                        || cursor.Kind is CXCursorKind.CXCursor_StructDecl or CXCursorKind.CXCursor_UnionDecl or CXCursorKind.CXCursor_ClassDecl
+                            && cursor.IsAnonymous);
                 bool requiredEnumFact = this.m_requiredSystemEnumDepth > 0 && cursor.Kind == CXCursorKind.CXCursor_EnumConstantDecl;
                 if (!this.parseSystemIncludes && !requiredRecordFact && !requiredEnumFact
                     && !(cursor.IsAttribute && (this.m_requiredSystemRecordDepth > 0 || this.m_requiredSystemEnumDepth > 0)))

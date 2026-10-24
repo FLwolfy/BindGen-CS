@@ -227,11 +227,13 @@ public sealed class NativeStorageAssertionTests
             MsvcToolchainInfo sdk = MsvcToolchainDiscovery.Resolve(compiler, "x64");
             string header = Path.Combine(root, "native.h"), source = Path.Combine(root, "proof.c");
             await File.WriteAllTextAsync(header, "typedef enum { Zero=0, One=1 } PublicEnum;\n");
-            StableId integer = new("integer"), enumType = new("enum-type"), declarationId = new("enum");
-            NativeDeclaration declaration = new(declarationId, "Enum", "PublicEnum", "PublicEnum", enumType, new(header, 1, 1)) { isCompleteDefinition = true };
+            StableId integer = new("integer"), enumType = new("enum-type"), declarationId = new("enum"), alias = new("alias"), typedef = new("typedef");
+            NativeDeclaration declaration = new(declarationId, "Enum", string.Empty, string.Empty, enumType, new(header, 1, 1)) { isCompleteDefinition = true };
+            NativeDeclaration aliasDeclaration = new(typedef, "Typedef", "PublicEnum", "PublicEnum", alias, new(header, 1, 1));
             NativeModule module = new("windows-x64-msvc", "x86_64-pc-windows-msvc", 8,
                 [new(integer, NativeTypeCategory.Primitive, correct ? "int" : "unsigned int", 4, 4) { primitiveKind = correct ? "Int" : "UInt", isSigned = correct },
-                 new(enumType, NativeTypeCategory.Enumeration, "PublicEnum", 4, 4) { declaration = declarationId, elementType = integer }], [declaration], [])
+                 new(enumType, NativeTypeCategory.Enumeration, "PublicEnum", 4, 4) { declaration = declarationId, elementType = integer },
+                 new(alias, NativeTypeCategory.Alias, "PublicEnum", 4, 4) { declaration = typedef, elementType = enumType }], [declaration, aliasDeclaration], [])
             { language = SourceLanguage.C };
             string assertions = new NativeStorageAssertionEmitter().Emit(module, [header], NativeAssertionConventions.For(module));
             Assert.Contains("sizeof(PublicEnum)", assertions);

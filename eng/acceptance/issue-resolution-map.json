@@ -150,7 +150,7 @@
       "id": "P13",
       "problem": "Documentation and installed examples must match the current product",
       "owner": "README.md",
-      "implementation": "Current documentation uses Core, schema2 and4.1.0; installation examples still require actual accepted packages.",
+      "implementation": "Current documentation uses Core, schema2 and4.1.1; installation examples still require actual accepted packages.",
       "validationSources": [
         "scripts/test-cli-examples.py",
         "scripts/generate-config-docs.py"
@@ -166,6 +166,19 @@
       "validationSources": [
         "scripts/verify-locked-toolchain.py",
         "eng/toolchains/toolchains.lock.json"
+      ],
+      "status": "implemented-awaiting-complete-validation",
+      "certified": false
+    },
+    {
+      "id": "N411",
+      "problem": "Anonymous type diagnostic spellings reached native assertions and injected field offsets were estimated",
+      "owner": "Frontend declaration facts, shared native type formatting and native storage assertions",
+      "implementation": "Preserve declaration/alias identity, real compiler field offsets and recursive structural member proofs without platform-specific exceptions. Native model revision4 rejects stale cache facts.",
+      "validationSources": [
+        "tests/extensions/Frontend.Clang/Types/NativeDeclarationStorageIdentityTests.cs",
+        "tests/BGCS.Tests/NativeAnonymousStorageProofTests.cs",
+        "tests/wasm/TypedBridge"
       ],
       "status": "implemented-awaiting-complete-validation",
       "certified": false

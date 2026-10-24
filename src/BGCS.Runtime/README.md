@@ -4,7 +4,7 @@
 generator, Core, Clang, Roslyn or MSBuild dependency.
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="4.1.0" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.1" />
 ```
 
 Generated instance contexts use independent module sessions. Active calls,

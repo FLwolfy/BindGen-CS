@@ -28,10 +28,10 @@
     "reason": "Explicit fixed-prototype corpus baseline; listed variadic entry points require fixed native wrappers."
   },
   "sources": {
-    "windows-x64-msvc/managed/Bindings.cs": "cb3c41f6e97e26a672674c036a8d4e70b0f69ed22302546ca2a1b0e7029a2678",
+    "windows-x64-msvc/managed/Bindings.cs": "b7fc23a1c9af078d20a8763100805ca92981ce56ef246cd00c0c1dda857846ae",
     "windows-x64-msvc/native/include/bgcs_cimgui.h": "0aefe5708af35894a8ec5275a761d7000332cf60360a987a4a05beb38f6f6ae0",
     "windows-x64-msvc/native/src/bgcs_cimgui.c": "1c92dc92f91fe2c8307eb783ef7f8ca0230772d1f90cb9e8695ca441f7c47fb4",
-    "windows-x64-msvc/native/src/storage.assertions.c": "7295a323690043b144d07fc32ec4cd819417061eeec12a65cbba0e89a9810054"
+    "windows-x64-msvc/native/src/storage.assertions.c": "b8f3ca7013c63d580e89ca6f52cb6486cd7658fbbf1ea7ec96e3eed9053cb944"
   },
   "publicApiSha256": "4b80fe3d522d8f1f0019276ce5f64bdee09f09dacd295a303443ae6dd77097c7"
 }
