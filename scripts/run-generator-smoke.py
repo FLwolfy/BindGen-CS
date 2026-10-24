@@ -8,7 +8,6 @@ from compiler_test_environment import isolated_native_test_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = (
-    'BGCS.Tests.NativeAnonymousStorageProofTests.CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof',
     'BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt',
     'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend',
     'BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse',
@@ -25,6 +24,10 @@ def required_cases(host):
         cases[name] = name
     def theory(method, arguments):
         for argument in arguments: cases[method + '(' + argument + ')'] = method
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof',
+           ['volatileContainer: False', 'volatileContainer: True'])
+    theory('BGCS.Tests.NativeAnonymousStorageProofTests.FrozenCopyTraitsStillRejectAnIncompatibleConsumer',
+           ['trivial: False', 'trivial: True'])
     theory('BGCS.Tests.NativeAnonymousStorageProofTests.SourceNamesRespectTagAliasAndQualifiedScopes',
            ['language: C', 'language: Cpp'])
     theory('BGCS.Tests.NativeAnonymousStorageProofTests.AnonymousMembersUseStructuralProofsWithRealLeafIdentity',

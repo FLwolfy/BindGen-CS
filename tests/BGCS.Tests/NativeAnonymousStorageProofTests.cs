@@ -19,8 +19,10 @@ namespace BGCS.Tests;
 
 public sealed class NativeAnonymousStorageProofTests
 {
-    [Fact]
-    public async Task CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof(bool volatileContainer)
     {
         string root = Path.Combine(Path.GetTempPath(), "bgcs anonymous cv " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -42,20 +44,63 @@ public sealed class NativeAnonymousStorageProofTests
             await using var host = TestHostPaths.CreateHost();
             string worker = Path.Combine(RepositoryRoot(), "extensions/frontends/BGCS.Frontend.Clang.Worker/bin/Release/net10.0/BGCS.Frontend.Clang.Worker.dll");
             NativeModule module = (await new FrontendWorkerClient(worker, host).ParseAsync(new(NativeConsumerHarness.ParserTarget(SourceLanguage.Cpp), SourceLanguage.Cpp, [header])
-            { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
+            { pathBase = root, parseMacros = false, defines = ["BGCS_CHANGE=" + (volatileContainer ? 1 : 0)] }, CancellationToken.None)).module;
             Assert.DoesNotContain(module.diagnostics, diagnostic => diagnostic.isFailure);
             string proof = Path.Combine(root, "proof.cpp");
             await File.WriteAllTextAsync(proof, new NativeStorageAssertionEmitter().Emit(module, ["native.h"], NativeAssertionConventions.For(module)));
             foreach (int change in new[] { 0, 1 })
             {
                 var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true),
-                    ["-std=c++23", "-fsyntax-only", "-DBGCS_CHANGE=" + change, proof, .. NativeConsumerHarness.CompilerSdkArguments()], root, TimeSpan.FromSeconds(45));
+                    ["-std=c++23", "-fsyntax-only", "-DBGCS_CHANGE=" + (volatileContainer ? 1 - change : change), proof, .. NativeConsumerHarness.CompilerSdkArguments()], root, TimeSpan.FromSeconds(45));
                 Assert.False(compiled.timedOut);
                 if (change == 0) Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
                 else
                 {
                     Assert.NotEqual(0, compiled.exitCode);
                     Assert.Contains("BGCS native structural const qualifier", compiled.standardOutput + compiled.standardError);
+                    Assert.Contains("BGCS native structural volatile qualifier", compiled.standardOutput + compiled.standardError);
+                }
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FrozenCopyTraitsStillRejectAnIncompatibleConsumer(bool trivial)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs frozen copy " + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string header = Path.Combine(root, "native.h");
+            await File.WriteAllTextAsync(header, trivial
+                ? "struct Subject { int value; }; Subject* borrow();\n"
+                : "struct Subject { int value; ~Subject() {} }; Subject* borrow();\n");
+            await using var host = TestHostPaths.CreateHost();
+            string worker = Path.Combine(RepositoryRoot(), "extensions/frontends/BGCS.Frontend.Clang.Worker/bin/Release/net10.0/BGCS.Frontend.Clang.Worker.dll");
+            NativeModule parsed = (await new FrontendWorkerClient(worker, host).ParseAsync(new(NativeConsumerHarness.ParserTarget(SourceLanguage.Cpp), SourceLanguage.Cpp, [header])
+            { pathBase = root, parseMacros = false }, CancellationToken.None)).module;
+            Assert.DoesNotContain(parsed.diagnostics, diagnostic => diagnostic.isFailure);
+            NativeDeclaration subject = Assert.Single(parsed.declarations, declaration => declaration.kind == "Class" && declaration.name == "Subject");
+            Assert.Equal(trivial, subject.isTriviallyCopyable);
+            foreach (bool mismatch in new[] { false, true })
+            {
+                NativeModule frozen = new(parsed.targetId, parsed.triple, parsed.pointerSize, parsed.types,
+                    parsed.declarations.Select(declaration => declaration.id == subject.id
+                        ? declaration with { isTriviallyCopyable = mismatch ? !trivial : trivial } : declaration).ToImmutableArray(), parsed.diagnostics)
+                { language = parsed.language, byteOrder = parsed.byteOrder };
+                string source = Path.Combine(root, "proof.cpp");
+                await File.WriteAllTextAsync(source, new NativeStorageAssertionEmitter().Emit(frozen, ["native.h"], NativeAssertionConventions.For(frozen)));
+                var compiled = await ProcessExecutor.ExecuteAsync(NativeConsumerHarness.FindCompiler(true),
+                    ["-std=c++23", "-fsyntax-only", source, .. NativeConsumerHarness.CompilerSdkArguments()], root, TimeSpan.FromSeconds(45));
+                Assert.False(compiled.timedOut);
+                if (!mismatch) Assert.True(compiled.exitCode == 0, compiled.standardOutput + compiled.standardError);
+                else
+                {
+                    Assert.NotEqual(0, compiled.exitCode);
+                    Assert.Contains("BGCS native trivial-copy trait", compiled.standardOutput + compiled.standardError);
                 }
             }
         }
@@ -225,6 +270,12 @@ public sealed class NativeAnonymousStorageProofTests
                 #if BGCS_CHANGE == 5
                 #pragma pack(push, 1)
                 #endif
+                #if defined(__cplusplus)
+                // This is a storage fixture, not the copyable invocation DTO.
+                // Give its copy category an explicit language-level definition;
+                // exact trait mismatches have an independent rejection test.
+                struct CopyCategory { ~CopyCategory() {} };
+                #endif
                 typedef struct {
                     char prefix;
                     union {
@@ -249,6 +300,9 @@ public sealed class NativeAnonymousStorageProofTests
                     } storage;
                     const struct { int value; int* pointer; } immutable;
                     volatile struct { unsigned count; } signal;
+                #if defined(__cplusplus)
+                    CopyCategory lifetime;
+                #endif
                     int tail;
                 } Packet;
                 #if BGCS_CHANGE == 5
