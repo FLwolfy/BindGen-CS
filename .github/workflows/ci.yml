@@ -113,6 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-feature-evidence-${{ matrix.target }}
+          overwrite: true
           path: |
             ${{ matrix.baseline == 'full' && 'artifacts/acceptance/report.json' || 'artifacts/generator-smoke/report.json' }}
             ${{ matrix.baseline == 'full' && 'artifacts/acceptance/test-results/**/*.trx' || '' }}
@@ -123,6 +124,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: performance-diagnostics-${{ matrix.target }}
+          overwrite: true
           path: |
             artifacts/performance/**/report.json
             artifacts/performance/**/logs/*.log
@@ -138,6 +140,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: optional-browser-regression-linux-x64
+          overwrite: true
           path: |
             artifacts/toolchain/browser.json
             artifacts/browser-mono/**/report.json
@@ -152,6 +155,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: parser-runtime-osx-x64
+          overwrite: true
           path: artifacts/clang-runtime/osx-x64
           if-no-files-found: error
       - name: Upload failed corpus review inputs
@@ -159,6 +163,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: corpus-review-inputs-${{ matrix.target }}
+          overwrite: true
           path: |
             artifacts/acceptance/corpus-*.json
             artifacts/acceptance/candidate-snapshots/corpus
@@ -172,5 +177,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-repository-tools
+          overwrite: true
           path: eng/BGCS.RepositoryTools/bin/Release/net10.0
           if-no-files-found: error
