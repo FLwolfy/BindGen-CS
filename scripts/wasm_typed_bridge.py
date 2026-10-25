@@ -11,7 +11,7 @@ from acceptance_evidence import digest, publication
 
 
 def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browser: str, helpers, report: dict) -> None:
-    """Generate once, then let the independent fixture publish and invoke all three imports."""
+    """Reject unestablished calli execution, then invoke admitted imports in a trimmed consumer."""
     source = root / "tests/wasm/TypedBridge"
     shutil.copytree(source, work / "Native")
     shutil.copytree(root / "tests/wasm/wwwroot", work / "wwwroot")
@@ -43,7 +43,7 @@ def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browse
     project = ET.parse(work / "Consumer.csproj")
     native = ET.SubElement(project.getroot(), "ItemGroup")
     receipts = []
-    for mode in fixture.MODES:
+    for mode in fixture.BROWSER_MODES:
         # The WebAssembly SDK registers P/Invoke modules by NativeFileReference's file stem.
         config = {"schemaVersion": 2, "library": {"id": "typed_" + mode.lower(), "nativeName": "native",
             "bridgeExportPrefix": "typed_" + mode.lower()},
@@ -77,10 +77,27 @@ def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browse
             ET.SubElement(native, "NativeFileReference", Include=(output / artifact["relativePath"]).relative_to(work).as_posix())
         receipts.append({"mode": mode, "manifestSha256": digest(path), "sources": len(manifest["sources"]),
             "exportCount": len(manifest["exportBindings"]), "nativePointerSize": requirements["execution"]["pointerSize"]})
+    # Refusal must be actionable and preserve a previously published complete output.
+    previous = {path.relative_to(output).as_posix(): digest(path) for path in output.rglob("*") if path.is_file()}
+    config["api"]["importMode"] = "functionTable"
+    request = work / "unsupported-function-table.json"
+    request.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    refusal = work / "unsupported-function-table.log"
+    try:
+        helpers.run([*fixture.tool_command(dotnet, tool), "generate", str(request)], work, refusal, environment)
+    except RuntimeError:
+        details = refusal.read_text(encoding="utf-8", errors="replace")
+        if not all(mode in details for mode in ("FunctionTable", "LibraryImport", "DllImport")):
+            raise RuntimeError("FunctionTable refusal did not identify the supported browser alternatives.")
+    else:
+        raise RuntimeError("The browser extension admitted an unestablished FunctionTable execution contract.")
+    if previous != {path.relative_to(output).as_posix(): digest(path) for path in output.rglob("*") if path.is_file()}:
+        raise RuntimeError("An unsupported import request changed previously published output.")
+    report["unsupportedFunctionTable"] = {"rejected": True, "previousOutputPreserved": True}
     project.write(work / "Consumer.csproj", encoding="utf-8", xml_declaration=True)
     runners = []
-    for mode in fixture.MODES:
-        factory = "FunctionTable.BridgeApi.FromStatic()" if mode == "FunctionTable" else mode + ".BridgeApi.Create()"
+    for mode in fixture.BROWSER_MODES:
+        factory = mode + ".BridgeApi.Create()"
         runners.append((source / "Invocation.cs.in").read_text(encoding="utf-8").replace("__MODE__", mode).replace("__FACTORY__", factory))
     (work / "Program.cs").write_text((source / "Program.cs.in").read_text(encoding="utf-8")
         .replace("__RUNNERS__", "\n".join(runners)), encoding="utf-8")
@@ -89,14 +106,16 @@ def execute(root: Path, work: Path, args, dotnet: str, environment: dict, browse
         path.write_text(path.read_text(encoding="utf-8").replace("left + right", "left + right + 1"), encoding="utf-8")
     helpers.run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-o", str(work / "published"),
         "--disable-build-servers", "-m:1", "-nodeReuse:false", "-p:RunAOTCompilation=" + str(args.aot).lower(),
-        "-p:PublishTrimmed=" + str(args.aot).lower()], work, work / "publish.log", environment)
+        "-p:PublishTrimmed=true"], work, work / "publish.log", environment)
     result = helpers.invoke_browser(browser, work / "published/wwwroot", work)
-    expected = {mode + ":" + case for mode in fixture.MODES for case in
-        ("scalar", "aggregate-input-output", "reverse-aggregate-callback-user-data", "anonymous-storage")}
+    expected = {mode + ":" + case for mode in fixture.BROWSER_MODES for case in
+        ("scalar", "aggregate-input-output", "reverse-aggregate-callback-user-data", "anonymous-storage",
+         "uint64-scalar-mixed-signatures", "uint64-callback", "closed-context")}
     checks = result.get("checks", [])
     if (not result.get("success") or result.get("pointerSize") != 4
             or len(checks) != len(expected) or set(checks) != expected):
         report["invocation"] = result
         raise RuntimeError("The real browser omitted or failed a required typed aggregate/callback invocation.")
     report.update(success=True, scope="optional-browser-typed-pointer-bridge-regression",
-        externalConsumerBuild=True, sourceManifests=receipts, invocation=result, requiredChecks=sorted(expected))
+        externalConsumerBuild=True, modes=list(fixture.BROWSER_MODES), trimmed=True,
+        sourceManifests=receipts, invocation=result, requiredChecks=sorted(expected))

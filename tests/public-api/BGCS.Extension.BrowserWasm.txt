@@ -11,8 +11,9 @@ class BGCS.Extension.BrowserWasm.BrowserWasmRuntimeProvider [sealed; interfaces=
   ctor()
   method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Boolean TryResolve(BGCS.Core.Targets.ManagedRuntimeRequest request, out BGCS.Core.Targets.ManagedRuntimeProfile profile) [virtual; final]
-class BGCS.Extension.BrowserWasm.BrowserWasmTargetProvider [sealed; interfaces=BGCS.Core.Targets.INativeTargetProvider]
+class BGCS.Extension.BrowserWasm.BrowserWasmTargetProvider [sealed; interfaces=BGCS.Core.Plugins.ICacheFingerprintProvider|BGCS.Core.Targets.INativeTargetProvider]
   ctor()
+  method BGCS.Core.Plugins.CacheFingerprintContribution CaptureFingerprint(BGCS.Core.Plugins.CacheFingerprintContext context, System.Threading.CancellationToken cancellationToken) [virtual; final]
   method System.Boolean TryResolve(BGCS.Core.Targets.NativeTargetRequest request, out BGCS.Core.Targets.NativeTargetDescriptor target) [virtual; final]
 class BGCS.Extension.BrowserWasm.EmscriptenSdkDiscovery [abstract; sealed]
   method BGCS.Core.Targets.NativeTargetDescriptor Resolve(System.String emsdkRoot) [static]

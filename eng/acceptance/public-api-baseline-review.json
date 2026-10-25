@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "productVersion": "4.1.1",
+  "productVersion": "4.1.2",
   "scope": "Current 4.0 candidate public API shape extracted from compiled assemblies; not feature, runtime, platform, package or release certification.",
   "releaseCertification": false,
   "sourceRevision": "93e05894e19bef4ae0cf623b8bfbcdfcd24d8778",
@@ -149,9 +149,9 @@
       "assembly": "BGCS.Extension.BrowserWasm",
       "project": "extensions/BGCS.Extension.BrowserWasm",
       "baseline": "tests/public-api/BGCS.Extension.BrowserWasm.txt",
-      "sha256": "2b8c39e4cadb80806af8f72b8ab8d4e712aa7cddd15efcbbb502e33ebc3547ea",
+      "sha256": "bdd97261653681bf4f91a138ffb058e29acdea0f0d04802f0964a60605c27d89",
       "assemblySha256": "a69c0b54c609b2c554d7cb678e60ad2938fc5046c934002afabef9cd838fdb2a",
-      "lines": 19,
+      "lines": 20,
       "exportedTypes": 5
     },
     {

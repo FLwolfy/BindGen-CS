@@ -8,6 +8,8 @@ from compiler_test_environment import isolated_native_test_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 FACTS = (
+    'BGCS.Tests.BrowserGenerationRegressionTests.UnsupportedFunctionTableFailsWithAlternativesAndPreservesPublishedOutput',
+    'BGCS.Tests.BrowserGenerationRegressionTests.BrowserCancellationAndConflictingTripleNeverPublish',
     'BGCS.Tests.PortableNativeSourceTests.CManifestKeepsTheParsersCSearchOrderWhenCppSdkHeadersWouldShadowIt',
     'BGCS.Tests.EmbeddedWorkerGenerationTests.FreshEmbeddedHost_GeneratesUsingRealWorkerWithoutLoadingTheClangFrontend',
     'BGCS.Tests.PrimaryFrontendCacheTests.ExplicitSdkRootsRejectUnlistedImplicitHeadersAndPreserveAdditiveInputsAndWarmReuse',
@@ -24,6 +26,9 @@ def required_cases(host):
         cases[name] = name
     def theory(method, arguments):
         for argument in arguments: cases[method + '(' + argument + ')'] = method
+    theory('BGCS.Tests.BrowserGenerationRegressionTests.OfficialBrowserTargetReusesOnlyUnchangedCompleteInputs',
+           ['change: "' + value + '"' for value in ('compiler', 'sdkMetadata', 'header', 'membership', 'searchOrder',
+            'sysroot', 'defines', 'arguments', 'language', 'missingCompiler')])
     theory('BGCS.Tests.NativeAnonymousStorageProofTests.CppAnonymousContainerQualifiersRemainPartOfTheFrozenProof',
            ['volatileContainer: False', 'volatileContainer: True'])
     theory('BGCS.Tests.NativeAnonymousStorageProofTests.FrozenCopyTraitsStillRejectAnIncompatibleConsumer',

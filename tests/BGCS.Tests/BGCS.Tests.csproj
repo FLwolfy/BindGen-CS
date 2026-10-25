@@ -14,6 +14,7 @@
   <ItemGroup Label="Project dependencies">
     <ProjectReference Include="../../src/BGCS.Runtime/BGCS.Runtime.csproj" />
     <ProjectReference Include="../../src/BGCS/BGCS.csproj" />
+    <ProjectReference Include="../../extensions/BGCS.Extension.BrowserWasm/BGCS.Extension.BrowserWasm.csproj" />
     <ProjectReference Include="../../examples/CustomTargetPlugin/BGCS.Example.CustomTargetPlugin.csproj" />
     <ProjectReference Include="../fixtures/plugins/NeutralLoweringPlugin/NeutralLoweringPlugin.csproj" />
     <ProjectReference Include="../fixtures/plugins/ClangFactPlugin/ClangFactPlugin.csproj" ReferenceOutputAssembly="false" />

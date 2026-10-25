@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="BGCS.Runtime" Version="4.1.1" />
+    <PackageReference Include="BGCS.Runtime" Version="4.1.2" />
     <Compile Include="../Generated/*/managed/**/*.cs" />
   </ItemGroup>
 </Project>

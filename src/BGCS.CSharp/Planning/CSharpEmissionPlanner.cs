@@ -68,7 +68,7 @@ public sealed class CSharpEmissionPlanner
         CallPlanValidator.VerifyProfile(model.interop, runtime);
         {
             if (!runtime.importModes.Contains(request.importMode))
-                throw new NotSupportedException("The resolved managed runtime profile does not admit this import mode.");
+                throw new NotSupportedException($"Runtime '{runtime.runtimeId.value}' does not admit import mode '{request.importMode}'. Supported modes: {string.Join(", ", runtime.importModes)}.");
             if (runtime.moduleMechanism == BGCS.Core.Targets.NativeModuleMechanism.StaticAdapter && request.importMode == BindingImportMode.FunctionTable)
             {
                 StaticExportTableDescriptor table = request.staticExportTable ?? throw new NotSupportedException("A static function table requires an explicit generated native adapter contract.");

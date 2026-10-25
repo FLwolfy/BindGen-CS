@@ -74,7 +74,7 @@ public sealed class NativeAotCallAbiProvider : ICallAbiProvider, ICacheFingerpri
 public sealed class NativeAotPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.extension.native-aot", "4.1.1", [
+    public PluginDescriptor descriptor => new("bgcs.extension.native-aot", "4.1.2", [
         new("native-aot.execution", ExtensionPort.ManagedRuntimeProvider), new("native-aot.call-abi", ExtensionPort.CallAbiProvider)]);
     /// <inheritdoc />
     public CacheFingerprintContribution CaptureFingerprint(

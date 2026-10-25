@@ -31,6 +31,7 @@ internal static unsafe partial class Program
             RunDllImport(dll);
             RunLibraryImport(library);
             __AGGREGATE_DIRECT_CHECKS__
+#if !BGCS_BROWSER_IMPORTS
             SymbolProvider context = new();
             Assert(!context.TryGetExport("missing_symbol", out nint missing) && missing == 0, "A missing symbol must remain unresolved.");
             m_checks.Add("missing-symbol");
@@ -51,6 +52,7 @@ internal static unsafe partial class Program
             Assert(closed, "A disposed API must reject new calls.");
             m_checks.Add("function-table-context");
             VerifyBorrowedResources();
+#endif
             m_report = SerializeReport(true, null);
             __BASELINE_PRINT__
             return 0;
@@ -70,6 +72,7 @@ internal static unsafe partial class Program
     private static string SerializeReport(bool success, string? error) => JsonSerializer.Serialize(
         new InvocationReport(success, sizeof(nint), m_checks.ToArray(), error, m_aggregateSignatures, m_lifecycleChecks), ReportContext.Default.InvocationReport);
 
+#if !BGCS_BROWSER_IMPORTS
     private static void VerifyBorrowedResources()
     {
         SymbolProvider external = new();
@@ -97,6 +100,7 @@ internal static unsafe partial class Program
         m_checks.Add("borrowed-storage");
     }
 
+#endif
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int Callback(void* counter, int value, void* state)
     {

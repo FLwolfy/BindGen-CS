@@ -211,8 +211,10 @@ exports still require fixed wrappers.
 
 ## Acceptance evidence
 
-Independent NativeAOT and browser interpreter/AOT fixtures share 74 checks
-across all three imports: scalars, high UInt64 enum bits, native long/bool,
+The independent NativeAOT fixture retains 74 checks across all three imports.
+The browser interpreter/AOT fixture uses its admitted DllImport/LibraryImport
+profiles; unsupported FunctionTable requests must fail before publication.
+The shared checks cover scalars, high UInt64 enum bits, native long/bool,
 layout/bitfield pointers, bounds/capacity, original-address ref/ref, in/out,
 record-field and Span/ref aliases, handles, callbacks/nulls/releases,
 generated managed callback capture and original-exception propagation,

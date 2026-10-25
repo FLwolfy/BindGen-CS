@@ -13,7 +13,7 @@ Internal Engine, Analysis, NativeBridge, CSharp and Infrastructure assemblies sh
 
 | Package | Scope |
 | --- | --- |
-| BGCS.Extension.BrowserWasm | Emscripten inputs, Mono Wasm profile, static table/callback strategies. |
+| BGCS.Extension.BrowserWasm | Emscripten inputs, Mono Wasm profile, DllImport/LibraryImport and callback strategies. FunctionTable is explicitly refused. |
 | BGCS.Extension.NativeAot | NativeAOT execution profile and existing call/thunk mechanisms. |
 | BGCS.Extension.Android | NDK target and header environment resolution. |
 | BGCS.Extension.AppleMobile | Device/simulator target and SDK inputs. |

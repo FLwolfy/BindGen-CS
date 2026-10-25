@@ -13,7 +13,7 @@ namespace BGCS.Frontend.Clang;
 public sealed class ClangFrontendPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc/>
-    public PluginDescriptor descriptor => new("bgcs.frontend.clang", "4.1.1", [new("bgcs.frontend.clang.worker", ExtensionPort.Frontend)])
+    public PluginDescriptor descriptor => new("bgcs.frontend.clang", "4.1.2", [new("bgcs.frontend.clang.worker", ExtensionPort.Frontend)])
     {
         configurationSchema = JsonSerializer.Deserialize<JsonElement>("""
             {"type":"object","additionalProperties":false,"properties":{

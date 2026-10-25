@@ -127,7 +127,7 @@ def prepare(dotnet: str, version: str, root: Path, work: Path, evidence: Path, r
     manifest = plugin_output / "plugin.json"
     _write(manifest, {"schemaVersion": 1, "assembly": ASSEMBLY + ".dll",
         "entryType": "BGCS.Examples.CustomTargetPlugin.CustomTargetPlugin", "plugin": {
-            "id": "bgcs.examples.custom-target", "version": "4.1.1", "contractsMajor": 4,
+            "id": "bgcs.examples.custom-target", "version": "4.1.2", "contractsMajor": 4,
             "services": [{"id": "example.custom-target", "port": "nativeTargetProvider"}],
             "configurationSchema": {"type": "object", "additionalProperties": False, "required": ["profile"],
                 "properties": {"profile": {"type": "string", "minLength": 1}}}},

@@ -20,7 +20,7 @@ namespace BGCS.Examples.CustomTargetPlugin;
 public sealed class CustomTargetPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "4.1.1", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
+    public PluginDescriptor descriptor => new("bgcs.examples.custom-target", "4.1.2", [new("example.custom-target", ExtensionPort.NativeTargetProvider)])
     {
         configurationSchema = JsonSerializer.Deserialize<JsonElement>("""
             {"type":"object","additionalProperties":false,"required":["profile"],"properties":{"profile":{"type":"string","minLength":1}}}

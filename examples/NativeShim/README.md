@@ -29,7 +29,7 @@ dotnet run --project Consumer/Consumer.csproj -- /absolute/path/to/your/built/wi
 
 Use the actual platform filename, including `.dll`, `.so` or `.dylib` as needed.
 The consumer compiles the generated C# and prints `42`. Its repository Runtime
-project reference can be replaced by `BGCS.Runtime` version `4.1.1` in an external
+project reference can be replaced by `BGCS.Runtime` version `4.1.2` in an external
 consumer. If generation used another output root, set `BGCSGeneratedRoot` to that
 root when compiling the consumer; do not edit the generated files.
 

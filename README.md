@@ -28,7 +28,7 @@ FunctionTable imports and separate files.
 ### 1. Describe the input
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.1
+dotnet tool install --global BindGen-CS --version 4.1.2
 bindgen-cs init native.h --language c
 ```
 
@@ -71,7 +71,7 @@ output channels; a direct import requires an applicable ABI plan.
 Add `managed/` sources to your .NET project, enable `AllowUnsafeBlocks`, and reference:
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="4.1.1" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.2" />
 ```
 
 After your project builds the native module:
@@ -173,6 +173,9 @@ execution are separate capabilities. See [the capability boundaries](docs/capabi
 | [Packages](docs/packages.md) | [Source processing](docs/source-processing.md) | [Runtime lifetimes](docs/runtime-lifetime.md) |
 
 Three import modes: **FunctionTable**, **DllImport**, **LibraryImport**.
+Availability follows the selected runtime profile. The BrowserWasm extension
+admits DllImport and LibraryImport; it rejects FunctionTable because trimmed
+Mono Wasm execution cannot establish arbitrary indirect-call signatures.
 Instance or explicit static APIs. Split or single-file output. Local workspaces,
 inspection and diffs. Supported C++ objects, templates and standard-library values
 can be adapted through lowering, recipes or native shims.

@@ -27,7 +27,7 @@ proved all of its ABI, runtime or import combinations.
 Install the released command-line tool:
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.1
+dotnet tool install --global BindGen-CS --version 4.1.2
 bindgen-cs --help
 ```
 
@@ -96,7 +96,7 @@ fields and old flat configurations are rejected. Create a new configuration with
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="4.1.1" />
+  <PackageReference Include="BGCS.Runtime" Version="4.1.2" />
 </ItemGroup>
 ```
 

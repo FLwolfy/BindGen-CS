@@ -13,7 +13,7 @@ Engine、Analysis、NativeBridge、CSharp、Infrastructure 等内部程序集随
 
 | 包 | 职责 |
 | --- | --- |
-| BGCS.Extension.BrowserWasm | Emscripten 输入、Mono Wasm profile、静态表和回调策略。 |
+| BGCS.Extension.BrowserWasm | Emscripten 输入、Mono Wasm profile、DllImport/LibraryImport 与回调策略；明确拒绝 FunctionTable。 |
 | BGCS.Extension.NativeAot | NativeAOT profile 以及已有调用/thunk 机制。 |
 | BGCS.Extension.Android | NDK 目标和头文件环境。 |
 | BGCS.Extension.AppleMobile | 设备/模拟器目标与 SDK 输入。 |

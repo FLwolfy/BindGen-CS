@@ -53,7 +53,7 @@
         "AOT"
       ],
       "artifact": "optional-browser-regression-linux-x64",
-      "scope": "generated aggregate calls and callbacks with the explicitly registered BrowserWasm extension; not full browser platform certification"
+      "scope": "trimmed DllImport/LibraryImport UInt64, aggregate and callback calls, context admission and explicit FunctionTable refusal with preserved output; not full browser platform certification"
     },
     "productInstallationHost": "windows-x64",
     "fullPlatformCertification": false

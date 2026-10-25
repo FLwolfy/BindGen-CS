@@ -16,7 +16,7 @@ namespace BGCS.Examples.LoweringPlugin;
 public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.engine-lowering", "4.1.1",
+    public PluginDescriptor descriptor => new("bgcs.examples.engine-lowering", "4.1.2",
         [new("engine.rename-tick", ExtensionPort.NativeCallableLowering, 100)]);
 
     /// <inheritdoc />
@@ -31,7 +31,7 @@ public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProv
         CacheFingerprintContext context,
         CancellationToken cancellationToken
     )
-        => Fingerprint("engine-lowering-plugin:4.1.1", cancellationToken);
+        => Fingerprint("engine-lowering-plugin:4.1.2", cancellationToken);
 
     private static CacheFingerprintContribution Fingerprint(
         string state,
@@ -86,6 +86,6 @@ public sealed class EngineLoweringPlugin : IBindingPlugin, ICacheFingerprintProv
             CacheFingerprintContext context,
             CancellationToken cancellationToken
         )
-            => Fingerprint("engine-world-tick:void/no-parameters:4.1.1", cancellationToken);
+            => Fingerprint("engine-world-tick:void/no-parameters:4.1.2", cancellationToken);
     }
 }

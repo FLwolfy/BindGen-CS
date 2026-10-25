@@ -10,7 +10,7 @@ reference to a concrete host, target, frontend or optional platform extension.
 An independent composition registers its required implementations through
 `BindingHost.CreateBuilder()`; missing or conflicting providers fail explicitly.
 
-For the standard ready-to-use composition, reference `BGCS` version `4.1.1` and
+For the standard ready-to-use composition, reference `BGCS` version `4.1.2` and
 call `BindingGenerator.CreateDefault()` from your own C# generation tool. See
 the [C# API](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/api.md) and
 [getting started](https://github.com/FLwolfy/BindGen-CS/blob/main/docs/getting-started.md).

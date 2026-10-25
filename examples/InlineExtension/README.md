@@ -8,7 +8,7 @@ From the repository root:
 dotnet run --project examples/InlineExtension -- examples/InlineExtension/bindgen.json
 ```
 
-The repository project reference is for developing this example. In your own tool, reference `BGCS` 4.1.1 instead. `BGCS.Core` supplies the interfaces and immutable models.
+The repository project reference is for developing this example. In your own tool, reference `BGCS` 4.1.2 instead. `BGCS.Core` supplies the interfaces and immutable models.
 
 The program emits source; your application separately compiles it and provides the native implementation. It does not invoke a consumer build.
 

@@ -1,4 +1,8 @@
 using System;
+using System.IO;
+using System.Text.Json;
+using System.Threading;
+using BGCS.Core;
 using BGCS.Analysis.Calls;
 using BGCS.Core.Calls;
 using BGCS.Core.Interop;
@@ -19,9 +23,30 @@ public sealed class BrowserWasmProviderTests
         Assert.True(runtime!.requiresStaticCallbackThunks);
         Assert.False(runtime.allowsBlockingDisposal);
         Assert.Equal(ManagedFunctionPointerTransport.NativeInteger, runtime.functionPointerTransport);
+        Assert.DoesNotContain(BindingImportMode.FunctionTable, runtime.importModes);
+        Assert.Contains(BindingImportMode.LibraryImport, runtime.importModes);
+        Assert.Contains(BindingImportMode.DllImport, runtime.importModes);
         NativeTargetDescriptor other = new(new("other"), "private", "wasm32", "emscripten", Target().triple,
             new(), new(true, false), NativeByteOrder.LittleEndian);
         Assert.Throws<NotSupportedException>(() => provider.TryResolve(new(new("dotnet.mono-wasm"), other), out _));
+    }
+
+    [Fact]
+    public void TargetFingerprintDeclaresSelectedCompilerAndSdkMetadataWithoutExecutingThem()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "bgcs-browser-fingerprint-" + Guid.NewGuid().ToString("N"));
+        string compiler = Path.Combine(root, "bin", "clang++");
+        NativeTargetDescriptor original = Target();
+        NativeTargetDescriptor target = new(original.targetId, original.platformId, original.architectureId,
+            original.abiId, original.triple, new(compilerPath: compiler), original.capabilities, original.byteOrder);
+        BrowserWasmTargetProvider provider = new();
+        BGCS.Core.Plugins.CacheFingerprintContext context = new(JsonSerializer.SerializeToElement(new { }), root, target);
+        var first = provider.CaptureFingerprint(context, CancellationToken.None);
+        var second = provider.CaptureFingerprint(context, CancellationToken.None);
+        Assert.Equal(first.fingerprint, second.fingerprint);
+        Assert.Contains(first.externalInputs, input => input.path == compiler && input.allowMissing);
+        Assert.Contains(first.externalInputs, input => input.path == Path.Combine(root, "emscripten", "emscripten-version.txt") && input.allowMissing);
+        Assert.Throws<OperationCanceledException>(() => provider.CaptureFingerprint(context, new CancellationToken(true)));
     }
 
     [Theory]

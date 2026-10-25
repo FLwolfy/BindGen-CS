@@ -18,7 +18,7 @@ import cpp_acceptance_fixture
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MODES = cpp_acceptance_fixture.MODES
+MODES = cpp_acceptance_fixture.BROWSER_MODES
 
 
 def stop_process(process):
@@ -248,19 +248,19 @@ def main():
         cpp_acceptance_fixture.write_consumer(ROOT, work, "WasmAcceptance", 4)
         run([dotnet, "publish", "Consumer.csproj", "-c", "Release", "-o", str(work / "published"),
              "--disable-build-servers", "-m:1", "-nodeReuse:false",
-             "-p:RunAOTCompilation=" + str(args.aot).lower(), "-p:PublishTrimmed=" + str(args.aot).lower()],
+             "-p:RunAOTCompilation=" + str(args.aot).lower(), "-p:PublishTrimmed=true"],
             work, work / "publish.log", environment)
         result = invoke_browser(browser, work / "published/wwwroot", work)
         report["browserVersion"] = result.pop("browserVersion")
         report["invocation"] = result
-        expected = cpp_acceptance_fixture.expected_checks()
+        expected = cpp_acceptance_fixture.expected_checks(modes=MODES, tables=False)
         checks = result.get("checks", []) if result else []
         if not result or not result.get("success") or len(checks) != len(expected) or set(checks) != expected:
             raise RuntimeError("Native invocation failed or did not complete every required check.")
         if result.get("pointerSize") != 4:
             raise RuntimeError("The invocation did not execute in wasm32.")
         lifecycle = result.get("lifecycleChecks", [])
-        expected_lifecycle = cpp_acceptance_fixture.expected_lifecycle_checks()
+        expected_lifecycle = cpp_acceptance_fixture.expected_lifecycle_checks(modes=MODES)
         if len(lifecycle) != len(expected_lifecycle) or set(lifecycle) != expected_lifecycle:
             raise RuntimeError("The browser did not complete every nonblocking retained/async lifecycle obligation.")
         report["nonblockingLifecycle"] = {"success": True, "checks": lifecycle, "requiredCount": len(expected_lifecycle)}

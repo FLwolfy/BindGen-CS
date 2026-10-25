@@ -18,7 +18,7 @@ schema = {"type": "object", "additionalProperties": False, "required": ["profile
 files = sorted([*directory.glob("*.dll"), *directory.glob("*.deps.json")])
 manifest = {
     "schemaVersion": 1,
-    "plugin": {"id": "bgcs.examples.custom-target", "version": "4.1.1", "contractsMajor": 4,
+    "plugin": {"id": "bgcs.examples.custom-target", "version": "4.1.2", "contractsMajor": 4,
                "services": [{"id": "example.custom-target", "port": "nativeTargetProvider", "priority": 0}],
                "configurationSchema": schema},
     "assembly": entry.relative_to(root).as_posix(),

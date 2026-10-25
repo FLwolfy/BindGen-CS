@@ -20,7 +20,7 @@ BGCS 不编译或运行你的项目。需要原生桥接时，由你的项目编
 ### 1. 准备输入
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.1
+dotnet tool install --global BindGen-CS --version 4.1.2
 bindgen-cs init native.h --language c
 ```
 
@@ -60,7 +60,7 @@ C++ 使用相同命令，将 `source.language` 设为 `cpp` 即可自动规划 C
 把 `managed/` 源码加入自己的 .NET 项目，启用 `AllowUnsafeBlocks`，并引用：
 
 ```xml
-<PackageReference Include="BGCS.Runtime" Version="4.1.1" />
+<PackageReference Include="BGCS.Runtime" Version="4.1.2" />
 ```
 
 由你的项目构建原生模块后：
@@ -148,6 +148,8 @@ Windows 解析器可以分析其他目标的头文件；这不执行目标程序
 | [产品包](docs/packages.cn.md) | [源码处理](docs/source-processing.cn.md) | [Runtime 生命周期](docs/runtime-lifetime.cn.md) |
 
 支持 FunctionTable、DllImport、LibraryImport；实例或显式静态 API；分文件或单文件；本地工作区、检查与差异比较。已支持的 C++ 对象、模板和标准库值可通过 lowering、recipe 或 native shim 适配。
+
+导入方式由选定的 runtime profile 限定。BrowserWasm 扩展支持 DllImport 与 LibraryImport；裁剪后的 Mono Wasm 无法保证任意间接调用签名，因此明确拒绝 FunctionTable。
 
 [完整文档](docs/README.cn.md) · [测试](docs/testing.cn.md) · [贡献](CONTRIBUTING.md)
 

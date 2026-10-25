@@ -731,8 +731,8 @@ def main() -> None:
     verify_source_ownership(ROOT)
     source = source_identity()
     version = args.version or ET.parse(ROOT / "Directory.Build.props").findtext("./PropertyGroup/Version")
-    if not re.fullmatch(r"4\.1\.1(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
-        parser.error("This source tree may create only 4.1.1 or private 4.1.1-ci candidate packages.")
+    if not re.fullmatch(r"4\.1\.2(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
+        parser.error("This source tree may create only 4.1.2 or private 4.1.2-ci candidate packages.")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     full = args.host_only is None

@@ -3,6 +3,9 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using BGCS.Core.Inputs;
+using BGCS.Core.Plugins;
 using BGCS.Core.Targets;
 
 namespace BGCS.Extension.BrowserWasm;
@@ -10,8 +13,28 @@ namespace BGCS.Extension.BrowserWasm;
 /// <summary>
 /// Supplies the Emscripten wasm32 ABI independently of the authoring host platform.
 /// </summary>
-public sealed class BrowserWasmTargetProvider : INativeTargetProvider
+public sealed class BrowserWasmTargetProvider : INativeTargetProvider, ICacheFingerprintProvider
 {
+    /// <inheritdoc />
+    public CacheFingerprintContribution CaptureFingerprint(
+        CacheFingerprintContext context,
+        CancellationToken cancellationToken
+    ) {
+        ArgumentNullException.ThrowIfNull(context);
+        CacheFingerprintContribution implementation = BrowserWasmFingerprint.Capture(GetType(), cancellationToken);
+        ImmutableArray<DeclaredExternalInput>.Builder inputs = ImmutableArray.CreateBuilder<DeclaredExternalInput>();
+        if (context.target.toolchain.compilerPath is string compiler && Path.IsPathFullyQualified(compiler))
+        {
+            inputs.Add(new(compiler, ExternalInputKind.File, allowMissing: true));
+            string? installation = Path.GetDirectoryName(Path.GetDirectoryName(compiler));
+            if (installation is not null)
+                inputs.Add(new(Path.Combine(installation, "emscripten", "emscripten-version.txt"), ExternalInputKind.File, allowMissing: true));
+        }
+        // Resolved paths, definitions and arguments are frozen in the frontend request.
+        // Its input snapshot owns header bytes, search membership and absent roots.
+        return implementation with { externalInputs = inputs.ToImmutable() };
+    }
+
     /// <inheritdoc/>
     public bool TryResolve(
         NativeTargetRequest request,
@@ -30,9 +53,7 @@ public sealed class BrowserWasmTargetProvider : INativeTargetProvider
             toolchain = new(toolchain.compilerPath, toolchain.sysRoot,
                 toolchain.systemIncludeFolders.Append(includes).Distinct(StringComparer.Ordinal),
                 toolchain.defines, toolchain.arguments,
-                Directory.Exists(cxxIncludes)
-                    ? toolchain.cxxSystemIncludeFolders.Append(cxxIncludes).Distinct(StringComparer.Ordinal)
-                    : toolchain.cxxSystemIncludeFolders,
+                toolchain.cxxSystemIncludeFolders.Append(cxxIncludes).Distinct(StringComparer.Ordinal),
                 toolchain.sdkVersion, toolchain.compilerVersion);
         }
         target = new(request.targetId, "emscripten", "wasm32", "emscripten", triple, toolchain, capabilities: new(true, false), byteOrder: BGCS.Core.Native.NativeByteOrder.LittleEndian)

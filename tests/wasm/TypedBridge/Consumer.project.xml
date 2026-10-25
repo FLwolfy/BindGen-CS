@@ -9,7 +9,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
     <WasmBuildNative>true</WasmBuildNative>
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed>true</PublishTrimmed>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DisableParallelAot>true</DisableParallelAot>
     <DisableParallelEmccCompile>true</DisableParallelEmccCompile>

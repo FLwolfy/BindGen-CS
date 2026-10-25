@@ -22,7 +22,7 @@ Windows x64 可以使用 Windows worker 和 Android NDK 头文件解析 Android 
 安装已发布的命令行工具：
 
 ```bash
-dotnet tool install --global BindGen-CS --version 4.1.1
+dotnet tool install --global BindGen-CS --version 4.1.2
 bindgen-cs --help
 ```
 
@@ -87,7 +87,7 @@ bindgen-cs init include/native.h --language c --config bindings/bindgen.json
   <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="BGCS.Runtime" Version="4.1.1" />
+  <PackageReference Include="BGCS.Runtime" Version="4.1.2" />
 </ItemGroup>
 ```
 

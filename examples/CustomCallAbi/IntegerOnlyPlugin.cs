@@ -21,7 +21,7 @@ namespace BGCS.Examples.CustomCallAbi;
 public sealed class IntegerOnlyPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.examples.integer-only", "4.1.1",
+    public PluginDescriptor descriptor => new("bgcs.examples.integer-only", "4.1.2",
         [new("example.integer-runtime", ExtensionPort.ManagedRuntimeProvider), new("example.integer-abi", ExtensionPort.CallAbiProvider)]);
     /// <inheritdoc />
     public void Configure(

@@ -8,6 +8,8 @@ bytes. They do not reconstruct unavailable symbols, attestations, or successful 
 
 | Release | Publication scope |
 | --- | --- |
+| [4.1.2](4.1.2.md) | Browser import admission and complete target-provider cache inputs |
+| [4.1.1](4.1.1.md) | Anonymous native source names, compiler-derived offsets and structural storage assertions |
 | [4.1.0](4.1.0.md) | Documentation and example convergence, consistent source formatting and license delivery |
 | [4.0.0](4.0.0.md) | Neutral Core/Engine, typed NativeBridge and explicit optional extensions; publication requires matching current evidence |
 | [3.0.1](3.0.1.md) | Portable native source inputs and shared template-reference corrections |

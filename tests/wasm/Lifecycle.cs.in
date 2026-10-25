@@ -28,7 +28,6 @@ internal static class BrowserLifecycleRunner
         {
             await RunMode("DllImport", CreateDllImport, checks);
             await RunMode("LibraryImport", CreateLibraryImport, checks);
-            await RunMode("FunctionTable", CreateFunctionTable, checks);
             report(true, null, checks.ToArray());
             return 0;
         }

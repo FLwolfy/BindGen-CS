@@ -40,14 +40,14 @@ def source_identity(root: Path) -> dict:
 def package_version(root: Path, *, declared: bool = False) -> str:
     """Select the formal version or one deterministic private commit/content candidate."""
     version = ET.parse(root / "Directory.Build.props").findtext("./PropertyGroup/Version")
-    if not version or not re.fullmatch(r"4\.1\.1(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
-        raise RuntimeError("The current tree must declare 4.1.1 or its private -ci candidate.")
-    if declared and version == "4.1.1":
+    if not version or not re.fullmatch(r"4\.1\.2(?:-ci(?:\.[0-9A-Za-z-]+)*)?", version):
+        raise RuntimeError("The current tree must declare 4.1.2 or its private -ci candidate.")
+    if declared and version == "4.1.2":
         return version
     source = source_identity(root)
     # Prefix the hash segments so NuGet cannot normalize an all-numeric hash's
     # leading zeroes. Both exact full identities remain in the package receipt.
-    return f"4.1.1-ci.g{source['revision'][:12]}.s{source['checkedOutSourceSha256'][:16]}"
+    return f"4.1.2-ci.g{source['revision'][:12]}.s{source['checkedOutSourceSha256'][:16]}"
 
 
 def discover_test_projects(root: Path) -> list[Path]:

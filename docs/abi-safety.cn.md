@@ -101,7 +101,7 @@ Processor 在最终源码契约验证前运行，缓存命中也复核实际 imp
 
 ## 验收证据
 
-独立 NativeAOT、浏览器解释/AOT fixture 保留三种 import 的全部 74 项检查，包括 scalar、UInt64 高位 enum、原生 long/bool、layout/bitfield 指针、bounds/capacity、ref/ref、in/out、记录字段与 Span/ref 的原地址别名、handle、callback/null/release、生成托管 callback 的状态捕获与原始异常返回、C++ 对象/继承，以及不完整/借用/缺失导出函数表。失败注入改变原生返回结果，必须在真实调用失败，不能仅因无关构建失败而通过。
+独立 NativeAOT fixture 保留三种 import 的全部 74 项检查。浏览器解释/AOT fixture 只运行当前准入的 DllImport/LibraryImport，并验证 FunctionTable 在发布前明确拒绝。共享检查包括 scalar、UInt64 高位 enum、原生 long/bool、layout/bitfield 指针、bounds/capacity、ref/ref、in/out、记录字段与 Span/ref 的原地址别名、handle、callback/null/release、生成托管 callback 的状态捕获与原始异常返回、C++ 对象/继承，以及不完整/借用/缺失导出函数表。失败注入改变原生返回结果，必须在真实调用失败，不能仅因无关构建失败而通过。
 
 可选私有 NativeAOT fixture 另外保留 39 项 aggregate 检查，合计 113 项。三种 import 都调用 C17 中的小型、混合、大型、union、嵌套、同类浮点、内联数组、紧密未对齐和单浮点成员记录的变换，包括按值记录的反向回调。每种 import 的结果签名必须与独立编译的原生 C probe 相同。这是私有应用证据，不是强制桌面发布门禁；浏览器 aggregate 能力仍单独界定。
 

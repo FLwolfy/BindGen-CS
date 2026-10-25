@@ -16,7 +16,7 @@ if not entry.is_file():
 files = sorted([*directory.glob("*.dll"), *directory.glob("*.deps.json")])
 manifest = {
     "schemaVersion": 1,
-    "plugin": {"id": "bgcs.examples.engine-lowering", "version": "4.1.1", "contractsMajor": 4,
+    "plugin": {"id": "bgcs.examples.engine-lowering", "version": "4.1.2", "contractsMajor": 4,
                "services": [{"id": "engine.rename-tick", "port": "cppCallableLowering", "priority": 100}]},
     "assembly": entry.relative_to(root).as_posix(),
     "entryType": "BGCS.Examples.LoweringPlugin.EngineLoweringPlugin",

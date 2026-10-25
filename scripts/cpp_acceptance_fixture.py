@@ -12,6 +12,7 @@ import subprocess
 from acceptance_evidence import digest as file_digest, publication, source_identity
 
 MODES = ("DllImport", "LibraryImport", "FunctionTable")
+BROWSER_MODES = ("DllImport", "LibraryImport")
 MODE_CHECKS = ("scalar", "wide-integer", "wide-enum", "native-long", "bool", "layout", "bitfields",
                "buffer", "capacity", "alias-ref", "alias-in-out", "alias-record-field", "alias-span-ref",
                "handle", "callback", "null-callback", "managed-callback", "managed-callback-exception", "release",
@@ -97,7 +98,7 @@ def stage_optional_extension(root, work, configuration, browser):
     path = directory / "plugin.json"
     path.write_text(json.dumps({"schemaVersion": 1, "assembly": product + ".dll",
         "entryType": product + (".BrowserWasmPlugin" if browser else ".NativeAotPlugin"),
-        "plugin": {"id": extension_id, "version": "4.1.1", "contractsMajor": 4, "services": services},
+        "plugin": {"id": extension_id, "version": "4.1.2", "contractsMajor": 4, "services": services},
         "assets": files}, indent=2), encoding="utf-8")
     return path
 
@@ -262,17 +263,17 @@ def binding_configuration(mode, namespace, compiler, bridge, sysroot=None):
     return configuration
 
 
-def expected_checks(aggregates=False):
+def expected_checks(aggregates=False, modes=MODES, tables=True):
     checks = MODE_CHECKS + AGGREGATE_CHECKS if aggregates else MODE_CHECKS
-    return {mode + ":" + check for mode in MODES for check in checks} | set(TABLE_CHECKS)
+    return {mode + ":" + check for mode in modes for check in checks} | (set(TABLE_CHECKS) if tables else set())
 
 
-def expected_lifecycle_checks():
+def expected_lifecycle_checks(modes=MODES):
     """Separate browser lifecycle obligations; the existing 74 raw checks stay mandatory."""
     checks = ("retained-close", "retained-exception", "retained-self-close", "retained-context-close",
               "async-native-frame", "async-cancel-request", "async-cancel-ack", "async-inline-completion",
               "async-duplicate-completion", "async-context-close", "native-quiescence")
-    return {mode + ":" + check for mode in MODES for check in checks}
+    return {mode + ":" + check for mode in modes for check in checks}
 
 
 def generated_abi_identity(work, mode):
@@ -289,25 +290,25 @@ def generated_abi_identity(work, mode):
 
 
 def write_consumer(root, work, namespace, pointer_size, aggregates=False):
+    browser = namespace == "WasmAcceptance"
+    selected_modes = BROWSER_MODES if browser else MODES
     invocation = (root / "tests/wasm/Invocation.cs.in").read_text(encoding="utf-8")
     if pointer_size not in (4, 8):
         raise RuntimeError("The acceptance fixture requires a proven 32-bit or 64-bit pointer target.")
-    runners = "\n".join(invocation.replace("__MODE__", mode).replace("__SIZE_TYPE__", "uint" if pointer_size == 4 else "ulong") for mode in MODES)
+    runners = "\n".join(invocation.replace("__MODE__", mode).replace("__SIZE_TYPE__", "uint" if pointer_size == 4 else "ulong") for mode in selected_modes)
     if aggregates:
         if pointer_size != 8:
             raise RuntimeError("Aggregate by-value acceptance requires a separately certified 64-bit desktop profile.")
         aggregate_invocation = (root / "tests/native-aot/Aggregates.cs.in").read_text(encoding="utf-8")
         runners += "\n" + "\n".join(aggregate_invocation.replace("__MODE__", mode) for mode in MODES)
     template = (root / "tests/wasm/Program.cs.in").read_text(encoding="utf-8")
-    browser = namespace == "WasmAcceptance"
     text = template.replace("__NAMESPACE__", namespace)
     text = text.replace("__BROWSER_USING__", "using System.Runtime.InteropServices.JavaScript;" if browser else "")
     text = text.replace("__BROWSER_EXPORT__", "[JSExport]\n    public static string GetReport() => m_report;" if browser else "")
     text = text.replace("__ENTRY_POINT__", "private static global::System.Threading.Tasks.Task<int> Main() => BrowserLifecycleRunner.RunAsync(RunBaseline, FinishLifecycle);" if browser
                         else "private static int Main() => RunBaseline();")
     text = text.replace("__BASELINE_PRINT__", "" if browser else "Console.WriteLine(m_report);")
-    text = text.replace("__BROWSER_LIFECYCLE_REPORT__", "internal static FunctionTable.NativeApi CreateLifecycleTable() => FunctionTable.NativeApi.FromProvider(new SymbolProvider(), callbackDispatcher);\n"
-                        "    private static void FinishLifecycle(bool success, string? error, string[] checks) { m_lifecycleChecks = checks; m_report = SerializeReport(success, error); Console.WriteLine(m_report); }" if browser else "")
+    text = text.replace("__BROWSER_LIFECYCLE_REPORT__", "private static void FinishLifecycle(bool success, string? error, string[] checks) { m_lifecycleChecks = checks; m_report = SerializeReport(success, error); Console.WriteLine(m_report); }" if browser else "")
     text = text.replace("__MAIN_ASSERTION__", 'Assert(sizeof(nint) == 4, "The consumer must execute inside wasm32.");' if browser else "")
     text = text.replace("__AGGREGATE_DIRECT_CHECKS__", "RunAggregatesDllImport(dll); RunAggregatesLibraryImport(library);" if aggregates else "")
     text = text.replace("__AGGREGATE_TABLE_CHECKS__", "RunAggregatesFunctionTable(api);" if aggregates else "")
@@ -323,7 +324,7 @@ def write_consumer(root, work, namespace, pointer_size, aggregates=False):
         lifecycle = (root / "tests/wasm/Lifecycle.cs.in").read_text(encoding="utf-8")
         modes = (root / "tests/wasm/LifecycleMode.cs.in").read_text(encoding="utf-8")
         lifecycle = lifecycle.replace("__MODE_FACTORIES__", "\n".join(modes.replace("__MODE__", mode)
-            .replace("__FACTORY__", "Program.CreateLifecycleTable()" if mode == "FunctionTable" else mode + ".NativeApi.Create(Program.callbackDispatcher)") for mode in MODES))
+            .replace("__FACTORY__", mode + ".NativeApi.Create(Program.callbackDispatcher)") for mode in selected_modes))
         (work / "Lifecycle.cs").write_text(lifecycle.replace("__NAMESPACE__", namespace), encoding="utf-8")
 
 

@@ -11,7 +11,7 @@ namespace BGCS.Extension.Android;
 public sealed class AndroidPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc/>
-    public PluginDescriptor descriptor => new("bgcs.extension.android", "4.1.1", [new("bgcs.target.android", ExtensionPort.NativeTargetProvider)]);
+    public PluginDescriptor descriptor => new("bgcs.extension.android", "4.1.2", [new("bgcs.target.android", ExtensionPort.NativeTargetProvider)]);
     /// <inheritdoc/>
     public void Configure(
         IExtensionRegistryBuilder registry,

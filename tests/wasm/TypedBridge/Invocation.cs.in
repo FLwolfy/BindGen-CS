@@ -10,6 +10,11 @@
         if (result.storage.marker != 42 || api.Raw.SystemStorageSize(null) <= 0)
             throw new InvalidOperationException("__MODE__: anonymous source storage");
         int state = 7;
+        const ulong high = 0xfedcba9876543210UL;
+        if (api.Raw.Scalar64(null) != high || api.Raw.Mixed64(high, 3, 2.0, &state) != high + 12)
+            throw new InvalidOperationException("__MODE__: exact high-bit UInt64 scalar signatures");
+        if (api.Raw.Invoke64(&ScalarCallback__MODE__, &state) != high + 7)
+            throw new InvalidOperationException("__MODE__: UInt64 reverse callback");
         api.Raw.Invoke(&Transform__MODE__, &input, &state, &result);
         if (result.first != 18 || result.scale != 3.75 || result.second != 24)
             throw new InvalidOperationException("__MODE__: reverse aggregate callback input/output or user data");
@@ -18,7 +23,18 @@
         m_checks.Add("__MODE__:aggregate-input-output");
         m_checks.Add("__MODE__:reverse-aggregate-callback-user-data");
         m_checks.Add("__MODE__:anonymous-storage");
+        m_checks.Add("__MODE__:uint64-scalar-mixed-signatures");
+        m_checks.Add("__MODE__:uint64-callback");
+        api.Dispose();
+        bool closed = false;
+        try { api.Raw.Scalar64(null); }
+        catch (ObjectDisposedException) { closed = true; }
+        if (!closed) throw new InvalidOperationException("__MODE__: disposed context admitted a new call");
+        m_checks.Add("__MODE__:closed-context");
     }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static ulong ScalarCallback__MODE__(void* state) => 0xfedcba9876543210UL + (ulong)*(int*)state;
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Transform__MODE__(__MODE__.Sample* input, void* state, __MODE__.Sample* result)

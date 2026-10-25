@@ -18,7 +18,6 @@ internal static unsafe partial class Program
         try
         {
             if (sizeof(nint) != 4) throw new InvalidOperationException("The consumer did not run inside wasm32.");
-            RunFunctionTable();
             RunDllImport();
             RunLibraryImport();
             m_report = JsonSerializer.Serialize(new Result(true, sizeof(nint), m_checks.ToArray(), null), ResultContext.Default.Result);

@@ -1,5 +1,21 @@
-The browser gate composes the same instance API invocation fixture as NativeAOT. It requires all 74 scalar, wide integer/enum conversion, native long, bool, record/bitfield, buffer/capacity, typed handle, raw callback/null callback, generated managed callback capture/exception, release, C++ construction/method/inheritance/destruction and FunctionTable ownership checks for each deployment. Generated callback overloads preserve the explicitly unsafe native object pointer and hide only the configured synchronous userdata token.
+The browser gate shares scalar, wide integer/enum, native long, bool, record,
+buffer, handle, callback, release and C++ invocation fixtures with NativeAOT.
+It executes DllImport and LibraryImport, the imports admitted by the Browser
+profile. FunctionTable must be rejected before replacing existing output; its
+trimmed interpreter signature contract is not established. Desktop FunctionTable
+ownership and invocation tests remain in the NativeAOT/desktop fixture.
 
-The four original-address alias cases per import compare native pointer equality and ordered ref/ref, in/out, record-field and Span/ref mutations. The expanded 74-check matrix requires fresh interpreter and AOT runs; earlier 62-check receipts do not certify it.
+The four original-address alias cases per import compare native pointer equality
+and ordered ref/ref, in/out, record-field and Span/ref mutations. Current evidence
+must identify the exact selected cases, runtime, trimming and execution mode.
 
-The nonblocking lifecycle gate adds a separate mandatory 33-check report (11 per import mode). Its native fixture rejects unregister/stop inside an active native frame and accesses retained memory after the managed completion callback returns. The generated bindings must defer self-disposal, keep canceled buffers pinned until native acknowledgement, handle synchronous and duplicate completion, and retain cleanup access after context disposal. Both interpreter and AOT must produce the complete `nonblockingLifecycle` subreport alongside the unchanged 74 raw checks. Draft source or desktop compilation does not certify browser behavior.
+The manual nonblocking lifecycle fixture retains 11 checks per admitted import.
+It rejects unregister/stop inside an active native frame and accesses retained
+memory after managed completion returns. Both interpreter and AOT must report
+every selected case. Draft source or desktop compilation cannot certify it.
+
+The targeted CI fixture separately verifies exact high-bit UInt64 returns,
+mixed scalar arguments, UInt64 callbacks, anonymous aggregate input/output and
+callbacks, closed-context admission, and FunctionTable refusal with preserved
+output. Both execution modes use trimming. The independent repository harness
+owns compilation; no consumer build capability is added to BGCS.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "productVersion": "4.1.1",
+  "productVersion": "4.1.2",
   "baselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "historicalDefinitionRevision": "d4bfe3939b6ab2c404080f9da58e4b5f64c861be",
   "implementationReady": true,
@@ -62,6 +62,6 @@
     "Complete final retained Host/nonHost baseline and repository controls",
     "Current-closure performance and isolated candidate consumption",
     "Four exact same-commit CI gates",
-    "Formal4.1.1 immutable tagging/public packages/clean feed consumption only after all gates"
+    "Formal4.1.2 immutable tagging/public packages/clean feed consumption only after all gates"
   ]
 }

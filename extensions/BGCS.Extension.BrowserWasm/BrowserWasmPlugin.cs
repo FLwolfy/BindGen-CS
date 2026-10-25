@@ -41,8 +41,11 @@ public sealed class BrowserWasmRuntimeProvider : IManagedRuntimeProvider, ICache
             || target.triple != "wasm32-unknown-emscripten" || target.byteOrder != NativeByteOrder.LittleEndian
             || target.capabilities is not { supportsDynamicModules: false })
             throw new NotSupportedException("The browser execution provider requires exact Emscripten wasm32 facts and static native-module capabilities.");
-        profile = new(target.targetId.value + "/dotnet.mono-wasm/v1", request.runtimeId, NativeModuleMechanism.StaticAdapter,
-            [BindingImportMode.FunctionTable, BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
+        // Trimmed Mono interpreter calli support depends on generated P/Invoke cookies.
+        // A function address alone cannot establish that execution contract, including
+        // on an application that may later choose AOT. Admit the deterministic imports.
+        profile = new(target.targetId.value + "/dotnet.mono-wasm/v2", request.runtimeId, NativeModuleMechanism.StaticAdapter,
+            [BindingImportMode.DllImport, BindingImportMode.LibraryImport], true, false)
         {
             nativeTargetId = target.targetId.value,
             nativeTriple = target.triple,
@@ -136,7 +139,7 @@ public sealed class BrowserWasmCallAbiProvider : ICallAbiProvider, ICacheFingerp
 public sealed class BrowserWasmPlugin : IBindingPlugin, ICacheFingerprintProvider
 {
     /// <inheritdoc />
-    public PluginDescriptor descriptor => new("bgcs.extension.browser-wasm", "4.1.1", [
+    public PluginDescriptor descriptor => new("bgcs.extension.browser-wasm", "4.1.2", [
         new("browser-wasm.target", ExtensionPort.NativeTargetProvider), new("browser-wasm.execution", ExtensionPort.ManagedRuntimeProvider),
         new("browser-wasm.call-abi", ExtensionPort.CallAbiProvider)]);
     /// <inheritdoc />

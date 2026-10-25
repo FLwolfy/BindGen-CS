@@ -225,12 +225,13 @@
             "--targeted",
             "--no-build"
           ],
-          "scope": "Exactly three import modes, scalar, typed aggregate pointer input/output, raw aggregate-return reverse callback with user data; separate real MonoWasm and AOT consumers."
+          "scope": "DllImport and LibraryImport: exact high-bit UInt64 and mixed scalar signatures, typed aggregate pointer input/output, reverse callbacks and closed-context rejection; separate trimmed MonoWasm and AOT consumers. FunctionTable must fail before replacing published output."
         }
       ],
       "constraints": [
         "The external consuming project registers and links native object/archive references with the import identity required by generated bindings; BGCS emits source only.",
         "LibraryImport uses the explicitly resolved browser default Cdecl convention profile.",
+        "The browser profile rejects FunctionTable because a native address does not establish trimmed Mono interpreter signature cookies; consumer AOT options do not change generation admission.",
         "Chromium evidence does not certify Firefox or Safari."
       ],
       "applicationInvocationCertification": "optional, requires its own actual SDK/native/application execution receipt",
@@ -579,7 +580,7 @@
     "dotnet.native-aot",
     "dotnet.mono-wasm"
   ],
-  "productVersion": "4.1.1",
+  "productVersion": "4.1.2",
   "formalBaselineRevision": "e619418c0c9f8422aad706de9b6544de63ebeff8",
   "targetedApplicationRegression": {
     "host": "linux-x64",

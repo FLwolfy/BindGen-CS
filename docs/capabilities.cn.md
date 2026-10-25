@@ -8,13 +8,17 @@ BGCS 生成源码；解析、生成、消费编译和真实调用是不同状态
 
 | 可选实现 | 声明范围 |
 | --- | --- |
-| BrowserWasm | Emscripten 目标与 Mono Wasm profile、静态表和 callback 策略。真实 Mono/AOT aggregate 回归属于对应仓库验收。 |
+| BrowserWasm | Emscripten 目标、Mono Wasm profile、DllImport/LibraryImport 与 callback 策略；明确拒绝 FunctionTable。裁剪后的 Mono/AOT 标量、aggregate 与 callback 真实调用属于对应仓库验收。 |
 | NativeAot | NativeAOT profile 与已有调用机制，不执行 publish。 |
 | Android | NDK/目标输入，不凭目标名推定 C# runtime。 |
 | AppleMobile | 设备、模拟器与 SDK 输入，不能将两者混同。 |
 | FreeBsd | 目标/sysroot 输入，不自动宣称 CoreCLR 或原生调用认证。 |
 
 资源存在、能够选择目标和可以生成源代码，不能写成完整平台认证。ARM64 等未执行组合保持未验证。特殊 SDK 通过私有 provider 接入；新的 ABI 或执行机制需要相应实现。
+
+Mono Wasm 解释器的间接调用依赖运行时生成的签名表。静态函数地址不能保证裁剪后仍有对应签名，因此官方 Browser profile 在发布源码前拒绝 FunctionTable。即使消费项目准备启用 AOT，也需显式选择 `libraryImport` 或 `dllImport`；生成器不读取消费构建选项，不添加无用 import 来影响签名表。
+
+Browser 目标 provider 使用统一指纹协议。编译器安装文件与相邻 SDK 版本清单作为只读输入追踪，包括缺失状态；解析后的 SDK 路径、头文件内容、搜索顺序和成员、宏、参数及语言继续由现有 frontend 快照和缓存身份管理。不执行编译器。
 
 ## 声明级报告
 

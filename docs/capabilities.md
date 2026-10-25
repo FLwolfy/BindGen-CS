@@ -8,13 +8,26 @@ The standard product supplies supported desktop host parser resources, desktop h
 
 | Optional implementation | Scope |
 | --- | --- |
-| BrowserWasm | Emscripten target, Mono Wasm profile, static tables and callback strategy; actual Mono/AOT aggregate execution belongs to its repository gate. |
+| BrowserWasm | Emscripten target, Mono Wasm profile, DllImport/LibraryImport and callback strategy; FunctionTable is refused. Actual trimmed Mono/AOT scalar, aggregate and callback execution belongs to its repository gate. |
 | NativeAot | NativeAOT profile and existing call mechanisms, without publishing an application. |
 | Android | NDK and target inputs; a target name does not select a C# runtime. |
 | AppleMobile | Distinct device/simulator and SDK inputs. |
 | FreeBsd | Target/sysroot inputs, without automatic CoreCLR or invocation certification. |
 
 Available resources, target resolution and generated source do not establish full platform certification. Unexecuted ARM64 and other combinations stay unverified. Private SDKs use private providers; new ABIs or execution mechanisms need applicable implementations.
+
+Mono Wasm interpreter indirect calls depend on runtime-generated signature cookies.
+A static function address alone does not guarantee their presence after trimming.
+The official browser profile therefore rejects FunctionTable before publication,
+including when an application intends to enable AOT; generation does not inspect
+consumer build options. Select `libraryImport` or `dllImport` explicitly. BGCS does
+not add unused imports to influence runtime signature-table generation.
+
+The Browser target provider participates in the standard fingerprint protocol.
+The compiler installation file and adjacent SDK version manifest are tracked as
+read-only inputs, including their absence. Resolved SDK paths, header bytes,
+search order and membership, macros, arguments and language remain owned by the
+existing frontend snapshots and cache identities. No compiler is executed.
 
 ## Per-declaration reports
 
